@@ -1,0 +1,22 @@
+# itb-suite MVP config. Copy to itb-suite.config.yaml (gitignored) and fill in.
+# ${VARS} are read from the environment — keep secrets out of the file.
+#
+# Where the keys live in the ITB UI (http://localhost:10003):
+#   communityApiKey   : Community admin -> your community -> "API keys" panel
+#   organisationApiKey: same panel (organisation entry), or the organisation's detail page
+#   specification     : Domain -> Specification -> details, field "API key"
+#   system            : Organisation -> Systems -> your system -> "API key info"
+#   actor             : Domain -> Specification -> Actors -> SUT actor -> API key
+instance:
+  baseUrl: http://localhost:10003
+  communityApiKey: ${ITB_COMMUNITY_KEY}
+  organisationApiKey: ${ITB_ORG_KEY}
+target:
+  specification: ${ITB_SPEC_KEY}
+execution:
+  system: ${ITB_SYSTEM_KEY}
+  actor: ${ITB_ACTOR_KEY}
+suites:
+  - feature: ../../test-workbench/public/features/ph4h-qr-integration.feature
+    out: out/ph4h
+    zip: ph4h-suite.zip

@@ -1,0 +1,19 @@
+apiVersion: itb-plugins/v1
+instance: http://localhost:10003
+plugins:
+  fhir-validator:
+    version: 0.3.0
+    repo: https://github.com/OpenTestBed/itb-plugin-fhir-validator
+    commit: 0000000000000000000000000000000000000000
+    services: { fhir-validator: { image: ghcr.io/opentestbed/fhir-validator:0.3.0, hostPort: null } }
+    provides:
+      - { capability: fhir-transform, version: 1.0.0, entrypoint: /itb/transform }
+      - { capability: fhir-validation, version: 1.0.0, entrypoint: /itb/fhir }
+  smart-helper:
+    version: 0.1.0
+    bindings:                     # resolved requires — recorded, reproducible
+      fhir-repository: fhir-server
+      fhir-transform: fhir-validator    # matchbox not installed; validator satisfied it
+domainParameters:
+  fhirValidator: http://fhir-validator:8080/itb/fhir
+  cap_fhir_transform: http://fhir-validator:8080/itb/transform

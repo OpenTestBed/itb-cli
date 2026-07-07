@@ -1,0 +1,18 @@
+{
+  "name": "@opentestbed/itb-cli",
+  "version": "0.1.0",
+  "description": "itb-suite MVP: compile Gherkin -> ITB test suite zip, deploy to a running ITB, execute and poll",
+  "type": "module",
+  "bin": { "itb-suite": "bin/itb-suite.mjs" },
+  "scripts": {
+    "build": "node src/build-compiler.mjs",
+    "compile": "node bin/itb-suite.mjs compile",
+    "test": "node test/compile.test.mjs",
+    "e2e": "node test/e2e.mjs"
+  },
+  "dependencies": {
+    "esbuild": "^0.24.0",
+    "js-yaml": "^4.1.0",
+    "jszip": "^3.10.1"
+  }
+}

@@ -1,0 +1,13 @@
+apiVersion: itb-workbench/v1
+instance:
+  url: http://localhost:10003
+  apiKeys: { community: ${ITB_COMMUNITY_KEY} }   # env-refs only
+target: { domain: gdhcn, specification: icvp-conformance }
+suites:
+  - id: icvp-conformance
+    features: features/icvp/*.feature
+    data: test-data/
+run:
+  select: { scopes: ["https://smart.who.int/trust/ActorDefinition-Receiver|0.1.0"] }
+  systems: { GdhcnConsumer: ${SUT_SYSTEM_KEY} }
+# No plugin list here: the instance reports what it provides; the manager reconciles.
