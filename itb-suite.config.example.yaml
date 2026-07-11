@@ -1,22 +1,32 @@
-# itb-suite MVP config. Copy to itb-suite.config.yaml (gitignored) and fill in.
-# ${VARS} are read from the environment — keep secrets out of the file.
+# itb-suite MVP config. Copy to itb-suite.config.yaml (gitignored).
 #
-# Where the keys live in the ITB UI (http://localhost:10003):
-#   communityApiKey   : Community admin -> your community -> "API keys" panel
-#   organisationApiKey: same panel (organisation entry), or the organisation's detail page
-#   specification     : Domain -> Specification -> details, field "API key"
-#   system            : Organisation -> Systems -> your system -> "API key info"
-#   actor             : Domain -> Specification -> Actors -> SUT actor -> API key
+# MINIMAL START — two values:
+#   ITB_MASTER_KEY : the instance master key (itb-starter default: master-api-key;
+#                    from AUTOMATION_API_MASTER_KEY in docker-compose / .env)
+#   ITB_SPEC_KEY   : the target specification's API key (Domain -> Specification -> API key)
+# Everything else is auto-resolved at run time:
+#   community/organisation keys  <- master key (by name; first one if unnamed)
+#   SUT actor key                <- the deploy response
+#   system                       <- auto-created via the organisation key
+#   conformance statement        <- ensured via PUT /conformance/{system}/{actor}
+# Explicit keys below OVERRIDE auto-resolution when set.
 instance:
   baseUrl: http://localhost:10003
-  communityApiKey: ${ITB_COMMUNITY_KEY}
-  organisationApiKey: ${ITB_ORG_KEY}
+  masterApiKey: ${ITB_MASTER_KEY}
+  communityApiKey: ${ITB_COMMUNITY_KEY}      # optional override
+  organisationApiKey: ${ITB_ORG_KEY}         # optional override
+# On a FRESH instance leave ITB_SPEC_KEY unset and declare names instead —
+# `init`/`run` create the domain + specification via the master key:
+bootstrap:
+  domain: ph4h
+  specification: ph4h-qr
 target:
-  specification: ${ITB_SPEC_KEY}
+  specification: ${ITB_SPEC_KEY}             # optional override (else created from bootstrap)
 execution:
-  system: ${ITB_SYSTEM_KEY}
-  actor: ${ITB_ACTOR_KEY}
+  actorId: User                              # SUT actor id in the suite (default: User)
+  system: ${ITB_SYSTEM_KEY}                  # optional override (else auto-created)
+  actor: ${ITB_ACTOR_KEY}                    # optional override (else from deploy)
 suites:
-  - feature: ../../test-workbench/public/features/ph4h-qr-integration.feature
+  - feature: features/ph4h-qr-integration.feature
     out: out/ph4h
     zip: ph4h-suite.zip

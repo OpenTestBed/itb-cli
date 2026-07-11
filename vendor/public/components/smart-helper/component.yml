@@ -1,0 +1,34 @@
+# Test Image Component: SMART Helper
+# Provides IG loading and SMART-on-FHIR support utilities
+id: smart-helper
+name: SMART Helper
+version: "1.0"
+description: >
+  Helper service for SMART-on-FHIR testing. Supports uploading
+  Implementation Guides and preparing SMART app launch contexts.
+
+docker:
+  image: isipfoundation/smart-helper:latest
+  ports:
+    - "8000:8000"
+  environment: []
+
+healthCheck:
+  method: GET
+  path: /health
+  expect:
+    status: 200
+
+actors:
+  - id: SmartHelper
+    description: SMART-on-FHIR helper service
+
+language: steps.yml
+
+# Scriptlets — reusable TDL functions shipped alongside generated tests.
+# serializeJsonObject.xml is the JSON-composition primitive used by the
+# `transforms via ...` and `validates via ... targeting ...` steps to turn
+# JsonPointer-extracted objects back into valid JSON strings before they hit
+# the wire. See docs/serialize-primitive.md for rationale.
+scriptlets:
+  - serializeJsonObject.xml

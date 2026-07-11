@@ -50,7 +50,7 @@ Sessions → the session → upload the QR → watch the rest run to the MEOW ve
 A non-interactive suite would reach SUCCESS/FAILURE inside the poll window.
 
 What to check in the UI after `deploy`: your specification page — the suite
-`hcert-ph4h-qr-to-meow-medicationoverview-bundle` replaced in place, version
+`track-3-system-utilizes-and-validates-hcert-ph4h-meow` replaced in place, version
 bumped, one test case. Re-run `deploy` after editing the feature file: no manual
 zip, no upload dialog, same suite updated.
 
@@ -79,3 +79,22 @@ vendors.
   `itb suite init` automates this).
 - Component dialects: all enabled by default; narrow with
   `ITB_COMPONENTS=fhir-validator,smart-helper`.
+
+## ITB automation API contract — verified live (latest ITB, 2026-07)
+
+Learned by running `init` against a fresh instance; the client is built around this:
+
+| Operation | Key scope | Notes |
+|---|---|---|
+| `GET /api/rest/communities` | — | **does not exist** (404) — no listing; keys come from creation responses or the UI |
+| `PUT /api/rest/domain` | master | works; returns domain API key |
+| `PUT /api/rest/community` | master | works; **accepts `domain: <domainKey>`** to link at creation (do this — spec management needs it) |
+| `PUT /api/rest/specification` | **community** | master key → 403 "not allowed to manage specifications" |
+| `PUT /api/rest/organisation` | community | works |
+| `PUT /api/rest/system` | **community** (header) + org key in **body** | org key in the header → 403 "not allowed to manage systems through the automation API" — that error means wrong key scope; there is NO UI toggle |
+| `POST /api/rest/testsuite/deploy` | community | replace-in-place with `updateSpecification=true` |
+| `POST /api/rest/tests/start` / `tests/status` | organisation | needs system+actor keys; actor keys ride in the deploy response |
+
+With the correct key scopes there is no manual step left on a fresh instance:
+one `init` with the master key bootstraps everything (domain, community, spec,
+organisation, system, conformance statement).

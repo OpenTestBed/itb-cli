@@ -1,4 +1,8 @@
 node_modules/
-dist/
 out/
 itb-suite.config.yaml
+.itb-state.json
+.itb-stack
+# dist/wb (transpiled parser) and vendor/ ARE committed: they make this repo
+# standalone. Regenerate dist/wb with build-compiler.mjs when the workbench
+# parser changes; refresh vendor/ with vendor-assets in the same situation.

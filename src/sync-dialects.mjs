@@ -16,8 +16,19 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(here, '..');
-const WB = path.resolve(ROOT, '../../test-workbench');
-const yaml = createRequire(path.join(WB, 'package.json'))('js-yaml');
+function findWorkbench(fromDir) {
+  const candidates = [
+    process.env.ITB_WORKBENCH_PATH,
+    path.resolve(fromDir, '../itb-plugin-authoring/app'), // in-ecosystem authoring plugin (canonical)
+    path.resolve(fromDir, '../../test-workbench'),   // legacy sibling checkout
+    path.resolve(fromDir, '../test-workbench'),      // flat clone layout
+  ].filter(Boolean);
+  for (const c of candidates) if (fs.existsSync(path.join(c, 'src/parser/gherkinParser.ts'))) return c;
+  throw new Error('workbench sources not found — expected itb-plugin-authoring/app next to itb-cli, or set ITB_WORKBENCH_PATH');
+}
+const WB = findWorkbench(ROOT);
+const DEPS = fs.existsSync(path.join(WB, 'node_modules', 'js-yaml')) ? WB : path.resolve(ROOT, 'vendor');
+const yaml = createRequire(path.join(DEPS, 'package.json'))('js-yaml');
 
 const pluginDirs = process.argv.slice(2).length
   ? process.argv.slice(2).map(p => path.resolve(p))

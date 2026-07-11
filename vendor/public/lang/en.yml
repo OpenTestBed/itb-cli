@@ -1,0 +1,855 @@
+version: 1
+locale: en
+
+# ====================================================================
+# FHIR Gherkin Dialect — Core Language
+# ====================================================================
+# All values in "quotes". Reserved names in assertions:
+#   "response status", "response", "validation errors",
+#   "validation warnings", "validation outcome", "validation severity"
+# ====================================================================
+
+steps:
+
+  # ==================================================================
+  # 1. ACTORS
+  # ==================================================================
+  # Roles (matches ITB/GITB vocabulary — SUT is a reserved word):
+  #   SUT     — system under test; the matrix measures conformance for this actor.
+  #             A test plan may declare multiple SUT actors (peer-to-peer testing).
+  #   infra   — required to run the test but not measured (mocks, simulators, proxies).
+  #
+  # Maps to GITB TDL role attribute: SUT → role="SUT", infra → role="SIMULATED".
+  # A 'calibration' role is planned but deferred until ITB can carry the
+  # distinction natively (the GITB XSD rejects unknown attributes).
+  #
+  # Phrases:
+  #   <Actor> is the system under test [at <endpoint>] [as defined by <canonical>]   -> SUT
+  #   <Actor> is available [as "<name>"] [at <endpoint>] [as defined by <canonical>] -> infra (default)
+  #   <Actor> is infrastructure [at <endpoint>] [as defined by <canonical>]          -> infra (explicit)
+
+  - match: '^([A-Za-z][A-Za-z0-9_]*) is the system under test (?:on|at) "?(https?://[^"\s]+)"? as defined by "?(https?://[^"\s]+)"?$'
+    actions:
+      - declareActor: { id: '$1', role: 'SUT', endpoint: '$2', canonical: '$3' }
+      - assign: { to: '$1Base', value: '"$2"' }
+
+  - match: '^([A-Za-z][A-Za-z0-9_]*) is the system under test (?:on|at) "?(https?://[^"\s]+)"?$'
+    actions:
+      - declareActor: { id: '$1', role: 'SUT', endpoint: '$2' }
+      - assign: { to: '$1Base', value: '"$2"' }
+
+  - match: '^([A-Za-z][A-Za-z0-9_]*) is the system under test as defined by "?(https?://[^"\s]+)"?$'
+    actions:
+      - declareActor: { id: '$1', role: 'SUT', canonical: '$2' }
+
+  - match: '^([A-Za-z][A-Za-z0-9_]*) is the system under test$'
+    actions:
+      - declareActor: { id: '$1', role: 'SUT' }
+
+  - match: '^([A-Za-z][A-Za-z0-9_]*) is available (?:on|at) "?(https?://[^"\s]+)"? as defined by "?(https?://[^"\s]+)"?$'
+    actions:
+      - declareActor: { id: '$1', role: 'infra', endpoint: '$2', canonical: '$3' }
+      - assign: { to: '$1Base', value: '"$2"' }
+
+  - match: '^([A-Za-z][A-Za-z0-9_]*) is available (?:on|at) "?(https?://[^"\s]+)"?$'
+    actions:
+      - declareActor: { id: '$1', role: 'infra', endpoint: '$2' }
+      - assign: { to: '$1Base', value: '"$2"' }
+
+  - match: '^([A-Za-z][A-Za-z0-9_]*) is available as defined by "?(https?://[^"\s]+)"?$'
+    actions:
+      - declareActor: { id: '$1', role: 'infra', canonical: '$2' }
+
+  - match: '^([A-Za-z][A-Za-z0-9_]*) is available as "([^"]+)"$'
+    actions:
+      - declareActor: { id: '$1', role: 'infra', name: '$2' }
+
+  - match: '^([A-Za-z][A-Za-z0-9_]*) is available$'
+    actions:
+      - declareActor: { id: '$1', role: 'infra' }
+
+  - match: '^([A-Za-z][A-Za-z0-9_]*) is infrastructure (?:on|at) "?(https?://[^"\s]+)"? as defined by "?(https?://[^"\s]+)"?$'
+    actions:
+      - declareActor: { id: '$1', role: 'infra', endpoint: '$2', canonical: '$3' }
+      - assign: { to: '$1Base', value: '"$2"' }
+
+  - match: '^([A-Za-z][A-Za-z0-9_]*) is infrastructure (?:on|at) "?(https?://[^"\s]+)"?$'
+    actions:
+      - declareActor: { id: '$1', role: 'infra', endpoint: '$2' }
+      - assign: { to: '$1Base', value: '"$2"' }
+
+  - match: '^([A-Za-z][A-Za-z0-9_]*) is infrastructure as defined by "?(https?://[^"\s]+)"?$'
+    actions:
+      - declareActor: { id: '$1', role: 'infra', canonical: '$2' }
+
+  - match: '^([A-Za-z][A-Za-z0-9_]*) is infrastructure$'
+    actions:
+      - declareActor: { id: '$1', role: 'infra' }
+
+  # ==================================================================
+  # 2. HTTP REQUESTS
+  # ==================================================================
+  # <Actor> posts|puts to <Actor> at "<path>" with: (docstring)
+  # <Actor> patches on <Actor> at "<path>" with: (docstring)
+  # <Actor> deletes on <Actor> at "<path>"
+  # <Actor> gets "<url>" as "<variable>"
+  # set header "<name>" to "<value>"
+
+  # Set a custom header (persists for subsequent requests)
+  - match: '^set header "([^"]+)" to "([^"]+)"$'
+    actions:
+      - assign: { to: 'jsonHeaders{$1}', value: '"$2"' }
+
+  # POST with body
+  - match: '^([A-Za-z][A-Za-z0-9_]*) posts to ([A-Za-z][A-Za-z0-9_]*) at "([^"]+)" with:$'
+    actions:
+      - assign: { to: 'jsonHeaders{Content-Type}', value: '"application/json"' }
+      - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
+      - send:
+          id: 'lastRequest'
+          desc: 'POST'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$2'
+          inputs:
+            uri: 'concat($$2Base, "$3")'
+            method: '"POST"'
+            headers: '$jsonHeaders'
+            body: '$docString'
+
+  # Repeated POST: <Actor> posts "<bodyVar>" to <Actor> at "<path>" <N> times, manually paced
+  # bodyVar is a previously-set variable holding a JSON body. N is a literal or $var.
+  # Between dispense requests, the operator gets a "Click Continue when ready"
+  # prompt — pace it by hand. (TDL has no sleep step in this ITB; manual
+  # pacing keeps the test deterministic for asynchronous SUTs like Spenser.)
+  - match: '^([A-Za-z][A-Za-z0-9_]*) posts "([A-Za-z_][A-Za-z0-9_]*)" to ([A-Za-z][A-Za-z0-9_]*) at "([^"]+)" ([0-9]+|\$[A-Za-z_][A-Za-z0-9_]*) times, paced manually$'
+    actions:
+      - assign: { to: 'jsonHeaders{Content-Type}', value: '"application/json"' }
+      - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
+      - repeat:
+          count: '$5'
+          do:
+            - send:
+                id: 'lastRequest'
+                desc: 'POST (loop)'
+                handler: 'HttpMessagingV2'
+                from: '$1'
+                to: '$3'
+                inputs:
+                  uri: 'concat($$3Base, "$4")'
+                  method: '"POST"'
+                  headers: '$jsonHeaders'
+                  body: '$$2'
+            - call:
+                path: scriptlets/instructUser.xml
+                inputs:
+                  step: '"inform"'
+                  actor: '"$1"'
+                  message: '"Dispense in progress — click Continue when the device finishes and is ready for the next request."'
+
+  # PUT with body
+  - match: '^([A-Za-z][A-Za-z0-9_]*) puts to ([A-Za-z][A-Za-z0-9_]*) at "([^"]+)" with:$'
+    actions:
+      - assign: { to: 'jsonHeaders{Content-Type}', value: '"application/json"' }
+      - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
+      - send:
+          id: 'lastRequest'
+          desc: 'PUT'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$2'
+          inputs:
+            uri: 'concat($$2Base, "$3")'
+            method: '"PUT"'
+            headers: '$jsonHeaders'
+            body: '$docString'
+
+  # PATCH with body
+  - match: '^([A-Za-z][A-Za-z0-9_]*) patches on ([A-Za-z][A-Za-z0-9_]*) at "([^"]+)" with:$'
+    actions:
+      - assign: { to: 'jsonHeaders{Content-Type}', value: '"application/json-patch+json"' }
+      - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
+      - send:
+          id: 'lastRequest'
+          desc: 'PATCH'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$2'
+          inputs:
+            uri: 'concat($$2Base, "$3")'
+            method: '"PATCH"'
+            headers: '$jsonHeaders'
+            body: '$docString'
+
+  # DELETE
+  - match: '^([A-Za-z][A-Za-z0-9_]*) deletes on ([A-Za-z][A-Za-z0-9_]*) at "([^"]+)"$'
+    actions:
+      - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
+      - send:
+          id: 'lastRequest'
+          desc: 'DELETE'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$2'
+          inputs:
+            uri: 'concat($$2Base, "$3")'
+            method: '"DELETE"'
+            headers: '$jsonHeaders'
+
+  # GET and store result — relative path via the receiving actor's base URL.
+  # Mirrors the POST/PUT/PATCH/DELETE pattern. Use this when the URL is
+  # relative to an actor's declared endpoint (the actor must have been
+  # declared with `at "<endpoint>"`).
+  - match: '^([A-Za-z][A-Za-z0-9_]*) gets from ([A-Za-z][A-Za-z0-9_]*) at "([^"]+)" as "([A-Za-z_][A-Za-z0-9_]*)"$'
+    actions:
+      - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
+      - send:
+          id: 'lastRequest'
+          desc: 'GET'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$2'
+          inputs:
+            uri: 'concat($$2Base, "$3")'
+            method: '"GET"'
+            headers: '$jsonHeaders'
+      - assign: { to: '$4', value: '$lastRequest{response}{body}' }
+
+  # GET and store result — absolute URL form. CAVEAT: TDL string literals do
+  # NOT interpolate $variables, so writing `gets "$ActorBase/path"` won't work
+  # at runtime — use the `gets from <Actor> at "<path>"` form above instead.
+  # This form is for fully-resolved URLs that are literal at compile time.
+  - match: '^([A-Za-z][A-Za-z0-9_]*) gets "([^"]+)" as "([A-Za-z_][A-Za-z0-9_]*)"$'
+    actions:
+      - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
+      - send:
+          id: 'lastRequest'
+          desc: 'GET'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          inputs:
+            uri: '"$2"'
+            method: '"GET"'
+            headers: '$jsonHeaders'
+      - assign: { to: '$3', value: '$lastRequest{response}{body}' }
+
+  # ==================================================================
+  # 3. VARIABLES
+  # ==================================================================
+  # set "<variable>" to "<value>"
+  # set "<variable>" to: (docstring)
+  # extract "<pointer>" [from "<variable>"] as "<variable>"
+
+  - match: '^set "([A-Za-z_][A-Za-z0-9_]*)" to "([^"]+)"$'
+    actions:
+      - assign: { to: '$1', value: '"$2"' }
+
+  - match: '^set "([A-Za-z_][A-Za-z0-9_]*)" to:$'
+    actions:
+      - assign: { to: '$1', value: '$docString' }
+
+  # set "<variable>" to now                          -> current timestamp (ISO 8601)
+  # set "<variable>" to now with format "<pattern>"  -> current timestamp, custom pattern
+  # Uses GITB's TokenGenerator. Default pattern is a FHIR-valid instant/dateTime
+  # (yyyy-MM-dd'T'HH:mm:ss.SSSXXX, e.g. 2026-07-10T13:45:00.123+00:00).
+  - match: '^set "([A-Za-z_][A-Za-z0-9_]*)" to now with format "([^"]+)"$'
+    actions:
+      - process:
+          handler: 'TokenGenerator'
+          operation: 'timestamp'
+          output: '$1'
+          inputs: { format: '"$2"' }
+
+  - match: '^set "([A-Za-z_][A-Za-z0-9_]*)" to now$'
+    actions:
+      - process:
+          handler: 'TokenGenerator'
+          operation: 'timestamp'
+          output: '$1'
+          inputs: { format: "\"yyyy-MM-dd'T'HH:mm:ss.SSSXXX\"" }
+
+  - match: '^extract "([^"]+)" from "([A-Za-z_][A-Za-z0-9_]*)" as "([A-Za-z_][A-Za-z0-9_]*)"$'
+    actions:
+      - process:
+          handler: 'JsonPointerProcessor'
+          operation: 'process'
+          output: '$3'
+          inputs: { content: '$$2', pointer: '"$1"' }
+
+  - match: '^extract "([^"]+)" as "([A-Za-z_][A-Za-z0-9_]*)"$'
+    actions:
+      - process:
+          handler: 'JsonPointerProcessor'
+          operation: 'process'
+          output: '$2'
+          inputs: { content: '$lastRequest{response}{body}', pointer: '"$1"' }
+
+  # ==================================================================
+  # 4. WAIT / RECEIVE
+  # ==================================================================
+  # <Actor> waits for <Actor> [within <number> seconds]
+  # <Actor> waits for <Actor> matching "<pattern>" [within <number> seconds]
+
+  # Wait for any message from an actor (with timeout)
+  - match: '^([A-Za-z][A-Za-z0-9_]*) waits for ([A-Za-z][A-Za-z0-9_]*) within ([0-9]+) seconds$'
+    actions:
+      - receive:
+          id: 'lastReceived'
+          desc: 'Wait for message'
+          handler: 'HttpMessagingV2'
+          from: '$2'
+          to: '$1'
+          inputs: { timeout: '"$3"' }
+
+  # Wait for any message from an actor (default timeout)
+  - match: '^([A-Za-z][A-Za-z0-9_]*) waits for ([A-Za-z][A-Za-z0-9_]*)$'
+    actions:
+      - receive:
+          id: 'lastReceived'
+          desc: 'Wait for message'
+          handler: 'HttpMessagingV2'
+          from: '$2'
+          to: '$1'
+          inputs: { timeout: '"60"' }
+
+  # ==================================================================
+  # 5. CONDITIONALS (single-line guard)
+  # ==================================================================
+  # if "<variable>" is not empty then "<variable>" should be "<value>"
+  # if "<variable>" is "<value>" then "<variable>" should be "<value>"
+
+  # Conditional: if not empty, then assert equals
+  - match: '^if "([^"]+)" is not empty then "([^"]+)" should be "([^"]+)"$'
+    actions:
+      - verify:
+          handler: 'ExpressionValidator'
+          desc: 'Conditional assertion'
+          inputs: { expression: '($$1 = "") or ($$2 = "$3")' }
+
+  # Conditional: if equals, then assert equals
+  - match: '^if "([^"]+)" is "([^"]+)" then "([^"]+)" should be "([^"]+)"$'
+    actions:
+      - verify:
+          handler: 'ExpressionValidator'
+          desc: 'Conditional assertion'
+          inputs: { expression: 'not($$1 = "$2") or ($$3 = "$4")' }
+
+  # Conditional: if not empty, then assert contains
+  - match: '^if "([^"]+)" is not empty then "([^"]+)" should contain "([^"]+)"$'
+    actions:
+      - verify:
+          handler: 'ExpressionValidator'
+          desc: 'Conditional assertion'
+          inputs: { expression: '($$1 = "") or contains($$2, "$3")' }
+
+  # ==================================================================
+  # 5b. TIMING
+  # ==================================================================
+  # wait <N> seconds   — N is a literal int or a $variable
+  - match: '^wait ([0-9]+|\$[A-Za-z_][A-Za-z0-9_]*) seconds$'
+    actions:
+      - wait: { durationMs: '$1 * 1000' }
+
+  # ==================================================================
+  # 6. ASSERTIONS
+  # ==================================================================
+  # "<variable>" should be "<value>"
+  # "<variable>" should not be "<value>"
+  # "<variable>" should contain "<value>"
+  # "<variable>" should not be empty
+  # "<lhs>" should equal "<rhs>" minus "<n>"   — numeric: assert lhs == rhs - n
+  # Reserved names: "response status", "response", "validation errors", etc.
+
+  - match: '^"([^"]+)" should be "([^"]+)"$'
+    actions:
+      - verify:
+          handler: 'StringValidator'
+          desc: 'Equals'
+          inputs: { actualstring: '$$1', expectedstring: '"$2"' }
+
+  # Numeric arithmetic: assert that lhs equals (rhs - n).
+  # All three operands are coerced to number(); n may be a literal or "$var".
+  - match: '^"([^"]+)" should equal "([^"]+)" minus "([^"]+)"$'
+    actions:
+      - verify:
+          handler: 'ExpressionValidator'
+          desc: 'Numeric equals minus'
+          inputs: { expression: 'number($$1) = number($$2) - number($3)' }
+
+  - match: '^"([^"]+)" should not be "([^"]+)"$'
+    actions:
+      - verify:
+          handler: 'ExpressionValidator'
+          desc: 'Not equals'
+          inputs: { expression: 'not($$1 = "$2")' }
+
+  - match: '^"([^"]+)" should contain "([^"]+)"$'
+    actions:
+      - verify:
+          handler: 'StringValidator'
+          desc: 'Contains'
+          inputs: { actualstring: '$$1', expectedstring: '"$2"', matchType: '"contains"' }
+
+  - match: '^"([^"]+)" should not contain "([^"]+)"$'
+    actions:
+      - verify:
+          handler: 'ExpressionValidator'
+          desc: 'Does not contain'
+          inputs: { expression: 'not(contains($$1, "$2"))' }
+
+  - match: '^"([^"]+)" should not be empty$'
+    actions:
+      - verify:
+          handler: 'ExpressionValidator'
+          desc: 'Not empty'
+          inputs: { expression: 'string-length($$1) > 0' }
+
+  # "<var>" should be a valid <Type> resource
+  # Validates the resource against the base FHIR profile for the given type
+  # (http://hl7.org/fhir/StructureDefinition/<Type>) and asserts no errors.
+  - match: '^"([^"]+)" should be a valid (\S+) resource$'
+    actions:
+      - assign:
+          to: 'fhirValidatorHeaders{Content-Type}'
+          value: '"application/json"'
+      - assign:
+          to: 'fhirValidatorHeaders{Accept}'
+          value: '"application/json"'
+      - assign:
+          to: 'validateTplParams{resource}'
+          value: '$$1'
+      - assign:
+          to: 'validateTplParams{resourceType}'
+          value: '"$2"'
+      - process:
+          handler: 'TemplateProcessor'
+          operation: 'process'
+          output: 'validateBody'
+          inputs:
+            syntax: '"freemarker"'
+            template: "'{ \"input\": [ { \"name\": \"contentToValidate\", \"value\": \"${resource?json_string}\", \"embeddingMethod\": \"STRING\" }, { \"name\": \"profiles\", \"value\": \"http://hl7.org/fhir/StructureDefinition/${resourceType}\", \"embeddingMethod\": \"STRING\" } ] }'"
+            parameters: '$validateTplParams'
+      - send:
+          id: 'lastRequest'
+          desc: 'Validate against base FHIR profile for $2'
+          handler: 'HttpMessagingV2'
+          inputs:
+            uri: 'concat($FHIRValidatorBase, "/itb/fhir/validate")'
+            method: '"POST"'
+            headers: '$fhirValidatorHeaders'
+            body: '$validateBody'
+      - process:
+          handler: 'JsonPointerProcessor'
+          operation: 'process'
+          output: 'validationErrors'
+          inputs:
+            content: '$lastRequest{response}{body}'
+            pointer: '"/report/context/0/value"'
+      - verify:
+          handler: 'StringValidator'
+          desc: '$1 is a valid $2 resource'
+          inputs:
+            actualstring: '$validationErrors'
+            expectedstring: '"0"'
+
+  # "<var>" conforms to "<canonical>"
+  # Validates the resource against an arbitrary profile canonical URL.
+  # Unlike `should be a valid <Type> resource` (which uses the base FHIR
+  # profile), this accepts any StructureDefinition canonical — e.g. an
+  # IHE MEOW, IPS, or IG-specific profile. Fails if the validator reports
+  # any errors.
+  - match: '^"([^"]+)" conforms to "([^"]+)"$'
+    actions:
+      - assign:
+          to: 'conformHeaders{Content-Type}'
+          value: '"application/json"'
+      - assign:
+          to: 'conformHeaders{Accept}'
+          value: '"application/json"'
+      # $$1 must be a plain string containing the FHIR resource JSON text.
+      # /output/0/value from a prior /itb/transform response fits that shape
+      # already (GITB envelope values are STRING embedding). Do not extract
+      # nested objects via JsonPointer and pass them here — ITB's coercion
+      # at scriptlet call boundaries doesn't support it.
+      - assign:
+          to: 'conformTplParams{resource}'
+          value: '$$1'
+      - assign:
+          to: 'conformTplParams{profile}'
+          value: '"$2"'
+      - process:
+          handler: 'TemplateProcessor'
+          operation: 'process'
+          output: 'conformBody'
+          inputs:
+            syntax: '"freemarker"'
+            template: "'{ \"input\": [ { \"name\": \"contentToValidate\", \"value\": \"${resource?json_string}\", \"embeddingMethod\": \"STRING\" }, { \"name\": \"profiles\", \"value\": \"${profile?json_string}\", \"embeddingMethod\": \"STRING\" } ] }'"
+            parameters: '$conformTplParams'
+      - send:
+          id: 'lastRequest'
+          desc: 'Validate $1 conforms to $2'
+          handler: 'HttpMessagingV2'
+          inputs:
+            uri: 'concat($FHIRValidatorBase, "/itb/fhir/validate")'
+            method: '"POST"'
+            headers: '$conformHeaders'
+            body: '$conformBody'
+      - process:
+          handler: 'JsonPointerProcessor'
+          operation: 'process'
+          output: 'validationErrors'
+          inputs:
+            content: '$lastRequest{response}{body}'
+            pointer: '"/report/context/0/value"'
+      - verify:
+          handler: 'StringValidator'
+          desc: '$1 conforms to $2'
+          inputs:
+            actualstring: '$validationErrors'
+            expectedstring: '"0"'
+
+  # ==================================================================
+  # 7. INTERACTION
+  # ==================================================================
+  # <Actor> is informed "<message>" [with "<content>"]
+  # <Actor> is asked for "<variable>" [with "<message>"]
+
+  - match: '^([A-Za-z][A-Za-z0-9_]*) is informed "([^"]+)" with "([^"]+)"$'
+    actions:
+      - call:
+          path: scriptlets/instructUser.xml
+          inputs: { step: '"inform"', actor: '"$1"', message: '"$2"', content: '"$3"' }
+
+  - match: '^([A-Za-z][A-Za-z0-9_]*) is informed "(.+)"$'
+    actions:
+      - call:
+          path: scriptlets/instructUser.xml
+          inputs: { step: '"inform"', actor: '"$1"', message: '"$2"' }
+
+  - match: '^([A-Za-z][A-Za-z0-9_]*) is asked for "([A-Za-z_][A-Za-z0-9_]*)" with "([^"]+)"$'
+    actions:
+      - declareVariable: { name: '$2', varType: 'string' }
+      - interact:
+          id: 'ask'
+          desc: '$3'
+          inputTitle: '$3'
+          requests:
+            - { desc: '$3', name: '$2', inputType: 'TEXT', required: true, variable: '$$2' }
+
+  - match: '^([A-Za-z][A-Za-z0-9_]*) is asked for "([A-Za-z_][A-Za-z0-9_]*)"$'
+    actions:
+      - declareVariable: { name: '$2', varType: 'string' }
+      - interact:
+          id: 'ask'
+          desc: 'Provide input'
+          inputTitle: 'Provide input'
+          requests:
+            - { desc: 'Provide input:', name: '$2', inputType: 'TEXT', required: true, variable: '$$2' }
+
+  # ==================================================================
+  # 8. LOGGING
+  # ==================================================================
+  # log "<message>"
+
+  - match: '^log "([^"]+)"$'
+    actions:
+      - log: '"$1"'
+
+  # ==================================================================
+  # 9. FHIR IG MANAGEMENT & TRANSFORM
+  # ==================================================================
+  # Steps that drive the GITB /itb/{igManager,transform,loadResource}/process
+  # endpoints on a FHIR validator. Together they cover the load-IG →
+  # parse-FML → register-StructureMap → transform → validate pipeline used
+  # by the validator-workbench SPA.
+  #
+  # <Actor> loads IG "<id>#<version>|<url>|<path>" on <Actor>
+  # <Actor> parses FML "<fmlVar>" on <Actor> as "<smVar>"
+  # <Actor> registers StructureMap "<smVar>" on <Actor>
+  # <Actor> transforms "<inVar>" on <Actor> with map "<canonical>" as "<outVar>"
+
+  # Load an IG package on the validator (NPM id, tarball URL, or local path).
+  - match: '^([A-Za-z][A-Za-z0-9_]*) loads IG "([^"]+)" on ([A-Za-z][A-Za-z0-9_]*)$'
+    actions:
+      - assign:
+          to: 'loadIgHeaders{Content-Type}'
+          value: '"application/json"'
+      - assign:
+          to: 'loadIgHeaders{Accept}'
+          value: '"application/json"'
+      - assign:
+          to: 'loadIgTplParams{ig}'
+          value: '"$2"'
+      - process:
+          handler: 'TemplateProcessor'
+          operation: 'process'
+          output: 'loadIgBody'
+          inputs:
+            syntax: '"freemarker"'
+            template: "'{ \"operation\": \"loadIG\", \"input\": [ { \"name\": \"ig\", \"value\": \"${ig?json_string}\", \"embeddingMethod\": \"STRING\" } ] }'"
+            parameters: '$loadIgTplParams'
+      - send:
+          id: 'lastRequest'
+          desc: 'Load IG $2'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$3'
+          inputs:
+            uri: 'concat($$3Base, "/itb/igManager/process")'
+            method: '"POST"'
+            headers: '$loadIgHeaders'
+            body: '$loadIgBody'
+
+  # Parse a FHIR Mapping Language (FML) source into a StructureMap resource.
+  # <fmlVar> holds the FML text (set via `set "..." to:` or `gets` from a URL);
+  # the parsed StructureMap JSON is stored in <smVar>.
+  - match: '^([A-Za-z][A-Za-z0-9_]*) parses FML "([A-Za-z_][A-Za-z0-9_]*)" on ([A-Za-z][A-Za-z0-9_]*) as "([A-Za-z_][A-Za-z0-9_]*)"$'
+    actions:
+      - assign:
+          to: 'parseFmlHeaders{Content-Type}'
+          value: '"application/json"'
+      - assign:
+          to: 'parseFmlHeaders{Accept}'
+          value: '"application/json"'
+      - assign:
+          to: 'parseFmlTplParams{content}'
+          value: '$$2'
+      - assign:
+          to: 'parseFmlTplParams{name}'
+          value: '"$2"'
+      - process:
+          handler: 'TemplateProcessor'
+          operation: 'process'
+          output: 'parseFmlBody'
+          inputs:
+            syntax: '"freemarker"'
+            template: "'{ \"operation\": \"parse\", \"input\": [ { \"name\": \"content\", \"value\": \"${content?json_string}\", \"embeddingMethod\": \"STRING\" }, { \"name\": \"name\", \"value\": \"${name?json_string}\", \"embeddingMethod\": \"STRING\" } ] }'"
+            parameters: '$parseFmlTplParams'
+      - send:
+          id: 'lastRequest'
+          desc: 'Parse FML $2'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$3'
+          inputs:
+            uri: 'concat($$3Base, "/itb/transform/process")'
+            method: '"POST"'
+            headers: '$parseFmlHeaders'
+            body: '$parseFmlBody'
+      - process:
+          handler: 'JsonPointerProcessor'
+          operation: 'process'
+          output: '$4'
+          inputs:
+            content: '$lastRequest{response}{body}'
+            pointer: '"/output/0/value"'
+
+  # Register a StructureMap (or any FHIR resource) on the validator so it can
+  # be referenced by canonical URL in subsequent transforms/validations.
+  # Replaces any existing resource at the same canonical.
+  - match: '^([A-Za-z][A-Za-z0-9_]*) registers StructureMap "([A-Za-z_][A-Za-z0-9_]*)" on ([A-Za-z][A-Za-z0-9_]*)$'
+    actions:
+      - assign:
+          to: 'regSmHeaders{Content-Type}'
+          value: '"application/json"'
+      - assign:
+          to: 'regSmHeaders{Accept}'
+          value: '"application/json"'
+      # $$2 must be a plain string containing the StructureMap JSON text
+      # (typically /output/0/value from a prior "parses FML" step).
+      - assign:
+          to: 'regSmTplParams{content}'
+          value: '$$2'
+      - process:
+          handler: 'TemplateProcessor'
+          operation: 'process'
+          output: 'regSmBody'
+          inputs:
+            syntax: '"freemarker"'
+            template: "'{ \"operation\": \"loadResource\", \"input\": [ { \"name\": \"content\", \"value\": \"${content?json_string}\", \"embeddingMethod\": \"STRING\" }, { \"name\": \"replace\", \"value\": \"true\", \"embeddingMethod\": \"STRING\" } ] }'"
+            parameters: '$regSmTplParams'
+      - send:
+          id: 'lastRequest'
+          desc: 'Register StructureMap $2'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$3'
+          inputs:
+            uri: 'concat($$3Base, "/itb/loadResource/process")'
+            method: '"POST"'
+            headers: '$regSmHeaders'
+            body: '$regSmBody'
+
+  # Run a StructureMap transformation on the validator. <inVar> holds the
+  # input resource JSON, <canonical> is the StructureMap URL (which must
+  # have been registered), <outVar> receives the transformed resource JSON.
+  - match: '^([A-Za-z][A-Za-z0-9_]*) transforms "([A-Za-z_][A-Za-z0-9_]*)" on ([A-Za-z][A-Za-z0-9_]*) with map "([^"]+)" as "([A-Za-z_][A-Za-z0-9_]*)"$'
+    actions:
+      # Fail fast with a clear verdict when the input variable is empty.
+      # Without this, the validator's requireInput reports a misleading
+      # "Missing required input: content" only at the HTTP call — the actual
+      # cause is usually an upstream extract that silently matched nothing.
+      - verify:
+          handler: 'ExpressionValidator'
+          desc: 'Transform input "$2" is non-empty (empty means an upstream extract found nothing)'
+          inputs: { expression: 'not($$2 = "")' }
+      - assign:
+          to: 'transformHeaders{Content-Type}'
+          value: '"application/json"'
+      - assign:
+          to: 'transformHeaders{Accept}'
+          value: '"application/json"'
+      # $$2 must be a plain string containing the FHIR resource JSON text
+      # (not a JsonPointer-extracted nested object — see the "extract" step
+      # and gdhcn-helper's `hcert_inner_json` field). ${content?json_string}
+      # then escapes it for embedding in the envelope's value field.
+      - assign:
+          to: 'transformTplParams{content}'
+          value: '$$2'
+      - assign:
+          to: 'transformTplParams{map}'
+          value: '"$4"'
+      - process:
+          handler: 'TemplateProcessor'
+          operation: 'process'
+          output: 'transformBody'
+          inputs:
+            syntax: '"freemarker"'
+            template: "'{ \"operation\": \"transform\", \"input\": [ { \"name\": \"content\", \"value\": \"${content?json_string}\", \"embeddingMethod\": \"STRING\" }, { \"name\": \"map\", \"value\": \"${map?json_string}\", \"embeddingMethod\": \"STRING\" }, { \"name\": \"contentType\", \"value\": \"application/fhir+json\", \"embeddingMethod\": \"STRING\" } ] }'"
+            parameters: '$transformTplParams'
+      - send:
+          id: 'lastRequest'
+          desc: 'Transform $2 with map $4'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$3'
+          inputs:
+            uri: 'concat($$3Base, "/itb/transform/process")'
+            method: '"POST"'
+            headers: '$transformHeaders'
+            body: '$transformBody'
+      - process:
+          handler: 'JsonPointerProcessor'
+          operation: 'process'
+          output: '$5'
+          inputs:
+            content: '$lastRequest{response}{body}'
+            pointer: '"/output/0/value"'
+
+  # ==================================================================
+  # 10. SMART-HELPER (transform + /validate proxy)
+  # ==================================================================
+  # Two steps for the SMART Helper microservice endpoints NOT already
+  # covered by the smart-helper component extension (which supplies the
+  # `loads IG "…" target "…" on <Actor>` and HAPI-direct `validates "…"
+  # against "…" on <Actor>` verbs). Namely:
+  #   • /transform — smart-helper StructureMap execution
+  #   • /validate  — smart-helper's own validation proxy that wraps
+  #                  {resource, profile_url, host} and delegates to a
+  #                  configured FHIR backend
+
+  # Transform a resource via SMART Helper's /transform endpoint.
+  # Uses a `?source=<canonical>` query param to select the StructureMap
+  # and posts the resource JSON as the body. Result is extracted from
+  # the response's /result field. DIFFERENT from `transforms … on …`
+  # (§9) which uses the GITB /itb/transform/process envelope.
+  # Fix note (was broken): $$2 (e.g. innerContent from a JsonPointer
+  # extraction) is a Map, and Freemarker `${obj}` calls Map.toString →
+  # `{k=v}` — not JSON. `serializeJsonObject` (smart-helper scriptlet)
+  # walks the value tree and emits RFC 8259 JSON. See docs/serialize-
+  # primitive.md.
+  - match: '^([A-Za-z][A-Za-z0-9_]*) transforms "([A-Za-z_][A-Za-z0-9_]*)" via ([A-Za-z][A-Za-z0-9_]*) with map "([^"]+)" as "([A-Za-z_][A-Za-z0-9_]*)"$'
+    actions:
+      - assign:
+          to: 'shTransformHeaders{Content-Type}'
+          value: '"application/fhir+json"'
+      - assign:
+          to: 'shTransformHeaders{Accept}'
+          value: '"application/json"'
+      - assign:
+          to: 'shTransformQuery{source}'
+          value: '"$4"'
+      - call:
+          path: 'scriptlets/serializeJsonObject.xml'
+          output: 'serializedObj'
+          inputs:
+            input: '$$2'
+      - assign:
+          to: 'shTransformBody'
+          value: '$serializedObj{jsonString}'
+      - send:
+          id: 'lastRequest'
+          desc: 'SMART Helper /transform via $4'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$3'
+          inputs:
+            uri: 'concat($$3Base, "/transform")'
+            method: '"POST"'
+            headers: '$shTransformHeaders'
+            parameters: '$shTransformQuery'
+            body: '$shTransformBody'
+      - process:
+          handler: 'JsonPointerProcessor'
+          operation: 'process'
+          output: '$5'
+          inputs:
+            content: '$lastRequest{response}{body}'
+            pointer: '"/result"'
+
+  # Validate a resource via SMART Helper's /validate endpoint. Wraps
+  # the resource + profile canonical + target FHIR host into a
+  # {"resource":…,"profile_url":…,"host":…} envelope. This is the
+  # endpoint the hand-written hcert-icvp test uses — DISTINCT from
+  # the HAPI-direct `validates … via <FHIRServer>` form (no `targeting`)
+  # and from the ITB `"<var>" conforms to "<canonical>"` form.
+  # Fix note (was broken): $$2 is a Map (result of transform), and
+  # Freemarker `${resource}` calls Map.toString → invalid JSON envelope.
+  # `serializeJsonObject` produces proper JSON for the resource field;
+  # profile and host are scalar strings and are safe inline. See
+  # docs/serialize-primitive.md.
+  - match: '^([A-Za-z][A-Za-z0-9_]*) validates "([A-Za-z_][A-Za-z0-9_]*)" against "([^"]+)" via ([A-Za-z][A-Za-z0-9_]*) targeting ([A-Za-z][A-Za-z0-9_]*)$'
+    actions:
+      - assign:
+          to: 'shValidateHeaders{Content-Type}'
+          value: '"application/json"'
+      - assign:
+          to: 'shValidateHeaders{Accept}'
+          value: '"application/json"'
+      - call:
+          path: 'scriptlets/serializeJsonObject.xml'
+          output: 'serializedResource'
+          inputs:
+            input: '$$2'
+      - assign:
+          to: 'shValidateTplParams{resourceJson}'
+          value: '$serializedResource{jsonString}'
+      - assign:
+          to: 'shValidateTplParams{profile}'
+          value: '"$3"'
+      - assign:
+          to: 'shValidateTplParams{host}'
+          value: '$$5Base'
+      - process:
+          handler: 'TemplateProcessor'
+          operation: 'process'
+          output: 'shValidateBody'
+          inputs:
+            syntax: '"freemarker"'
+            template: "'{\"resource\":${resourceJson},\"profile_url\":\"${profile}\",\"host\":\"${host}\"}'"
+            parameters: '$shValidateTplParams'
+      - send:
+          id: 'lastRequest'
+          desc: 'SMART Helper /validate $2 against $3'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$4'
+          inputs:
+            uri: 'concat($$4Base, "/validate")'
+            method: '"POST"'
+            headers: '$shValidateHeaders'
+            body: '$shValidateBody'
+
+  # (HAPI-direct `<Actor> validates "<var>" against "<canonical>" on <Actor>`
+  # is supplied by the smart-helper component extension — no need to
+  # duplicate it here.)

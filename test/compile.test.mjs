@@ -4,10 +4,10 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { compileFeature, writeSuite, WB } from '../src/compile.mjs';
+import { compileFeature, writeSuite } from '../src/compile.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const feature = path.join(WB, 'public/features/ph4h-qr-integration.feature');
+const feature = path.join(here, '../features/ph4h-qr-integration.feature');
 
 const r = await compileFeature(feature);
 const errors = (r.issues ?? []).filter(i => (i.severity ?? 'error') === 'error');
