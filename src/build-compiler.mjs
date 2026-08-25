@@ -32,6 +32,9 @@ const ts = req('typescript');
 const files = [
   ['src/types.ts', 'wb/types.cjs'],
   ['src/parser/languageCatalog.ts', 'wb/parser/languageCatalog.cjs'],
+  // gherkinParser imports this for the `# itb:` header block — omitting it
+  // makes the transpiled parser throw MODULE_NOT_FOUND at require time.
+  ['src/parser/itbHeader.ts', 'wb/parser/itbHeader.cjs'],
   ['src/parser/gherkinParser.ts', 'wb/parser/gherkinParser.cjs'],
   ['src/parser/xmlGenerator.ts', 'wb/parser/xmlGenerator.cjs'],
 ];
@@ -53,6 +56,7 @@ for (const [srcRel, outRel] of files) {
   let txt = out.outputText
     .replaceAll('require("./languageCatalog")', 'require("./languageCatalog.cjs")')
     .replaceAll('require("./gherkinParser")', 'require("./gherkinParser.cjs")')
+    .replaceAll('require("./itbHeader")', 'require("./itbHeader.cjs")')
     .replaceAll('require("../types")', 'require("../types.cjs")');
   const outPath = path.join(ROOT, 'dist', outRel);
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
