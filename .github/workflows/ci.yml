@@ -6,5 +6,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm ci && npm test
+      # test/e2e.mjs deploys to a RUNNING ITB and needs itb-suite.config.yaml
+      # with live API keys. That file is gitignored (it holds secrets), so on a
+      # runner the script always takes its skip path and exits 2 — a code it
+      # uses deliberately to mean "could not run", distinct from 1 = failed.
+      # Bare `npm run e2e` turned that skip into a red build, so the job could
+      # never go green. Honour the contract: 2 is a skip, anything else stands.
+      # The default shell is `bash -e`, hence `|| code=$?` rather than a bare
+      # call — otherwise the step aborts before the exit code can be read.
       - name: e2e — boot itb-starter, add fhir-validator, assert green smoke
-        run: npm run e2e
+        run: |
+          code=0
+          npm run e2e || code=$?
+          if [ "$code" -eq 2 ]; then
+            echo "::notice::e2e skipped — no itb-suite.config.yaml (needs a live ITB instance and API keys)"
+            exit 0
+          fi
+          exit "$code"
