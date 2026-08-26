@@ -60,6 +60,39 @@ globalThis.fetch = async (url, opts) => {
 
 const { GherkinParser } = req('./dist/wb/parser/gherkinParser.cjs');
 const { XMLGenerator } = req('./dist/wb/parser/xmlGenerator.cjs');
+const { parseITBHeader, scriptletSearchPaths } = req('./dist/wb/parser/itbHeader.cjs');
+
+/**
+ * Load scriptlets from the file source, keyed as the generator expects
+ * (`scriptlets/<id>.xml`). The browser app does this over fetch(); on Node we
+ * read the directories directly.
+ *
+ * Search order is scriptletSearchPaths(): the `# itb:` header locations first,
+ * then the `scriptlets/` convention dir beside the feature — first hit wins,
+ * so a declared location overrides the default. Each entry is a directory
+ * that DIRECTLY contains `<id>.xml`.
+ *
+ * Remote (http/https) locations are skipped here: resolving them would make
+ * compile a network operation, and compile is meant to be local and instant.
+ */
+function loadExternalScriptlets(featurePath, text) {
+  const featureDir = path.dirname(featurePath);
+  const { header } = parseITBHeader(text);
+  const found = new Map();
+  for (const loc of scriptletSearchPaths(header)) {
+    if (/^https?:/i.test(loc)) continue;
+    const dir = path.isAbsolute(loc) ? loc : path.resolve(featureDir, loc);
+    let entries;
+    try { entries = fs.readdirSync(dir); } catch { continue; }
+    for (const name of entries) {
+      if (!name.endsWith('.xml')) continue;
+      const key = `scriptlets/${name}`;
+      if (found.has(key)) continue; // earlier location wins
+      try { found.set(key, fs.readFileSync(path.join(dir, name), 'utf8')); } catch { /* skip */ }
+    }
+  }
+  return found;
+}
 
 /** Compile a .feature file. Returns { files: [{filename, xml, type, id, name}], issues } */
 export async function compileFeature(featurePath) {
@@ -69,8 +102,16 @@ export async function compileFeature(featurePath) {
   const parsed = parser.parse(text);
   await parser.expandScenarioToIR(parsed);
   const gen = new XMLGenerator(parser);
+  gen.setExternalScriptlets(loadExternalScriptlets(featurePath, text));
   const out = gen.generate(parsed);
-  return { files: out.files, issues: parsed.issues ?? [], testcaseName: out.testcaseName };
+  // generate() reports its own issues (chiefly unresolved scriptlet ids, which
+  // are severity:error). Dropping them let a suite compile "successfully" while
+  // referencing a scriptlet file it never emitted.
+  return {
+    files: out.files,
+    issues: [...(parsed.issues ?? []), ...(out.issues ?? [])],
+    testcaseName: out.testcaseName,
+  };
 }
 
 /** Write compiled files to a dir and build the deployable suite zip. */

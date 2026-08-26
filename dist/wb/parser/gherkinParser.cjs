@@ -33,6 +33,7 @@ function parseDocString(lines, startIdx) {
     return { text: contentLines.join('\n'), endIdx: j };
 }
 const languageCatalog_1 = require("./languageCatalog.cjs");
+const itbHeader_1 = require("./itbHeader.cjs");
 /** Minimal, self-contained parser + catalog expander */
 class GherkinParser {
     constructor(model, options) {
@@ -45,7 +46,7 @@ class GherkinParser {
     async ensureCatalog(locale = 'en') {
         if (!this.catalog) {
             const core = await (0, languageCatalog_1.loadCatalog)(locale);
-            this.components = await (0, languageCatalog_1.loadAllComponents)();
+            this.components = await (0, languageCatalog_1.loadAllComponents)(core);
             this.catalog = (0, languageCatalog_1.mergeCatalog)(core, this.components);
         }
     }
@@ -65,6 +66,12 @@ class GherkinParser {
         const scenarios = [];
         let currentTarget = null; // null = not collecting steps yet
         let currentScenarioName = '';
+        // Gherkin @tags. Collected feature-wide (we don't currently need
+        // per-scenario scoping). Recognised control tags:
+        //   @continue-on-error / @non-blocking → testcase <steps stopOnError="false">
+        //     (checks still report red and still fail the test overall — they just
+        //      don't abort the remaining steps; mirrors the hand-written suites).
+        const featureTags = new Set();
         const STEP_RE = /^(Given|When|Then|And|But)\s+(.*)$/i;
         let i = 0;
         while (i < lines.length) {
@@ -72,6 +79,16 @@ class GherkinParser {
             const lineNo = i + 1;
             const line = stripInlineComments(raw).trim();
             if (!line) {
+                i++;
+                continue;
+            }
+            // Tag line(s): `@foo @bar` — Gherkin tags precede Feature/Scenario.
+            // Collected feature-wide; consumed here so they don't warn as unknown.
+            if (/^@/.test(line)) {
+                for (const tok of line.split(/\s+/)) {
+                    if (tok.startsWith('@'))
+                        featureTags.add(tok.slice(1).toLowerCase());
+                }
                 i++;
                 continue;
             }
@@ -131,14 +148,16 @@ class GherkinParser {
                 let table;
                 if (tableRows.length > 1)
                     table = tableRows.slice(1);
-                // optional doc string (triple-quoted block)
+                // Optional doc string (triple-quoted block). Allowed *after* a table
+                // too: `call scriptlet ... with:` takes a table of inputs and a
+                // docstring holding the raw TDL body. A GITB scriptlet only sees what
+                // its <params> receive, so an inline body without inputs could not
+                // reach the enclosing test case's variables.
                 let docString;
-                if (!table || table.length === 0) {
-                    const ds = parseDocString(lines, j);
-                    if (ds) {
-                        docString = ds.text;
-                        j = ds.endIdx;
-                    }
+                const ds = parseDocString(lines, j);
+                if (ds) {
+                    docString = ds.text;
+                    j = ds.endIdx;
                 }
                 currentTarget.push({
                     type,
@@ -181,7 +200,38 @@ class GherkinParser {
         parsed.__scenarios = builtScenarios;
         parsed.__featureTitle = featureTitle || 'Feature';
         parsed.__featureDescription = featureDescription;
+        parsed.__featureTags = [...featureTags];
+        // `# itb:` header block — carries anything path-shaped (scriptlet
+        // locations), which tags cannot hold because they are lowercased and
+        // whitespace-split. A malformed block is reported, never fatal.
+        const { header, issues: headerIssues } = (0, itbHeader_1.parseITBHeader)(text);
+        parsed.__itbHeader = header;
+        for (const h of headerIssues) {
+            issues.push({ line: h.line, severity: 'warning', message: h.message });
+        }
         return parsed;
+    }
+    /** Classify a step's text against the catalog: which component (plugin
+     *  dialect) provides it? Returns null for core-language steps AND for
+     *  unmatched text (unmatched is already reported by expandStep as an issue).
+     *  Used by the editor to highlight plugin-provided steps distinctly. */
+    classifyStepText(text) {
+        if (!this.catalog)
+            return null;
+        const t = normalizeSpaces(text.trim());
+        for (const entry of this.catalog.steps) {
+            try {
+                if (!new RegExp(entry.match, 'i').test(t))
+                    continue;
+            }
+            catch {
+                continue;
+            }
+            return entry._source
+                ? { componentId: entry._source.componentId, componentName: entry._source.componentName }
+                : null;
+        }
+        return null;
     }
     /** Expand a single step to IR actions using the language catalog */
     expandStep(step) {
@@ -494,7 +544,30 @@ function materialize(actions, ctx) {
             if (clone.call.inputs)
                 for (const k in clone.call.inputs)
                     clone.call.inputs[k] = subst(clone.call.inputs[k]);
-            out.push({ type: 'call', path: clone.call.path, output: clone.call.output ? subst(clone.call.output) : undefined, from: subst(clone.call.from ?? ''), to: subst(clone.call.to ?? ''), inputs: clone.call.inputs });
+            // `inputsFromTable`: each row of the step's table contributes one input,
+            // named by its `name` column. Lets one step pattern accept an arbitrary
+            // parameter list instead of a fixed set baked into the YAML.
+            if (clone.call.inputsFromTable) {
+                const built = { ...(clone.call.inputs ?? {}) };
+                for (const row of ctx.tableRows ?? []) {
+                    const name = (row.name ?? '').trim();
+                    if (name)
+                        built[name] = subst(row.value ?? '');
+                }
+                clone.call.inputs = built;
+            }
+            out.push({
+                type: 'call',
+                path: subst(clone.call.path),
+                output: clone.call.output ? subst(clone.call.output) : undefined,
+                from: subst(clone.call.from ?? ''),
+                to: subst(clone.call.to ?? ''),
+                inputs: clone.call.inputs,
+                // Emitted verbatim into the scriptlet — this is the raw-ITB escape
+                // hatch, so it is deliberately NOT escaped. Schema validation of the
+                // generated file is the safety net.
+                body: clone.call.body ? String(clone.call.body).replace(/\$docString/g, ctx.docString ?? '') : undefined,
+            });
             return;
         }
         if (clone.verify) {

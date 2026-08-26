@@ -32,6 +32,9 @@ const ts = req('typescript');
 const files = [
   ['src/types.ts', 'wb/types.cjs'],
   ['src/parser/languageCatalog.ts', 'wb/parser/languageCatalog.cjs'],
+  // gherkinParser imports this for the `# itb:` header block — omitting it
+  // makes the transpiled parser throw MODULE_NOT_FOUND at require time.
+  ['src/parser/itbHeader.ts', 'wb/parser/itbHeader.cjs'],
   ['src/parser/gherkinParser.ts', 'wb/parser/gherkinParser.cjs'],
   ['src/parser/xmlGenerator.ts', 'wb/parser/xmlGenerator.cjs'],
 ];
@@ -53,6 +56,7 @@ for (const [srcRel, outRel] of files) {
   let txt = out.outputText
     .replaceAll('require("./languageCatalog")', 'require("./languageCatalog.cjs")')
     .replaceAll('require("./gherkinParser")', 'require("./gherkinParser.cjs")')
+    .replaceAll('require("./itbHeader")', 'require("./itbHeader.cjs")')
     .replaceAll('require("../types")', 'require("../types.cjs")');
   const outPath = path.join(ROOT, 'dist', outRel);
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
@@ -60,12 +64,30 @@ for (const [srcRel, outRel] of files) {
   console.log('transpiled', srcRel, '->', path.relative(ROOT, outPath));
 }
 
-// js-yaml must be resolvable from dist/wb/parser — link/copy it into our node_modules.
-const nm = path.join(ROOT, 'node_modules');
-fs.mkdirSync(nm, { recursive: true });
-const link = path.join(nm, 'js-yaml');
-if (!fs.existsSync(link)) {
-  try { fs.symlinkSync(path.join(WB, 'node_modules/js-yaml'), link, 'junction'); }
-  catch { fs.cpSync(path.join(WB, 'node_modules/js-yaml'), link, { recursive: true }); }
+// js-yaml must be resolvable from dist/wb/parser. If this repo's own deps are
+// installed, npm has already provided it — do NOT touch node_modules.
+//
+// WHY THE GUARD: this fallback used to run unconditionally when the path was
+// absent. Symlinking js-yaml into node_modules and *then* running `npm install`
+// makes npm record the link in package-lock.json as
+//   "node_modules/js-yaml": { "resolved": "../itb-plugin-authoring/app/node_modules/js-yaml", "link": true }
+// which resolves to nothing on any machine without a sibling workbench — so
+// `npm ci` in CI installs no js-yaml and the parser dies with MODULE_NOT_FOUND.
+// Deferring to a real install keeps the lockfile registry-resolved; the link is
+// only for the standalone case where `npm install` has never been run here.
+// NB: `req` above is rooted at the WORKBENCH package.json, which always has
+// js-yaml — it would answer the wrong question. Resolve from THIS repo.
+const ownReq = createRequire(path.join(ROOT, 'package.json'));
+let jsYamlResolvable = true;
+try { ownReq.resolve('js-yaml'); } catch { jsYamlResolvable = false; }
+if (!jsYamlResolvable && WB) {
+  const nm = path.join(ROOT, 'node_modules');
+  fs.mkdirSync(nm, { recursive: true });
+  const link = path.join(nm, 'js-yaml');
+  if (!fs.existsSync(link)) {
+    try { fs.symlinkSync(path.join(WB, 'node_modules/js-yaml'), link, 'junction'); }
+    catch { fs.cpSync(path.join(WB, 'node_modules/js-yaml'), link, { recursive: true }); }
+    console.log('linked js-yaml from the workbench — run `npm install` here before `npm install`/`npm ci` regenerates the lockfile');
+  }
 }
 console.log('done');

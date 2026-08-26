@@ -4,6 +4,15 @@ exports.XMLGenerator = void 0;
 class XMLGenerator {
     constructor(parser) {
         this.parser = parser;
+        /**
+         * Scriptlets read from the active file source, keyed by their suite-relative
+         * path (`scriptlets/<id>.xml`). Loaded asynchronously by the app, so they are
+         * pushed in rather than fetched here — generate() stays synchronous.
+         */
+        this.externalScriptlets = new Map();
+    }
+    setExternalScriptlets(scriptlets) {
+        this.externalScriptlets = scriptlets;
     }
     /** Collect all scriptlets from enabled components loaded by the parser */
     getComponentScriptlets() {
@@ -20,6 +29,16 @@ class XMLGenerator {
         const featureTitle = parsed.__featureTitle ?? parsed.scenario.feature ?? 'Feature';
         const featureDescription = parsed.__featureDescription ?? featureTitle;
         const scenarioIRs = parsed.__scenarioIRs;
+        // Feature-level @tags. `@continue-on-error` / `@non-blocking` make the
+        // testcase's <steps> non-blocking (stopOnError="false"): a failed check
+        // still reports red and still fails the test overall, but subsequent steps
+        // keep running (e.g. a DEV-env COSE signature that can't verify against an
+        // incomplete trustlist shouldn't abort the SHL/FHIR pipeline). Default
+        // stays "true" so unrelated tests are unaffected.
+        const featureTags = parsed.__featureTags ?? [];
+        const stopOnError = featureTags.includes('continue-on-error') || featureTags.includes('non-blocking')
+            ? 'false'
+            : 'true';
         const files = [];
         // If we have multiple scenarios, generate individual test case files + a test suite
         const scenarios = scenarioIRs && scenarioIRs.length > 0
@@ -52,7 +71,7 @@ class XMLGenerator {
 ${indent(actorsXml, 4)}
   </actors>
 ${variablesXml ? `\n  <variables>\n${indent(variablesXml, 4)}\n  </variables>\n` : ''}
-  <steps stopOnError="true">
+  <steps stopOnError="${stopOnError}">
 ${indent(stepsXml || '<!-- no steps generated for this scenario -->', 4)}
   </steps>
 
@@ -112,8 +131,9 @@ ${testcaseRefs}
             id: suiteId,
             name: featureTitle
         });
-        // Generate scriptlet files: use real component scriptlets when available, stubs otherwise
-        const scriptletFiles = generateScriptlets(scenarios, this.getComponentScriptlets());
+        // Scriptlets: inline body → file source → component. No stub fallback.
+        const scriptletIssues = [];
+        const scriptletFiles = generateScriptlets(scenarios, this.getComponentScriptlets(), this.externalScriptlets, scriptletIssues);
         files.push(...scriptletFiles);
         // Combined preview: test suite + all test cases separated by comments
         const combinedXml = files.map(f => `<!-- ===== ${f.type}: ${f.filename} ===== -->\n${f.xml}`).join('\n\n');
@@ -122,6 +142,7 @@ ${testcaseRefs}
             xml: combinedXml,
             files,
             scriptletCount: scriptletFiles.length,
+            issues: scriptletIssues,
         };
     }
 }
@@ -612,56 +633,66 @@ function buildConcatExpression(v) {
         return parts[0];
     return `concat(${parts.join(', ')})`;
 }
+function mergeRef(calls, path) {
+    const existing = calls.get(path) ?? { inputs: new Set() };
+    calls.set(path, existing);
+    return existing;
+}
 /**
- * Collect all unique scriptlet call paths and their input names from IR actions.
+ * Collect all unique scriptlet call paths, their input names, and any inline
+ * body, from IR actions.
  */
 function collectScriptletCalls(ir) {
     const calls = new Map();
     for (const a of ir) {
         if (a.type === 'call' && a.path.startsWith('scriptlets/')) {
-            const existing = calls.get(a.path) || new Set();
+            const ref = mergeRef(calls, a.path);
             if (a.from)
-                existing.add('from');
+                ref.inputs.add('from');
             if (a.to)
-                existing.add('to');
+                ref.inputs.add('to');
             if (a.inputs) {
                 for (const k of Object.keys(a.inputs))
-                    existing.add(k);
+                    ref.inputs.add(k);
             }
-            calls.set(a.path, existing);
+            if (a.body)
+                ref.body = a.body;
         }
-        if (a.type === 'foreach' && a.do) {
-            for (const [path, inputs] of collectScriptletCalls(a.do)) {
-                const existing = calls.get(path) || new Set();
-                for (const k of inputs)
-                    existing.add(k);
-                calls.set(path, existing);
-            }
-        }
-        if (a.type === 'repeat' && a.do) {
-            for (const [path, inputs] of collectScriptletCalls(a.do)) {
-                const existing = calls.get(path) || new Set();
-                for (const k of inputs)
-                    existing.add(k);
-                calls.set(path, existing);
+        if ((a.type === 'foreach' || a.type === 'repeat') && a.do) {
+            for (const [path, nested] of collectScriptletCalls(a.do)) {
+                const ref = mergeRef(calls, path);
+                for (const k of nested.inputs)
+                    ref.inputs.add(k);
+                if (nested.body)
+                    ref.body = nested.body;
             }
         }
     }
     return calls;
 }
 /**
- * Generate stub scriptlet XML files for all referenced scriptlet paths.
- * Each scriptlet is a minimal valid TDL scriptlet that declares its inputs.
+ * Emit a scriptlet file for every referenced path.
+ *
+ * Resolution order — first hit wins:
+ *   1. an inline body from the feature file's doc string
+ *   2. an external scriptlet loaded from the file source (`# itb:` header
+ *      locations, then `scriptlets/` beside the features)
+ *   3. a scriptlet shipped by an enabled component
+ *
+ * Nothing matches → NO FILE and an issue. There is deliberately no stub
+ * fallback: a stub imports and runs green while doing nothing, so a mistyped
+ * id used to produce a passing test that asserted nothing.
  */
-function generateScriptlets(scenarios, componentScriptlets = []) {
+function generateScriptlets(scenarios, componentScriptlets = [], externalScriptlets = new Map(), issues = []) {
     // Merge scriptlet calls across all scenarios
     const allCalls = new Map();
     for (const sc of scenarios) {
-        for (const [path, inputs] of collectScriptletCalls(sc.ir)) {
-            const existing = allCalls.get(path) || new Set();
-            for (const k of inputs)
-                existing.add(k);
-            allCalls.set(path, existing);
+        for (const [path, ref] of collectScriptletCalls(sc.ir)) {
+            const merged = mergeRef(allCalls, path);
+            for (const k of ref.inputs)
+                merged.inputs.add(k);
+            if (ref.body)
+                merged.body = ref.body;
         }
     }
     // Index real component scriptlets by path
@@ -670,44 +701,48 @@ function generateScriptlets(scenarios, componentScriptlets = []) {
         realScriptlets.set(s.path, s);
     }
     const files = [];
-    // For each referenced scriptlet path, use real XML if available, otherwise generate a stub
-    for (const [path, inputNames] of allCalls) {
+    for (const [path, ref] of allCalls) {
         const scriptletId = path.replace(/^scriptlets\//, '').replace(/\.xml$/, '');
-        const real = realScriptlets.get(path);
-        if (real) {
-            // Use the real scriptlet XML from the component
-            files.push({
-                filename: path,
-                xml: real.xml,
-                type: 'scriptlet',
-                id: scriptletId,
-                name: scriptletId,
-            });
-        }
-        else {
-            // Generate a stub scriptlet
-            const inputsXml = [...inputNames]
+        // 1. Inline body from the feature file
+        if (ref.body?.trim()) {
+            const inputsXml = [...ref.inputs]
                 .map(name => `    <var name="${escapeAttr(name)}" type="string"/>`)
                 .join('\n');
-            const xml = `<?xml version="1.0" encoding="UTF-8"?>
+            // The body is raw TDL by design — emitted verbatim, never escaped.
+            // Schema validation of this file is what catches malformed input.
+            files.push({
+                filename: path,
+                xml: `<?xml version="1.0" encoding="UTF-8"?>
 <scriptlet id="${escapeAttr(scriptletId)}"
             xmlns="http://www.gitb.com/tdl/v1/"
             xmlns:gitb="http://www.gitb.com/core/v1/">
-  <params>
-${inputsXml}
-  </params>
-  <steps>
-    <log>"Scriptlet ${escapeXml(scriptletId)} executed (stub)."</log>
+${inputsXml ? `  <params>\n${inputsXml}\n  </params>\n` : ''}  <steps>
+${indent(ref.body.trim(), 4)}
   </steps>
-</scriptlet>`;
-            files.push({
-                filename: path,
-                xml,
+</scriptlet>`,
                 type: 'scriptlet',
                 id: scriptletId,
                 name: scriptletId,
             });
+            continue;
         }
+        // 2. External scriptlet from the file source
+        const external = externalScriptlets.get(path);
+        if (external) {
+            files.push({ filename: path, xml: external, type: 'scriptlet', id: scriptletId, name: scriptletId });
+            continue;
+        }
+        // 3. Component-shipped scriptlet
+        const real = realScriptlets.get(path);
+        if (real) {
+            files.push({ filename: path, xml: real.xml, type: 'scriptlet', id: scriptletId, name: scriptletId });
+            continue;
+        }
+        issues.push({
+            severity: 'error',
+            from: 'scriptlet',
+            message: `Scriptlet "${scriptletId}" not found — add ${path} beside your feature files, declare its location in the "# itb:" header, or supply the body inline with a doc string`,
+        });
     }
     // Also include any component scriptlets that weren't directly referenced
     // (they may be called by other scriptlets or useful for future steps)
