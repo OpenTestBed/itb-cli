@@ -13,8 +13,8 @@ export { XMLGenerator } from './parser/xmlGenerator.js';
 export type { GeneratedFile, XMLOutput } from './parser/xmlGenerator.js';
 
 // ── Where assets and enablement come from ───────────────────────────
-export { setAssetBase, setCatalogSource } from './parser/languageCatalog.js';
-export type { CatalogSource } from './parser/languageCatalog.js';
+export { setAssetBase, setCatalogSource, createBrowserSource } from './parser/languageCatalog.js';
+export type { CatalogSource, BrowserSourceOptions } from './parser/languageCatalog.js';
 
 // ── Catalog: loading, merging, inspecting ───────────────────────────
 export {

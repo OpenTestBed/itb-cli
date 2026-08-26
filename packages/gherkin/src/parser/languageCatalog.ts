@@ -259,10 +259,33 @@ export interface CatalogSource {
   saveStoredDialectUrls?(urls: string[]): void;
 }
 
-/** The historical behaviour: fetch + localStorage. Used when nothing is
- *  injected, so a browser caller needs no configuration at all. */
-function browserSource(): CatalogSource {
+export interface BrowserSourceOptions {
+  /**
+   * Assets bundled into the caller rather than served over HTTP, keyed by the
+   * path they would otherwise be fetched from ("lang/en.yml"). A request whose
+   * URL ends with a key is answered from here and never hits the network.
+   *
+   * This is how the workbench supplies the core language: it imports en.yml
+   * from this package with Vite's `?raw`, so there is exactly one copy — the
+   * one inside the package — instead of a duplicate in the app's public/
+   * folder that had to be edited in lockstep and could silently drift.
+   */
+  assets?: Record<string, string>;
+}
+
+/** fetch + localStorage — the browser default, used when nothing is injected
+ *  so a browser caller needs no configuration at all. */
+export function createBrowserSource(opts: BrowserSourceOptions = {}): CatalogSource {
+  const assets = opts.assets ?? {};
+  const bundled = (url: string): string | null => {
+    for (const [key, value] of Object.entries(assets)) {
+      if (url === key || url.endsWith('/' + key.replace(/^\/+/, ''))) return value;
+    }
+    return null;
+  };
   const text = async (url: string) => {
+    const hit = bundled(url);
+    if (hit !== null) return hit;
     try {
       const res = await fetch(url);
       return res.ok ? await res.text() : null;
@@ -299,7 +322,7 @@ export function setCatalogSource(s: CatalogSource): void {
   catalogSource = s;
 }
 
-const src = (): CatalogSource => (catalogSource ??= browserSource());
+const src = (): CatalogSource => (catalogSource ??= createBrowserSource());
 
 /**
  * Plugin dialect sources: absolute base URLs of a plugin repo's dialect/
