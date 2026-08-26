@@ -51,22 +51,40 @@ function findAssets() {
   return null;
 }
 
-export const PUB = findAssets();
-if (!PUB) {
-  throw new Error(
-    'no asset root found — set ITB_ASSET_ROOT to a folder containing lang/en.yml and components/, ' +
-    'or keep an itb-plugin-authoring checkout beside this repo'
-  );
+/**
+ * Resolved on first compile, not at import.
+ *
+ * This used to run at module scope and throw when no assets were found, which
+ * meant merely IMPORTING this file could kill a process that was never going
+ * to compile anything — test/e2e.mjs crashed with exit 1 before reaching its
+ * own "no config, skip" check, turning a skip into a red build.
+ *
+ * A missing asset root is a compile-time problem. Report it then.
+ */
+let assetsReady = false;
+function ensureAssets() {
+  if (assetsReady) return PUB_CACHE;
+  const root = findAssets();
+  if (!root) {
+    throw new Error(
+      'no asset root found — set ITB_ASSET_ROOT to a folder containing lang/en.yml and components/, ' +
+      'or keep an itb-plugin-authoring checkout beside this repo'
+    );
+  }
+  // The parser reads its assets and its enablement through a CatalogSource.
+  // This used to be two globalThis patches installed before the parser was
+  // imported. Same behaviour, declared instead of monkey-patched.
+  setCatalogSource(createNodeSource(root, {
+    components: (process.env.ITB_COMPONENTS ?? '').split(',').map(s => s.trim()).filter(Boolean),
+  }));
+  PUB_CACHE = root;
+  assetsReady = true;
+  return root;
 }
 
-// The parser reads its assets and its enablement through a CatalogSource.
-// This used to be two globalThis patches installed before the parser was
-// imported — a fetch() that read PUB off disk, and a localStorage that
-// answered enablement from ITB_COMPONENTS. Same behaviour, declared instead
-// of monkey-patched, and nothing global is mutated any more.
-setCatalogSource(createNodeSource(PUB, {
-  components: (process.env.ITB_COMPONENTS ?? '').split(',').map(s => s.trim()).filter(Boolean),
-}));
+let PUB_CACHE = null;
+/** The resolved asset root, or null before the first compile. */
+export const PUB = findAssets();
 
 /**
  * Load scriptlets from the file source, keyed as the generator expects
@@ -102,6 +120,7 @@ function loadExternalScriptlets(featurePath, text) {
 
 /** Compile a .feature file. Returns { files: [{filename, xml, type, id, name}], issues } */
 export async function compileFeature(featurePath) {
+  ensureAssets();
   const text = fs.readFileSync(featurePath, 'utf8');
   const parser = new GherkinParser(undefined, { strictRequirements: false });
   await parser.ensureCatalog('en');
