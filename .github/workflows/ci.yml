@@ -5,7 +5,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: npm ci && npm test
+      - run: npm ci
+      - run: npm test
+      # The golden corpus is the regression net for the compiler: 39 real
+      # feature files compiled and compared byte for byte against snapshots
+      # taken before the parser was extracted. It is self-contained, so it
+      # needs no checkout beside this one.
+      - name: golden corpus (package implementation)
+        run: npm test --workspace packages/gherkin
+      # ...and the same snapshots replayed through the CLI adapter, which is
+      # the path the `otb` command actually takes.
+      - name: golden corpus (CLI adapter)
+        run: npm test --workspace packages/gherkin
+        env:
+          CORPUS_IMPL: ../../../src/compile.mjs
+          # Absolute: npm runs a workspace script with the CWD set to that
+          # workspace, so a repo-relative path would resolve under
+          # packages/gherkin and find nothing.
+          ITB_ASSET_ROOT: ${{ github.workspace }}/packages/gherkin/test/corpus
       # test/e2e.mjs deploys to a RUNNING ITB and needs itb-suite.config.yaml
       # with live API keys. That file is gitignored (it holds secrets), so on a
       # runner the script always takes its skip path and exits 2 — a code it

@@ -1,12 +1,21 @@
 // Offline test: the compile pipeline against the real ph4h feature.
-// Run: node test/compile.test.mjs   (after: node src/build-compiler.mjs)
+// Run: node test/compile.test.mjs
+//
+// Pins ITB_ASSET_ROOT at the golden corpus's frozen fixtures. Without it the
+// CLI looks for an itb-plugin-authoring checkout beside this repo — fine on a
+// developer machine, absent on a CI runner, and the vendored fallback that
+// used to cover that case is gone (it was 278 lines behind canonical and
+// silently selected). The fixtures are committed, so this test is
+// self-contained.
 import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { compileFeature, writeSuite } from '../src/compile.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+process.env.ITB_ASSET_ROOT ??= path.join(here, '../packages/gherkin/test/corpus');
+
+const { compileFeature, writeSuite } = await import('../src/compile.mjs');
 const feature = path.join(here, '../features/ph4h-qr-integration.feature');
 
 const r = await compileFeature(feature);
