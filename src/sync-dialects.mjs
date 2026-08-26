@@ -11,24 +11,26 @@
 //        itb-plugin-* folders of the itb-ecosystem checkout)
 import fs from 'node:fs';
 import path from 'node:path';
-import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import yaml from 'js-yaml';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(here, '..');
+/**
+ * Locate the workbench. Unlike the hunts this repo used to run, this one is
+ * legitimate: sync-dialects WRITES into the app's public/components, so it
+ * genuinely has to find that folder. It no longer looks for parser SOURCE —
+ * the marker is the components directory it is about to write to.
+ */
 function findWorkbench(fromDir) {
   const candidates = [
     process.env.ITB_WORKBENCH_PATH,
-    path.resolve(fromDir, '../itb-plugin-authoring/app'), // in-ecosystem authoring plugin (canonical)
-    path.resolve(fromDir, '../../test-workbench'),   // legacy sibling checkout
-    path.resolve(fromDir, '../test-workbench'),      // flat clone layout
+    path.resolve(fromDir, '../itb-plugin-authoring/app'),
   ].filter(Boolean);
-  for (const c of candidates) if (fs.existsSync(path.join(c, 'src/parser/gherkinParser.ts'))) return c;
-  throw new Error('workbench sources not found — expected itb-plugin-authoring/app next to itb-cli, or set ITB_WORKBENCH_PATH');
+  for (const c of candidates) if (fs.existsSync(path.join(c, 'public', 'components'))) return c;
+  throw new Error('workbench not found — expected itb-plugin-authoring/app beside this repo, or set ITB_WORKBENCH_PATH');
 }
 const WB = findWorkbench(ROOT);
-const DEPS = fs.existsSync(path.join(WB, 'node_modules', 'js-yaml')) ? WB : path.resolve(ROOT, 'vendor');
-const yaml = createRequire(path.join(DEPS, 'package.json'))('js-yaml');
 
 const pluginDirs = process.argv.slice(2).length
   ? process.argv.slice(2).map(p => path.resolve(p))

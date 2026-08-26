@@ -5,23 +5,10 @@
 //   POST /api/rest/tests/status       (organisation key) — poll a session
 import fs from 'node:fs';
 import path from 'node:path';
-import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import yaml from 'js-yaml';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-function findWorkbench(fromDir) {
-  const candidates = [
-    process.env.ITB_WORKBENCH_PATH,
-    path.resolve(fromDir, '../itb-plugin-authoring/app'), // in-ecosystem authoring plugin (canonical)
-    path.resolve(fromDir, '../../test-workbench'),   // legacy sibling checkout
-    path.resolve(fromDir, '../test-workbench'),      // flat clone layout
-  ].filter(Boolean);
-  for (const c of candidates) if (fs.existsSync(path.join(c, 'src/parser/gherkinParser.ts'))) return c;
-  return null; // standalone: vendored deps
-}
-const WB = findWorkbench(path.resolve(here, '..'));
-const DEPS = (WB && fs.existsSync(path.join(WB, 'node_modules', 'js-yaml'))) ? WB : path.resolve(here, '../vendor');
-const yaml = createRequire(path.join(DEPS, 'package.json'))('js-yaml');
 
 /** Load itb-suite.config.yaml with ${ENV_VAR} substitution.
  *  Also merges .itb-state.json (keys persisted by a previous init/run in
