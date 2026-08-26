@@ -6,3 +6,7 @@ itb-suite.config.yaml
 # dist/wb (transpiled parser) and vendor/ ARE committed: they make this repo
 # standalone. Regenerate dist/wb with build-compiler.mjs when the workbench
 # parser changes; refresh vendor/ with vendor-assets in the same situation.
+
+# built on install via the package prepare script — never committed,
+# because a committed dist is what went stale and broke the CLI before
+packages/*/dist/

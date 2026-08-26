@@ -7,15 +7,26 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
     "./lang/en.yml": "./lang/en.yml"
   },
-  "files": ["dist", "lang"],
+  "files": [
+    "dist",
+    "lang"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "node test/corpus.mjs",
-    "test:update": "node test/corpus.mjs --update"
+    "test:update": "node test/corpus.mjs --update",
+    "prepare": "npm run build"
   },
-  "dependencies": { "js-yaml": "^4.1.0" },
-  "devDependencies": { "typescript": "^5.6.0" }
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
 }
