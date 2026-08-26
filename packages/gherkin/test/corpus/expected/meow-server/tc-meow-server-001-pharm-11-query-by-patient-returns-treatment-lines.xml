@@ -54,7 +54,7 @@
       <input name="expectednumber">&quot;200&quot;</input>
     </verify>
     <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
-    <send id="lastRequest" desc="GET" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="MedicationOverviewResponder">
+    <send id="lastRequest" desc="GET /MedicationStatement?patient=meow-test-patient" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="MedicationOverviewResponder">
       <input name="uri">concat($MedicationOverviewResponderBase, &quot;/MedicationStatement?patient=meow-test-patient&quot;)</input>
       <input name="method">&quot;GET&quot;</input>
       <input name="headers">$jsonHeaders</input>

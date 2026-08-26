@@ -31,7 +31,7 @@
     <assign to="MedicationOverviewResponderBase">&quot;http://meow-responder:8080/fhir&quot;</assign>
     <assign to="FHIRValidatorBase">&quot;http://fhir-validator:8080&quot;</assign>
     <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
-    <send id="lastRequest" desc="GET" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="MedicationOverviewResponder">
+    <send id="lastRequest" desc="GET /MedicationStatement" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="MedicationOverviewResponder">
       <input name="uri">concat($MedicationOverviewResponderBase, &quot;/MedicationStatement&quot;)</input>
       <input name="method">&quot;GET&quot;</input>
       <input name="headers">$jsonHeaders</input>

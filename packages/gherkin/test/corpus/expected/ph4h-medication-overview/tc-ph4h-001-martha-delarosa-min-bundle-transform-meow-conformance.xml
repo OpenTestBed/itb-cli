@@ -81,7 +81,7 @@
       <input name="expectednumber">&quot;200&quot;</input>
     </verify>
     <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
-    <send id="lastRequest" desc="GET" handler="HttpMessagingV2" from="Client">
+    <send id="lastRequest" desc="GET https://raw.githubusercontent.com/WorldHealthOrganization/smart-ph4h/MeOW-r4/input/maps/MedicationOverviewMin-to-MedicationOverviewBundle.map" handler="HttpMessagingV2" from="Client">
       <input name="uri">&quot;https://raw.githubusercontent.com/WorldHealthOrganization/smart-ph4h/MeOW-r4/input/maps/MedicationOverviewMin-to-MedicationOverviewBundle.map&quot;</input>
       <input name="method">&quot;GET&quot;</input>
       <input name="headers">$jsonHeaders</input>

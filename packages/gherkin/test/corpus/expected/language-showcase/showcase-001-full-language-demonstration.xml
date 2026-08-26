@@ -249,7 +249,7 @@
     </verify>
     <assign to="jsonHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
-    <send id="lastRequest" desc="POST" handler="HttpMessagingV2" from="User" to="FHIRServer">
+    <send id="lastRequest" desc="POST /fhir/Patient" handler="HttpMessagingV2" from="User" to="FHIRServer">
       <input name="uri">concat($FHIRServerBase, &quot;/fhir/Patient&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$jsonHeaders</input>
@@ -268,7 +268,7 @@
       <input name="expression">string-length($createdId) &gt; 0</input>
     </verify>
     <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
-    <send id="lastRequest" desc="GET" handler="HttpMessagingV2" from="User">
+    <send id="lastRequest" desc="GET http://fhir-server:8080/fhir/Patient?family=TestPost" handler="HttpMessagingV2" from="User">
       <input name="uri">&quot;http://fhir-server:8080/fhir/Patient?family=TestPost&quot;</input>
       <input name="method">&quot;GET&quot;</input>
       <input name="headers">$jsonHeaders</input>
@@ -289,7 +289,7 @@
       <input name="template">$docTpl</input>
       <input name="parameters">$docTplParams</input>
     </process>
-    <send id="lastRequest" desc="PUT" handler="HttpMessagingV2" from="User" to="FHIRServer">
+    <send id="lastRequest" desc="PUT /fhir/Patient/$createdId" handler="HttpMessagingV2" from="User" to="FHIRServer">
       <input name="uri">concat($FHIRServerBase, &quot;/fhir/Patient/$createdId&quot;)</input>
       <input name="method">&quot;PUT&quot;</input>
       <input name="headers">$jsonHeaders</input>
@@ -302,7 +302,7 @@
     </verify>
     <assign to="jsonHeaders{Content-Type}">&quot;application/json-patch+json&quot;</assign>
     <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
-    <send id="lastRequest" desc="PATCH" handler="HttpMessagingV2" from="User" to="FHIRServer">
+    <send id="lastRequest" desc="PATCH /fhir/Patient/$createdId" handler="HttpMessagingV2" from="User" to="FHIRServer">
       <input name="uri">concat($FHIRServerBase, &quot;/fhir/Patient/$createdId&quot;)</input>
       <input name="method">&quot;PATCH&quot;</input>
       <input name="headers">$jsonHeaders</input>
@@ -312,7 +312,7 @@
       <input name="expression">not($lastRequest{response}{status} = &quot;404&quot;)</input>
     </verify>
     <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
-    <send id="lastRequest" desc="DELETE" handler="HttpMessagingV2" from="User" to="FHIRServer">
+    <send id="lastRequest" desc="DELETE /fhir/Patient/$createdId" handler="HttpMessagingV2" from="User" to="FHIRServer">
       <input name="uri">concat($FHIRServerBase, &quot;/fhir/Patient/$createdId&quot;)</input>
       <input name="method">&quot;DELETE&quot;</input>
       <input name="headers">$jsonHeaders</input>

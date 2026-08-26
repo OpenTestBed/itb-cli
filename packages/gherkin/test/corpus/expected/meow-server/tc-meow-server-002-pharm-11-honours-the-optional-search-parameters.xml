@@ -33,7 +33,7 @@
     <assign to="MedicationOverviewResponderBase">&quot;http://meow-responder:8080/fhir&quot;</assign>
     <assign to="FHIRValidatorBase">&quot;http://fhir-validator:8080&quot;</assign>
     <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
-    <send id="lastRequest" desc="GET" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="MedicationOverviewResponder">
+    <send id="lastRequest" desc="GET /MedicationStatement?patient=meow-test-patient&amp;status=active" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="MedicationOverviewResponder">
       <input name="uri">concat($MedicationOverviewResponderBase, &quot;/MedicationStatement?patient=meow-test-patient&amp;status=active&quot;)</input>
       <input name="method">&quot;GET&quot;</input>
       <input name="headers">$jsonHeaders</input>
@@ -91,7 +91,7 @@
       <input name="expectedstring">&quot;true&quot;</input>
     </verify>
     <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
-    <send id="lastRequest" desc="GET" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="MedicationOverviewResponder">
+    <send id="lastRequest" desc="GET /MedicationStatement?patient=meow-test-patient&amp;category=community" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="MedicationOverviewResponder">
       <input name="uri">concat($MedicationOverviewResponderBase, &quot;/MedicationStatement?patient=meow-test-patient&amp;category=community&quot;)</input>
       <input name="method">&quot;GET&quot;</input>
       <input name="headers">$jsonHeaders</input>
@@ -126,7 +126,7 @@
       <input name="expectedstring">&quot;searchset&quot;</input>
     </verify>
     <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
-    <send id="lastRequest" desc="GET" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="MedicationOverviewResponder">
+    <send id="lastRequest" desc="GET /MedicationStatement?patient=meow-test-patient&amp;_lastUpdated=gt2999-01-01" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="MedicationOverviewResponder">
       <input name="uri">concat($MedicationOverviewResponderBase, &quot;/MedicationStatement?patient=meow-test-patient&amp;_lastUpdated=gt2999-01-01&quot;)</input>
       <input name="method">&quot;GET&quot;</input>
       <input name="headers">$jsonHeaders</input>

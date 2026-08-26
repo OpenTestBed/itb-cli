@@ -59,7 +59,7 @@
       <input name="expectednumber">&quot;200&quot;</input>
     </verify>
     <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
-    <send id="lastRequest" desc="GET" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="MedicationOverviewResponder">
+    <send id="lastRequest" desc="GET /Bundle?patient=meow-test-patient&amp;type=document" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="MedicationOverviewResponder">
       <input name="uri">concat($MedicationOverviewResponderBase, &quot;/Bundle?patient=meow-test-patient&amp;type=document&quot;)</input>
       <input name="method">&quot;GET&quot;</input>
       <input name="headers">$jsonHeaders</input>
@@ -163,7 +163,7 @@
       <input name="expectedstring">&quot;true&quot;</input>
     </verify>
     <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
-    <send id="lastRequest" desc="GET" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="MedicationOverviewResponder">
+    <send id="lastRequest" desc="GET /Bundle/meow-test-overview" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="MedicationOverviewResponder">
       <input name="uri">concat($MedicationOverviewResponderBase, &quot;/Bundle/meow-test-overview&quot;)</input>
       <input name="method">&quot;GET&quot;</input>
       <input name="headers">$jsonHeaders</input>

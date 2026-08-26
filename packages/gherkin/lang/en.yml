@@ -6,7 +6,7 @@ locale: en
 # specVersion on ANY step-pattern change: minor for additions, major for
 # changed/removed patterns (first-match merging makes silent drift unsafe).
 id: itb-core-en
-specVersion: "1.3.0"
+specVersion: "1.3.1"
 
 # ====================================================================
 # FHIR Gherkin Dialect — Core Language
@@ -187,7 +187,7 @@ steps:
       - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
       - send:
           id: 'lastRequest'
-          desc: 'POST'
+          desc: 'POST $3'
           handler: 'HttpMessagingV2'
           from: '$1'
           to: '$2'
@@ -211,7 +211,7 @@ steps:
           do:
             - send:
                 id: 'lastRequest'
-                desc: 'POST (loop)'
+                desc: 'POST $4 (loop)'
                 handler: 'HttpMessagingV2'
                 from: '$1'
                 to: '$3'
@@ -234,7 +234,7 @@ steps:
       - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
       - send:
           id: 'lastRequest'
-          desc: 'PUT'
+          desc: 'PUT $3'
           handler: 'HttpMessagingV2'
           from: '$1'
           to: '$2'
@@ -251,7 +251,7 @@ steps:
       - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
       - send:
           id: 'lastRequest'
-          desc: 'PATCH'
+          desc: 'PATCH $3'
           handler: 'HttpMessagingV2'
           from: '$1'
           to: '$2'
@@ -267,7 +267,7 @@ steps:
       - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
       - send:
           id: 'lastRequest'
-          desc: 'DELETE'
+          desc: 'DELETE $3'
           handler: 'HttpMessagingV2'
           from: '$1'
           to: '$2'
@@ -285,7 +285,7 @@ steps:
       - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
       - send:
           id: 'lastRequest'
-          desc: 'GET'
+          desc: 'GET $3'
           handler: 'HttpMessagingV2'
           from: '$1'
           to: '$2'
@@ -304,7 +304,7 @@ steps:
       - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
       - send:
           id: 'lastRequest'
-          desc: 'GET'
+          desc: 'GET $2'
           handler: 'HttpMessagingV2'
           from: '$1'
           inputs:

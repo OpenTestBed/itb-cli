@@ -38,7 +38,7 @@
       <request desc="How many dark chocolates to dispense?" name="N" inputType="TEXT" required="true">$N</request>
     </interact>
     <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
-    <send id="lastRequest" desc="GET" handler="HttpMessagingV2" from="Client" to="Spenser">
+    <send id="lastRequest" desc="GET /InventoryReport" handler="HttpMessagingV2" from="Client" to="Spenser">
       <input name="uri">concat($SpenserBase, &quot;/InventoryReport&quot;)</input>
       <input name="method">&quot;GET&quot;</input>
       <input name="headers">$jsonHeaders</input>
@@ -69,7 +69,7 @@
     <while>
       <cond>number($i) &lt; number($N)</cond>
       <do>
-        <send id="lastRequest" desc="POST (loop)" handler="HttpMessagingV2" from="Client" to="Spenser">
+        <send id="lastRequest" desc="POST /MedicationRequest (loop)" handler="HttpMessagingV2" from="Client" to="Spenser">
           <input name="uri">concat($SpenserBase, &quot;/MedicationRequest&quot;)</input>
           <input name="method">&quot;POST&quot;</input>
           <input name="headers">$jsonHeaders</input>
@@ -84,7 +84,7 @@
       </do>
     </while>
     <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
-    <send id="lastRequest" desc="GET" handler="HttpMessagingV2" from="Client" to="Spenser">
+    <send id="lastRequest" desc="GET /InventoryReport" handler="HttpMessagingV2" from="Client" to="Spenser">
       <input name="uri">concat($SpenserBase, &quot;/InventoryReport&quot;)</input>
       <input name="method">&quot;GET&quot;</input>
       <input name="headers">$jsonHeaders</input>

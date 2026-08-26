@@ -36,7 +36,7 @@
     <assign to="SpenserBase">&quot;http://spenser.local&quot;</assign>
     <assign to="FHIRValidatorBase">&quot;http://fhir-validator:8081&quot;</assign>
     <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
-    <send id="lastRequest" desc="GET" handler="HttpMessagingV2" from="Client" to="Spenser">
+    <send id="lastRequest" desc="GET /metadata" handler="HttpMessagingV2" from="Client" to="Spenser">
       <input name="uri">concat($SpenserBase, &quot;/metadata&quot;)</input>
       <input name="method">&quot;GET&quot;</input>
       <input name="headers">$jsonHeaders</input>
@@ -163,7 +163,7 @@
       <input name="expectedstring">&quot;true&quot;</input>
     </verify>
     <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
-    <send id="lastRequest" desc="GET" handler="HttpMessagingV2" from="Client" to="Spenser">
+    <send id="lastRequest" desc="GET /InventoryReport" handler="HttpMessagingV2" from="Client" to="Spenser">
       <input name="uri">concat($SpenserBase, &quot;/InventoryReport&quot;)</input>
       <input name="method">&quot;GET&quot;</input>
       <input name="headers">$jsonHeaders</input>
@@ -211,7 +211,7 @@
     }'</assign>
     <assign to="jsonHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
-    <send id="lastRequest" desc="POST" handler="HttpMessagingV2" from="Client" to="Spenser">
+    <send id="lastRequest" desc="POST /MedicationRequest" handler="HttpMessagingV2" from="Client" to="Spenser">
       <input name="uri">concat($SpenserBase, &quot;/MedicationRequest&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$jsonHeaders</input>
