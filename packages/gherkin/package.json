@@ -1,6 +1,6 @@
 {
   "name": "@opentestbed/otb-gherkin",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Gherkin -> GITB TDL compiler: the FHIR Gherkin dialect, its parser and its XML generator",
   "license": "BSD-3-Clause",
   "type": "module",
@@ -19,13 +19,16 @@
   },
   "files": [
     "dist",
-    "lang"
+    "lang",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "node test/corpus.mjs",
     "test:update": "node test/corpus.mjs --update",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run build && npm test"
   },
   "dependencies": {
     "js-yaml": "^4.1.0"
@@ -33,5 +36,29 @@
   "devDependencies": {
     "typescript": "^5.6.0",
     "@types/node": "^22.0.0"
+  },
+  "keywords": [
+    "gherkin",
+    "gitb",
+    "tdl",
+    "itb",
+    "fhir",
+    "conformance",
+    "testing"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OpenTestBed/otb.git",
+    "directory": "packages/gherkin"
+  },
+  "bugs": {
+    "url": "https://github.com/OpenTestBed/otb/issues"
+  },
+  "homepage": "https://github.com/OpenTestBed/otb/tree/main/packages/gherkin#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

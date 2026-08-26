@@ -30,7 +30,11 @@ const update = process.argv.includes('--update');
  * be pointed at the pre-move pipeline and the extracted package in turn — that
  * is the entire point of a baseline.
  */
-const IMPL = process.env.CORPUS_IMPL ?? '../../../src/compile.mjs';
+// Defaults to the package's OWN implementation so `npm test` is
+// self-contained — a published package must not need a sibling checkout to
+// test itself. Point CORPUS_IMPL at ../../../src/compile.mjs to replay the
+// same snapshots through the CLI adapter instead.
+const IMPL = process.env.CORPUS_IMPL ?? './impl-package.mjs';
 const { compileFeature } = await import(new URL(IMPL, import.meta.url).href);
 
 function listFeatures() {
