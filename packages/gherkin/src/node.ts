@@ -15,6 +15,18 @@ export interface NodeSourceOptions {
    *  compiling is meant to be local and instant, and a build that silently
    *  reaches the network is a build that fails differently on every machine. */
   allowRemote?: boolean;
+  /**
+   * Assets supplied directly rather than read from `root`, keyed by the path
+   * they would otherwise be read from ("lang/en.yml"). Mirrors
+   * BrowserSourceOptions.assets.
+   *
+   * The CLI uses this for the core language: en.yml ships inside this package,
+   * while components/ still comes off disk from the workbench where
+   * sync-dialects writes it. Without it the CLI would need a copy of the
+   * language somewhere on the filesystem — which is the duplication the
+   * package exists to remove.
+   */
+  assets?: Record<string, string>;
 }
 
 /**
@@ -27,11 +39,15 @@ export interface NodeSourceOptions {
 export function createNodeSource(root: string, opts: NodeSourceOptions = {}): CatalogSource {
   const abs = path.resolve(root);
   const enabled = (opts.components ?? []).filter(Boolean);
+  const assets = opts.assets ?? {};
 
   return {
     async read(p) {
       // Paths arrive app-relative ("/lang/en.yml"); resolve them under root.
       const rel = p.replace(/^\/+/, '');
+      for (const [key, value] of Object.entries(assets)) {
+        if (rel === key.replace(/^\/+/, '')) return value;
+      }
       try {
         return fs.readFileSync(path.join(abs, rel), 'utf8');
       } catch {

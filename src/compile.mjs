@@ -28,7 +28,17 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(here, '..');
 
 /**
- * Where lang/ and components/ are read from, in precedence order:
+ * The core language, read from the package that implements it. It is no longer
+ * on disk beside the app: the workbench bundles it from here too, so this is
+ * the single copy.
+ */
+const LANG_EN = fs.readFileSync(
+  fileURLToPath(new URL('../lang/en.yml', import.meta.resolve('@opentestbed/otb-gherkin'))),
+  'utf8',
+);
+
+/**
+ * Where components/ is read from, in precedence order:
  *   1. ITB_ASSET_ROOT — an explicit folder. The golden corpus pins its frozen
  *      fixtures this way, so a snapshot mismatch always means the compiler
  *      changed rather than that a dialect moved under it.
@@ -46,7 +56,9 @@ function findAssets() {
     path.resolve(ROOT, '../itb-plugin-authoring/app'),
   ].filter(Boolean)) {
     const pub = path.join(c, 'public');
-    if (fs.existsSync(path.join(pub, 'lang', 'en.yml'))) return pub;
+    // components/ is the marker now — lang/en.yml used to be, but it lives in
+    // the package and no longer exists under public/.
+    if (fs.existsSync(path.join(pub, 'components'))) return pub;
   }
   return null;
 }
@@ -67,7 +79,7 @@ function ensureAssets() {
   const root = findAssets();
   if (!root) {
     throw new Error(
-      'no asset root found — set ITB_ASSET_ROOT to a folder containing lang/en.yml and components/, ' +
+      'no components/ found — set ITB_ASSET_ROOT to a folder containing components/, ' +
       'or keep an itb-plugin-authoring checkout beside this repo'
     );
   }
@@ -76,6 +88,8 @@ function ensureAssets() {
   // imported. Same behaviour, declared instead of monkey-patched.
   setCatalogSource(createNodeSource(root, {
     components: (process.env.ITB_COMPONENTS ?? '').split(',').map(s => s.trim()).filter(Boolean),
+    // the language comes from the package, components/ from disk
+    assets: { 'lang/en.yml': LANG_EN },
   }));
   PUB_CACHE = root;
   assetsReady = true;
