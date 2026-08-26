@@ -1,8 +1,8 @@
 // Gherkin -> ITB test suite compiler (Node).
 //
 // The compiler itself is @opentestbed/otb-gherkin — an ordinary dependency.
-// This file is the Node adapter around it: it supplies the assets and the two
-// remaining browser globals the parser still expects, then runs the pipeline
+// This file is the Node adapter around it: it injects a CatalogSource that
+// reads assets from disk, then runs the pipeline
 // ensureCatalog -> parse -> expandScenarioToIR -> XMLGenerator.generate.
 //
 // What used to be here: a sibling-path hunt for a workbench checkout, plus
@@ -20,8 +20,9 @@ import {
   XMLGenerator,
   parseITBHeader,
   scriptletSearchPaths,
-  setAssetBase,
+  setCatalogSource,
 } from '@opentestbed/otb-gherkin';
+import { createNodeSource } from '@opentestbed/otb-gherkin/node';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(here, '..');
@@ -58,38 +59,14 @@ if (!PUB) {
   );
 }
 
-setAssetBase('/');
-
-// Component enablement. The parser reads this through localStorage; on Node it
-// comes from ITB_COMPONENTS (comma-separated ids), everything enabled by
-// default. Injecting it properly is phase 02.
-const enabledIds = (process.env.ITB_COMPONENTS ?? '').split(',').map(s => s.trim()).filter(Boolean);
-globalThis.localStorage = {
-  getItem: (k) => {
-    const m = /^component:(.+):enabled$/.exec(k);
-    if (m) return (enabledIds.length === 0 || enabledIds.includes(m[1])) ? 'true' : 'false';
-    return null;
-  },
-  setItem: () => {}, removeItem: () => {},
-};
-
-// Asset loading. The parser fetches '/lang/en.yml' and '/components/...';
-// on Node those resolve to files under PUB. Absolute URLs still go to the
-// network, so remote dialects keep working.
-const realFetch = globalThis.fetch;
-globalThis.fetch = async (url, opts) => {
-  const u = String(url);
-  if (u.startsWith('/') || u.startsWith('file:')) {
-    const rel = u.startsWith('file:') ? fileURLToPath(u) : path.join(PUB, u);
-    try {
-      const text = fs.readFileSync(rel, 'utf8');
-      return { ok: true, status: 200, text: async () => text, json: async () => JSON.parse(text) };
-    } catch {
-      return { ok: false, status: 404, text: async () => '', json: async () => ({}) };
-    }
-  }
-  return realFetch(url, opts);
-};
+// The parser reads its assets and its enablement through a CatalogSource.
+// This used to be two globalThis patches installed before the parser was
+// imported — a fetch() that read PUB off disk, and a localStorage that
+// answered enablement from ITB_COMPONENTS. Same behaviour, declared instead
+// of monkey-patched, and nothing global is mutated any more.
+setCatalogSource(createNodeSource(PUB, {
+  components: (process.env.ITB_COMPONENTS ?? '').split(',').map(s => s.trim()).filter(Boolean),
+}));
 
 /**
  * Load scriptlets from the file source, keyed as the generator expects

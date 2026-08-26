@@ -11,7 +11,11 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./lang/en.yml": "./lang/en.yml"
+    "./lang/en.yml": "./lang/en.yml",
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "default": "./dist/node.js"
+    }
   },
   "files": [
     "dist",
@@ -27,6 +31,7 @@
     "js-yaml": "^4.1.0"
   },
   "devDependencies": {
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "@types/node": "^22.0.0"
   }
 }

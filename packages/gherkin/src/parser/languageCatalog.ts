@@ -235,6 +235,73 @@ export function setAssetBase(b: string): void {
 const base = () => assetBase;
 
 /**
+ * Where the catalog reads its assets and its enablement state.
+ *
+ * The parser used to call `fetch` and `localStorage` directly, which is why
+ * every Node caller had to monkey-patch globalThis before importing it. Those
+ * are browser APIs, not compiler concerns: the compiler needs to READ some
+ * text and know WHICH dialects are on. That is this interface.
+ *
+ * Persistence stays with the caller. The library never writes anything unless
+ * a source explicitly offers a setter — the browser app owns its localStorage,
+ * Node owns its filesystem.
+ */
+export interface CatalogSource {
+  /** Read an asset by app-relative path, e.g. "/lang/en.yml". null = absent. */
+  read(path: string): Promise<string | null>;
+  /** Read an absolute URL — remote plugin dialects. null = unavailable. */
+  readUrl?(url: string): Promise<string | null>;
+  /** Is a component's dialect enabled? Default: yes. */
+  isEnabled?(componentId: string): boolean;
+  /** Dialect URLs the user has added. */
+  storedDialectUrls?(): string[];
+  /** Persist that list. Omit to make the source read-only. */
+  saveStoredDialectUrls?(urls: string[]): void;
+}
+
+/** The historical behaviour: fetch + localStorage. Used when nothing is
+ *  injected, so a browser caller needs no configuration at all. */
+function browserSource(): CatalogSource {
+  const text = async (url: string) => {
+    try {
+      const res = await fetch(url);
+      return res.ok ? await res.text() : null;
+    } catch { return null; }
+  };
+  return {
+    read: text,
+    readUrl: text,
+    isEnabled(id) {
+      try {
+        if (typeof localStorage === 'undefined') return true;
+        const stored = localStorage.getItem(`component:${id}:enabled`);
+        return stored !== null ? stored === 'true' : true;
+      } catch { return true; }
+    },
+    storedDialectUrls() {
+      try {
+        if (typeof localStorage === 'undefined') return [];
+        const stored = localStorage.getItem(DIALECT_URLS_KEY);
+        const parsed = stored ? (JSON.parse(stored) as string[]) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch { return []; }
+    },
+    saveStoredDialectUrls(urls) {
+      try { localStorage.setItem(DIALECT_URLS_KEY, JSON.stringify(urls)); } catch { /* ignore */ }
+    },
+  };
+}
+
+let catalogSource: CatalogSource | null = null;
+
+/** Inject the source. Call once at startup; omit to keep browser behaviour. */
+export function setCatalogSource(s: CatalogSource): void {
+  catalogSource = s;
+}
+
+const src = (): CatalogSource => (catalogSource ??= browserSource());
+
+/**
  * Plugin dialect sources: absolute base URLs of a plugin repo's dialect/
  * folder (must contain component.yml + steps.yml [+ scriptlets/]) — OR a
  * deployed plugin service's base URL, which serves its own dialect at the
@@ -264,17 +331,14 @@ export function queryDialectUrls(): string[] {
 /** Dialect URLs added by the user (persisted in localStorage). */
 export function getStoredDialectUrls(): string[] {
   try {
-    if (typeof localStorage === 'undefined') return [];
-    const stored = localStorage.getItem(DIALECT_URLS_KEY);
-    const parsed = stored ? (JSON.parse(stored) as string[]) : [];
-    return Array.isArray(parsed) ? parsed.map(normalizeDialectUrl).filter(Boolean) : [];
+    return (src().storedDialectUrls?.() ?? []).map(normalizeDialectUrl).filter(Boolean);
   } catch { return []; }
 }
 
 /** Persist a new dialect URL; returns the updated list. */
 export function addStoredDialectUrl(url: string): string[] {
   const urls = [...new Set([...getStoredDialectUrls(), normalizeDialectUrl(url)])].filter(Boolean);
-  localStorage.setItem(DIALECT_URLS_KEY, JSON.stringify(urls));
+  src().saveStoredDialectUrls?.(urls);
   return urls;
 }
 
@@ -282,7 +346,7 @@ export function addStoredDialectUrl(url: string): string[] {
 export function removeStoredDialectUrl(url: string): string[] {
   const target = normalizeDialectUrl(url);
   const urls = getStoredDialectUrls().filter(u => u !== target);
-  localStorage.setItem(DIALECT_URLS_KEY, JSON.stringify(urls));
+  src().saveStoredDialectUrls?.(urls);
   return urls;
 }
 
@@ -305,30 +369,30 @@ export async function loadRemoteComponent(baseUrl: string): Promise<ComponentInf
     // Resolve the effective dialect base: the URL as given, else the
     // service's well-known /gherkin-dialect endpoint.
     let effectiveBase = baseUrl;
-    let mres = await fetch(`${baseUrl}/component.yml`).catch(() => null);
-    if (!mres?.ok) {
+    const readUrl = src().readUrl ?? src().read;
+    let mtext = await readUrl(`${baseUrl}/component.yml`);
+    if (mtext === null) {
       effectiveBase = `${baseUrl}/${GHERKIN_DIALECT_PATH}`;
-      mres = await fetch(`${effectiveBase}/component.yml`).catch(() => null);
+      mtext = await readUrl(`${effectiveBase}/component.yml`);
     }
-    if (!mres?.ok) return null;
-    const manifest = yaml.load(await mres.text()) as ComponentManifest;
+    if (mtext === null) return null;
+    const manifest = yaml.load(mtext) as ComponentManifest;
     if (!manifest?.id) return null;
 
     let extension: ExtensionCatalog | null = null;
     const langFile = languageDecl(manifest)?.steps ?? 'steps.yml';
-    const eres = await fetch(`${effectiveBase}/${langFile}`);
-    if (eres.ok) extension = yaml.load(await eres.text()) as ExtensionCatalog;
+    const etext = await readUrl(`${effectiveBase}/${langFile}`);
+    if (etext !== null) extension = yaml.load(etext) as ExtensionCatalog;
 
     const scriptlets: ComponentScriptlet[] = [];
     for (const file of manifest.scriptlets ?? []) {
       try {
-        const sres = await fetch(`${effectiveBase}/scriptlets/${file}`);
-        if (sres.ok) scriptlets.push({ path: `scriptlets/${file}`, xml: await sres.text() });
+        const stext = await readUrl(`${effectiveBase}/scriptlets/${file}`);
+        if (stext !== null) scriptlets.push({ path: `scriptlets/${file}`, xml: stext });
       } catch { /* skip */ }
     }
 
-    const stored = typeof localStorage !== 'undefined' ? localStorage.getItem(`component:${manifest.id}:enabled`) : null;
-    const enabled = stored !== null ? stored === 'true' : true;
+    const enabled = src().isEnabled?.(manifest.id) ?? true;
     return { manifest, extension: extension ?? undefined, scriptlets: scriptlets.length ? scriptlets : undefined, enabled, status: 'unknown' };
   } catch {
     return null;
@@ -338,11 +402,10 @@ export async function loadRemoteComponent(baseUrl: string): Promise<ComponentInf
 /** Load the core language catalog */
 export async function loadCatalog(locale = 'en'): Promise<Catalog> {
   const url = `${base()}lang/${locale}.yml`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Failed to load catalog: ${url} (${res.status})`);
+  const text = await src().read(url);
+  if (text === null) {
+    throw new Error(`Failed to load catalog: ${url}`);
   }
-  const text = await res.text();
   return yaml.load(text) as Catalog;
 }
 
@@ -350,10 +413,9 @@ export async function loadCatalog(locale = 'en'): Promise<Catalog> {
 export async function discoverComponents(): Promise<string[]> {
   try {
     const url = `${base()}components/index.json`;
-    const res = await fetch(url);
-    if (!res.ok) return [];
-    const data = await res.json();
-    return data.components || [];
+    const text = await src().read(url);
+    if (text === null) return [];
+    return (JSON.parse(text) as { components?: string[] }).components || [];
   } catch {
     return [];
   }
@@ -363,9 +425,8 @@ export async function discoverComponents(): Promise<string[]> {
 export async function loadComponentManifest(componentId: string): Promise<ComponentManifest | null> {
   try {
     const url = `${base()}components/${componentId}/component.yml`;
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const text = await res.text();
+    const text = await src().read(url);
+    if (text === null) return null;
     return yaml.load(text) as ComponentManifest;
   } catch {
     return null;
@@ -376,9 +437,8 @@ export async function loadComponentManifest(componentId: string): Promise<Compon
 export async function loadComponentExtension(componentId: string, languageFile: string): Promise<ExtensionCatalog | null> {
   try {
     const url = `${base()}components/${componentId}/${languageFile}`;
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const text = await res.text();
+    const text = await src().read(url);
+    if (text === null) return null;
     return yaml.load(text) as ExtensionCatalog;
   } catch {
     return null;
@@ -411,18 +471,14 @@ export async function loadAllComponents(core?: Catalog): Promise<ComponentInfo[]
       for (const file of manifest.scriptlets) {
         try {
           const url = `${base()}components/${id}/scriptlets/${file}`;
-          const res = await fetch(url);
-          if (res.ok) {
-            const xml = await res.text();
-            scriptlets.push({ path: `scriptlets/${file}`, xml });
-          }
+          const xml = await src().read(url);
+          if (xml !== null) scriptlets.push({ path: `scriptlets/${file}`, xml });
         } catch { /* skip unavailable scriptlets */ }
       }
     }
 
-    // Check localStorage for enabled state (default: enabled)
-    const stored = localStorage.getItem(`component:${id}:enabled`);
-    const enabled = stored !== null ? stored === 'true' : true;
+    // Enablement comes from the source (default: enabled).
+    const enabled = src().isEnabled?.(id) ?? true;
 
     results.push({
       manifest,

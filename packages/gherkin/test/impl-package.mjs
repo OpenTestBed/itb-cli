@@ -5,45 +5,25 @@
 // dist/wb. Pointing the corpus at this file replays the pre-move snapshots
 // against the post-move code — which is the proof the extraction is faithful.
 //
-// The three browser couplings are still shimmed here rather than injected:
-// that is phase 02's job. What matters at this phase is that the code MOVED
-// without changing behaviour, so the shims stay byte-compatible with the ones
-// in src/compile.mjs.
+// Nothing is shimmed: the source is injected exactly as src/compile.mjs does
+// it. Passing the pre-move snapshots through this path is the proof that
+// neither the move nor the CatalogSource refactor changed the output.
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { GherkinParser, XMLGenerator, setAssetBase, parseITBHeader, scriptletSearchPaths } from '../dist/index.js';
+import { GherkinParser, XMLGenerator, setCatalogSource, parseITBHeader, scriptletSearchPaths } from '../dist/index.js';
+import { createNodeSource } from '../dist/node.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const PUB = process.env.ITB_ASSET_ROOT ? path.resolve(process.env.ITB_ASSET_ROOT) : path.join(here, 'corpus');
 
-setAssetBase('/');
-
-const enabledIds = (process.env.ITB_COMPONENTS ?? '').split(',').map(s => s.trim()).filter(Boolean);
-globalThis.localStorage = {
-  getItem: (k) => {
-    const m = /^component:(.+):enabled$/.exec(k);
-    if (m) return (enabledIds.length === 0 || enabledIds.includes(m[1])) ? 'true' : 'false';
-    return null;
-  },
-  setItem: () => {}, removeItem: () => {},
-};
-
-const realFetch = globalThis.fetch;
-globalThis.fetch = async (url, opts) => {
-  const u = String(url);
-  if (u.startsWith('/') || u.startsWith('file:')) {
-    const rel = u.startsWith('file:') ? fileURLToPath(u) : path.join(PUB, u);
-    try {
-      const text = fs.readFileSync(rel, 'utf8');
-      return { ok: true, status: 200, text: async () => text, json: async () => JSON.parse(text) };
-    } catch {
-      return { ok: false, status: 404, text: async () => '', json: async () => ({}) };
-    }
-  }
-  return realFetch(url, opts);
-};
+// No globalThis patching: the source is injected, which is the whole point
+// of phase 02. If this still passes the pre-move snapshots, the refactor
+// changed nothing observable.
+setCatalogSource(createNodeSource(PUB, {
+  components: (process.env.ITB_COMPONENTS ?? '').split(',').map(x => x.trim()).filter(Boolean),
+}));
 
 /** Mirror of src/compile.mjs loadExternalScriptlets(). */
 function loadExternalScriptlets(featurePath, text) {
