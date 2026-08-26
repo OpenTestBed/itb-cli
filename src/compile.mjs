@@ -1,48 +1,69 @@
-// Gherkin -> ITB test suite compiler (Node). Wraps the test-workbench pipeline:
+// Gherkin -> ITB test suite compiler (Node).
+//
+// The compiler itself is @opentestbed/otb-gherkin — an ordinary dependency.
+// This file is the Node adapter around it: it supplies the assets and the two
+// remaining browser globals the parser still expects, then runs the pipeline
 // ensureCatalog -> parse -> expandScenarioToIR -> XMLGenerator.generate.
-// The workbench loads its step catalog + component dialects over fetch();
-// here fetch is shimmed onto the workbench's public/ folder.
+//
+// What used to be here: a sibling-path hunt for a workbench checkout, plus
+// build-compiler.mjs transpiling that checkout's TypeScript into dist/wb so
+// this file could require() it. That arrangement produced two outages — a
+// dist/ that could not be rebuilt, and a js-yaml symlink baked into the
+// lockfile as an out-of-tree link. Both are gone with it.
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import fs from 'node:fs';
+import JSZip from 'jszip';
+import {
+  GherkinParser,
+  XMLGenerator,
+  parseITBHeader,
+  scriptletSearchPaths,
+  setAssetBase,
+} from '@opentestbed/otb-gherkin';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(here, '..');
-function findWorkbench(fromDir) {
-  const candidates = [
+
+/**
+ * Where lang/ and components/ are read from, in precedence order:
+ *   1. ITB_ASSET_ROOT — an explicit folder. The golden corpus pins its frozen
+ *      fixtures this way, so a snapshot mismatch always means the compiler
+ *      changed rather than that a dialect moved under it.
+ *   2. the authoring app's public/ — where sync-dialects.mjs writes the
+ *      plugin dialects, so it is the live source for components/.
+ *
+ * This is still a lookup rather than an injected CatalogSource; that is
+ * phase 02. It is no longer a hunt for source code to compile, though — only
+ * for data.
+ */
+function findAssets() {
+  if (process.env.ITB_ASSET_ROOT) return path.resolve(process.env.ITB_ASSET_ROOT);
+  for (const c of [
     process.env.ITB_WORKBENCH_PATH,
-    path.resolve(fromDir, '../itb-plugin-authoring/app'), // in-ecosystem authoring plugin (canonical)
-    path.resolve(fromDir, '../../test-workbench'),   // legacy sibling checkout
-    path.resolve(fromDir, '../test-workbench'),      // flat clone layout
-  ].filter(Boolean);
-  for (const c of candidates) if (fs.existsSync(path.join(c, 'src/parser/gherkinParser.ts'))) return c;
-  return null; // standalone mode: vendored assets in vendor/ (see below)
+    path.resolve(ROOT, '../itb-plugin-authoring/app'),
+  ].filter(Boolean)) {
+    const pub = path.join(c, 'public');
+    if (fs.existsSync(path.join(pub, 'lang', 'en.yml'))) return pub;
+  }
+  return null;
 }
-export const WB = findWorkbench(ROOT);
-// Asset root: prefer the workbench sources; dependency root: the workbench
-// only if it has node_modules (the plugin's app/ ships without them),
-// else the vendored copies committed in this repo.
-// Asset root, in precedence order:
-//   1. ITB_ASSET_ROOT   — an explicit folder holding lang/ and components/.
-//      The golden corpus uses this to compile against FROZEN fixtures, so a
-//      snapshot mismatch always means the compiler changed rather than that
-//      someone edited a dialect in another repo. It is also the first step
-//      toward CatalogSource: the asset location becomes an input, not a
-//      filesystem accident.
-//   2. the sibling workbench checkout
-//   3. the vendored copies (standalone mode)
-export const PUB = process.env.ITB_ASSET_ROOT
-  ? path.resolve(process.env.ITB_ASSET_ROOT)
-  : WB ? path.join(WB, 'public') : path.join(ROOT, 'vendor/public');
-const DEPS = (WB && fs.existsSync(path.join(WB, 'node_modules', 'jszip'))) ? WB : path.join(ROOT, 'vendor');
-const req = createRequire(path.join(ROOT, 'package.json'));
 
-process.env.WB_BASE_URL = '/';
+export const PUB = findAssets();
+if (!PUB) {
+  throw new Error(
+    'no asset root found — set ITB_ASSET_ROOT to a folder containing lang/en.yml and components/, ' +
+    'or keep an itb-plugin-authoring checkout beside this repo'
+  );
+}
 
-// Browser localStorage shim: component dialects enabled unless ITB_COMPONENTS
-// env narrows them (comma-separated ids).
-const enabledIds = (process.env.ITB_COMPONENTS ?? '').split(',').map(s=>s.trim()).filter(Boolean);
+setAssetBase('/');
+
+// Component enablement. The parser reads this through localStorage; on Node it
+// comes from ITB_COMPONENTS (comma-separated ids), everything enabled by
+// default. Injecting it properly is phase 02.
+const enabledIds = (process.env.ITB_COMPONENTS ?? '').split(',').map(s => s.trim()).filter(Boolean);
 globalThis.localStorage = {
   getItem: (k) => {
     const m = /^component:(.+):enabled$/.exec(k);
@@ -52,8 +73,9 @@ globalThis.localStorage = {
   setItem: () => {}, removeItem: () => {},
 };
 
-
-// fetch shim: '/lang/en.yml', '/components/...' -> test-workbench/public/*
+// Asset loading. The parser fetches '/lang/en.yml' and '/components/...';
+// on Node those resolve to files under PUB. Absolute URLs still go to the
+// network, so remote dialects keep working.
 const realFetch = globalThis.fetch;
 globalThis.fetch = async (url, opts) => {
   const u = String(url);
@@ -68,10 +90,6 @@ globalThis.fetch = async (url, opts) => {
   }
   return realFetch(url, opts);
 };
-
-const { GherkinParser } = req('./dist/wb/parser/gherkinParser.cjs');
-const { XMLGenerator } = req('./dist/wb/parser/xmlGenerator.cjs');
-const { parseITBHeader, scriptletSearchPaths } = req('./dist/wb/parser/itbHeader.cjs');
 
 /**
  * Load scriptlets from the file source, keyed as the generator expects
@@ -133,8 +151,6 @@ export async function writeSuite(files, outDir, zipName) {
     fs.mkdirSync(path.dirname(fp), { recursive: true });
     fs.writeFileSync(fp, f.xml);
   }
-  const reqDeps = createRequire(path.join(DEPS, 'package.json'));
-  const JSZip = reqDeps('jszip');
   const zip = new JSZip();
   for (const f of files) zip.file(f.filename, f.xml);
   const buf = await zip.generateAsync({ type: 'nodebuffer' });
