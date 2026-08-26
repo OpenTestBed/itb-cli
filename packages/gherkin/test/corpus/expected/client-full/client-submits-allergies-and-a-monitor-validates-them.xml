@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite id="client-submits-allergies-and-a-monitor-validates-them"
+           xmlns="http://www.gitb.com/tdl/v1/"
+           xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>Client submits allergies and a monitor validates them</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>As a client I want to submit allergy resources, have them validated, and get monitor approval So that the client's conformance to the Belgian allergy IG is verified end-to-end</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="Client">
+      <gitb:name>Client</gitb:name>
+      <gitb:desc>Endpoint: http://localhost:9000/fhir | Definition: http://hl7.org/fhir/ActorDefinition/client</gitb:desc>
+    </gitb:actor>
+    <gitb:actor id="FHIRServer">
+      <gitb:name>FHIRServer</gitb:name>
+      <gitb:desc>Endpoint: http://hapi.fhir.org/baseR4 | Definition: http://hl7.org/fhir/ActorDefinition/server</gitb:desc>
+    </gitb:actor>
+    <gitb:actor id="Validator">
+      <gitb:name>Validator</gitb:name>
+      <gitb:desc>Definition: http://hl7.org/fhir/ActorDefinition/validator</gitb:desc>
+    </gitb:actor>
+  </actors>
+
+  <testcase id="tc-client-001-submit-a-valid-allergy-with-monitor-approval"/>
+  <testcase id="tc-client-002-submit-and-validate-using-meta-profile"/>
+  <testcase id="tc-client-003-verify-client-sends-a-post-via-proxy"/>
+  <testcase id="tc-client-004-generate-a-patient-validate-and-inspect"/>
+  <testcase id="tc-client-005-generate-patients-with-reusable-mappings"/>
+  <testcase id="tc-client-006-detect-invalid-resource-with-missing-required-fields"/>
+  <testcase id="tc-client-007-extract-and-assert-values-from-a-submission"/>
+
+</testsuite>

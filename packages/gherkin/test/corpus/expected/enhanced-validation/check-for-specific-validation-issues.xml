@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testcase id="check-for-specific-validation-issues"
+          xmlns="http://www.gitb.com/tdl/v1/"
+          xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>Check for specific validation issues</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>Enhanced validation options</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="Client" role="SUT"/>
+    <gitb:actor id="FHIRServer" role="SIMULATED"/>
+    <gitb:actor id="FHIRValidator" role="SIMULATED"/>
+  </actors>
+
+  <variables>
+    <var name="loadIgBody" type="string"/>
+    <var name="lastRequest" type="map"/>
+    <var name="fhirValidatorHeaders" type="map"/>
+    <var name="loadIgTplParams" type="map"/>
+    <var name="FHIRValidatorBase" type="string"/>
+    <var name="validationErrors" type="string"/>
+  </variables>
+
+  <steps stopOnError="true">
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="loadIgTplParams{ig}">&quot;hl7.fhir.us.core#5.0.1&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="loadIgBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;loadIG&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;ig&quot;, &quot;value&quot;: &quot;${ig}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$loadIgTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Load IG via IGManager" handler="HttpMessagingV2" from="Client" to="FHIRValidator">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/igManager/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$loadIgBody</input>
+    </send>
+    <verify handler="NumberValidator" desc="IGManager.loadIG returned HTTP 200">
+      <input name="actualnumber">$lastRequest{response}{status}</input>
+      <input name="expectednumber">&quot;200&quot;</input>
+    </verify>
+    <verify handler="NumberValidator" desc="At least one validation error">
+      <input name="actualnumber">$validationErrors</input>
+      <input name="expectednumber">0</input>
+      <input name="operation">&quot;greater_than&quot;</input>
+    </verify>
+  </steps>
+
+  <output>
+    <success>
+      <default>"Test case completed successfully."</default>
+    </success>
+    <failure>
+      <default>"Test case failed. Check step reports and logs."</default>
+    </failure>
+  </output>
+</testcase>

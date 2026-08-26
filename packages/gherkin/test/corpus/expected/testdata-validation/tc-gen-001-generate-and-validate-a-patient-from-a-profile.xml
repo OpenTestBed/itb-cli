@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testcase id="tc-gen-001-generate-and-validate-a-patient-from-a-profile"
+          xmlns="http://www.gitb.com/tdl/v1/"
+          xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>tc-gen-001 Generate and validate a Patient from a profile</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>Test data generation, validation, FHIRPath, and match</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="Client" role="SUT"/>
+    <gitb:actor id="FHIRServer" role="SIMULATED"/>
+    <gitb:actor id="FHIRValidator" role="SIMULATED"/>
+  </actors>
+
+  <variables>
+    <var name="loadIgBody" type="string"/>
+    <var name="generatedResource" type="string"/>
+    <var name="validateBody" type="string"/>
+    <var name="validationErrors" type="string"/>
+    <var name="validationWarnings" type="string"/>
+    <var name="validationSeverity" type="string"/>
+    <var name="validationOutcome" type="string"/>
+    <var name="lastRequest" type="map"/>
+    <var name="fhirValidatorHeaders" type="map"/>
+    <var name="loadIgTplParams" type="map"/>
+    <var name="validateTplParams" type="map"/>
+    <var name="FHIRValidatorBase" type="string"/>
+  </variables>
+
+  <steps stopOnError="true">
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="loadIgTplParams{ig}">&quot;hl7.fhir.us.core#5.0.1&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="loadIgBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;loadIG&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;ig&quot;, &quot;value&quot;: &quot;${ig}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$loadIgTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Load IG via IGManager" handler="HttpMessagingV2" from="Client" to="FHIRValidator">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/igManager/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$loadIgBody</input>
+    </send>
+    <verify handler="NumberValidator" desc="IGManager.loadIG returned HTTP 200">
+      <input name="actualnumber">$lastRequest{response}{status}</input>
+      <input name="expectednumber">&quot;200&quot;</input>
+    </verify>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <send id="lastRequest" desc="Generate test data from profile" handler="HttpMessagingV2" from="Client">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/testdata/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">concat('{&quot;operation&quot;:&quot;generate&quot;,&quot;input&quot;:[{&quot;name&quot;:&quot;profile&quot;,&quot;value&quot;:&quot;', &quot;http://hl7.org/fhir/StructureDefinition/Patient&quot;, '&quot;,&quot;embeddingMethod&quot;:&quot;STRING&quot;}]}')</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="generatedResource">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="validateTplParams{resource}">$generatedResource</assign>
+    <assign to="validateTplParams{profiles}">&quot;http://hl7.org/fhir/StructureDefinition/Patient&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="validateBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;profiles&quot;, &quot;value&quot;: &quot;${profiles}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$validateTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Validate resource against profile" handler="HttpMessagingV2" from="Client">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhir/validate&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$validateBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="validationErrors">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/report/context/0/value&quot;</input>
+    </process>
+    <process handler="JsonPointerProcessor" operation="process" output="validationWarnings">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/report/context/1/value&quot;</input>
+    </process>
+    <process handler="JsonPointerProcessor" operation="process" output="validationSeverity">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/report/context/3/value&quot;</input>
+    </process>
+    <process handler="JsonPointerProcessor" operation="process" output="validationOutcome">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/report/context/4/value&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="No validation errors">
+      <input name="actualstring">$validationErrors</input>
+      <input name="expectedstring">&quot;0&quot;</input>
+    </verify>
+  </steps>
+
+  <output>
+    <success>
+      <default>"Test case completed successfully."</default>
+    </success>
+    <failure>
+      <default>"Test case failed. Check step reports and logs."</default>
+    </failure>
+  </output>
+</testcase>

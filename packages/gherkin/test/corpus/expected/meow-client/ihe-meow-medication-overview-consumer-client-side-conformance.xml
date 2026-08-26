@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite id="ihe-meow-medication-overview-consumer-client-side-conformance"
+           xmlns="http://www.gitb.com/tdl/v1/"
+           xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>IHE MEOW Medication Overview Consumer — client-side conformance</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>Tests a MEOW *client* (the Medication Overview Consumer actor), not a QR pipeline. The SUT initiates every exchange; ITB plays the Responder and judges what arrives. tc-meow-client-001  QUERY  — the Consumer must be able to query by patient (required) and by the optional search parameters it declares support for. tc-meow-client-002  SUBMIT — whatever Medication Overview the Consumer submits must conform to the MEOW MedicationOverview profile. Actors are named after the real CapabilityStatements in ihe.pharm.meow: https://profiles.ihe.net/PHARM/MEOW/CapabilityStatement/MedicationOverviewConsumer https://profiles.ihe.net/PHARM/MEOW/CapabilityStatement/MedicationOverviewResponder Consumer search parameters per that CapabilityStatement (mode: client), on MedicationStatement / PHARM-11, profiled as MedicationTreatmentLine: patient        reference  REQUIRED — the patient whose overview is wanted status         token      filter by treatment line status effective      date       filter by effective period of the treatment line category       token      filter by medication list category / list type _lastUpdated   date       incremental sync</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="MedicationOverviewConsumer">
+      <gitb:name>MedicationOverviewConsumer</gitb:name>
+      <gitb:desc>Definition: https://profiles.ihe.net/PHARM/MEOW/CapabilityStatement/MedicationOverviewConsumer</gitb:desc>
+    </gitb:actor>
+    <gitb:actor id="MedicationOverviewResponder">
+      <gitb:name>MedicationOverviewResponder</gitb:name>
+      <gitb:desc>Definition: https://profiles.ihe.net/PHARM/MEOW/CapabilityStatement/MedicationOverviewResponder</gitb:desc>
+    </gitb:actor>
+    <gitb:actor id="FHIRValidator">
+      <gitb:name>FHIRValidator</gitb:name>
+      <gitb:desc>Endpoint: http://fhir-validator:8080</gitb:desc>
+    </gitb:actor>
+  </actors>
+
+  <testcase id="tc-meow-client-001-pharm-11-query-by-patient-and-by-optional-parameters"/>
+  <testcase id="tc-meow-client-002-submitted-overview-conforms-to-medicationoverview"/>
+
+</testsuite>

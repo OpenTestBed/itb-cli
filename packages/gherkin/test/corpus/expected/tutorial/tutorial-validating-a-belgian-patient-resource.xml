@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite id="tutorial-validating-a-belgian-patient-resource"
+           xmlns="http://www.gitb.com/tdl/v1/"
+           xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>Tutorial - Validating a Belgian Patient resource</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>This tutorial walks through a complete conformance test: load an Implementation Guide, generate test data with mappings, validate against a profile, check structure with match patterns, and extract values with FHIRPath expressions.</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="Client">
+      <gitb:name>Client</gitb:name>
+    </gitb:actor>
+    <gitb:actor id="FHIRServer">
+      <gitb:name>FHIRServer</gitb:name>
+    </gitb:actor>
+    <gitb:actor id="Validator">
+      <gitb:name>FHIR Validation Service</gitb:name>
+    </gitb:actor>
+    <gitb:actor id="FHIRValidator">
+      <gitb:name>FHIRValidator</gitb:name>
+    </gitb:actor>
+  </actors>
+
+  <testcase id="tutorial-001-generate-validate-match-and-assert"/>
+
+</testsuite>

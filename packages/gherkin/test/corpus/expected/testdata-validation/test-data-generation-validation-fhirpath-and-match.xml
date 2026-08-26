@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite id="test-data-generation-validation-fhirpath-and-match"
+           xmlns="http://www.gitb.com/tdl/v1/"
+           xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>Test data generation, validation, FHIRPath, and match</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>As a tester using the ITB test workbench I want to generate test data, validate it, evaluate FHIRPath, and compare with match So that I can build complete automated conformance tests</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="Client">
+      <gitb:name>Client</gitb:name>
+    </gitb:actor>
+    <gitb:actor id="FHIRServer">
+      <gitb:name>FHIRServer</gitb:name>
+    </gitb:actor>
+    <gitb:actor id="FHIRValidator">
+      <gitb:name>FHIRValidator</gitb:name>
+    </gitb:actor>
+  </actors>
+
+  <testcase id="tc-gen-001-generate-and-validate-a-patient-from-a-profile"/>
+  <testcase id="tc-gen-002-generate-patient-with-data-table-and-mappings"/>
+  <testcase id="tc-gen-003-generate-a-bundle-of-patients-from-multiple-data-rows"/>
+  <testcase id="tc-gen-004-generate-and-validate-in-a-single-step"/>
+  <testcase id="tc-fp-001-fhirpath-existence-and-count-checks"/>
+  <testcase id="tc-val-001-validate-with-best-practice-warnings-as-errors"/>
+  <testcase id="tc-val-002-detect-validation-issues-containing-specific-text"/>
+  <testcase id="tc-match-001-partial-match-with-wildcards"/>
+  <testcase id="tc-match-002-match-submission-against-inline-pattern"/>
+
+</testsuite>

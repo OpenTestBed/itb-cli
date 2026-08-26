@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testcase id="tc-ph4h-001-martha-delarosa-min-bundle-transform-meow-conformance"
+          xmlns="http://www.gitb.com/tdl/v1/"
+          xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>tc-ph4h-001 Martha DeLarosa — Min → Bundle transform + MEOW conformance</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>PH4H MedicationOverview — IHE MEOW conformance</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="Client" role="SUT"/>
+    <gitb:actor id="FHIRValidator" role="SIMULATED"/>
+  </actors>
+
+  <variables>
+    <var name="loadIgBody" type="string"/>
+    <var name="parseFmlBody" type="string"/>
+    <var name="structureMap" type="string"/>
+    <var name="regSmBody" type="string"/>
+    <var name="transformBody" type="string"/>
+    <var name="bundle" type="string"/>
+    <var name="conformBody" type="string"/>
+    <var name="validationErrors" type="string"/>
+    <var name="lastRequest" type="map"/>
+    <var name="FHIRValidatorBase" type="string"/>
+    <var name="loadIgHeaders" type="map"/>
+    <var name="loadIgTplParams" type="map"/>
+    <var name="sigStatus" type="string"/>
+    <var name="jsonHeaders" type="map"/>
+    <var name="fmlText" type="string"/>
+    <var name="parseFmlHeaders" type="map"/>
+    <var name="parseFmlTplParams" type="map"/>
+    <var name="regSmHeaders" type="map"/>
+    <var name="regSmTplParams" type="map"/>
+    <var name="medMin" type="string"/>
+    <var name="transformHeaders" type="map"/>
+    <var name="transformTplParams" type="map"/>
+    <var name="conformHeaders" type="map"/>
+    <var name="conformTplParams" type="map"/>
+  </variables>
+
+  <steps stopOnError="true">
+    <assign to="FHIRValidatorBase">&quot;http://fhir-validator:8080&quot;</assign>
+    <assign to="loadIgHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="loadIgHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="loadIgTplParams{ig}">&quot;https://ihe.github.io/pharm-meow/branches/r4/package.tgz&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="loadIgBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;loadIG&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;ig&quot;, &quot;value&quot;: &quot;${ig?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$loadIgTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Load IG https://ihe.github.io/pharm-meow/branches/r4/package.tgz" handler="HttpMessagingV2" from="Client" to="FHIRValidator">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/igManager/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$loadIgHeaders</input>
+      <input name="body">$loadIgBody</input>
+    </send>
+    <assign to="sigStatus">if (empty($lastRequest{response}{status})) then &quot;0&quot; else $lastRequest{response}{status}</assign>
+    <verify handler="NumberValidator" desc="Response status is 200">
+      <input name="actualnumber">$sigStatus</input>
+      <input name="expectednumber">&quot;200&quot;</input>
+    </verify>
+    <assign to="loadIgHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="loadIgHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="loadIgTplParams{ig}">&quot;E:/work/ImplementationGuides/smart-ph4h/output/package.tgz&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="loadIgBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;loadIG&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;ig&quot;, &quot;value&quot;: &quot;${ig?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$loadIgTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Load IG E:/work/ImplementationGuides/smart-ph4h/output/package.tgz" handler="HttpMessagingV2" from="Client" to="FHIRValidator">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/igManager/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$loadIgHeaders</input>
+      <input name="body">$loadIgBody</input>
+    </send>
+    <assign to="sigStatus">if (empty($lastRequest{response}{status})) then &quot;0&quot; else $lastRequest{response}{status}</assign>
+    <verify handler="NumberValidator" desc="Response status is 200">
+      <input name="actualnumber">$sigStatus</input>
+      <input name="expectednumber">&quot;200&quot;</input>
+    </verify>
+    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <send id="lastRequest" desc="GET" handler="HttpMessagingV2" from="Client">
+      <input name="uri">&quot;https://raw.githubusercontent.com/WorldHealthOrganization/smart-ph4h/MeOW-r4/input/maps/MedicationOverviewMin-to-MedicationOverviewBundle.map&quot;</input>
+      <input name="method">&quot;GET&quot;</input>
+      <input name="headers">$jsonHeaders</input>
+    </send>
+    <assign to="fmlText">$lastRequest{response}{body}</assign>
+    <assign to="parseFmlHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="parseFmlHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="parseFmlTplParams{content}">$fmlText</assign>
+    <assign to="parseFmlTplParams{name}">&quot;fmlText&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="parseFmlBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;parse&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${content?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;name&quot;, &quot;value&quot;: &quot;${name?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$parseFmlTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Parse FML fmlText" handler="HttpMessagingV2" from="Client" to="FHIRValidator">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/transform/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$parseFmlHeaders</input>
+      <input name="body">$parseFmlBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="structureMap">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <assign to="sigStatus">if (empty($lastRequest{response}{status})) then &quot;0&quot; else $lastRequest{response}{status}</assign>
+    <verify handler="NumberValidator" desc="Response status is 200">
+      <input name="actualnumber">$sigStatus</input>
+      <input name="expectednumber">&quot;200&quot;</input>
+    </verify>
+    <assign to="regSmHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="regSmHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="regSmTplParams{content}">$structureMap</assign>
+    <process handler="TemplateProcessor" operation="process" output="regSmBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;loadResource&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${content?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;replace&quot;, &quot;value&quot;: &quot;true&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$regSmTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Register StructureMap structureMap" handler="HttpMessagingV2" from="Client" to="FHIRValidator">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/loadResource/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$regSmHeaders</input>
+      <input name="body">$regSmBody</input>
+    </send>
+    <assign to="sigStatus">if (empty($lastRequest{response}{status})) then &quot;0&quot; else $lastRequest{response}{status}</assign>
+    <verify handler="NumberValidator" desc="Response status is 200">
+      <input name="actualnumber">$sigStatus</input>
+      <input name="expectednumber">&quot;200&quot;</input>
+    </verify>
+    <assign to="medMin">'{
+      &quot;resourceType&quot;: &quot;MedicationOverviewMin&quot;,
+      &quot;n&quot;: &quot;Martha DeLarosa&quot;,
+      &quot;dob&quot;: &quot;1972-05-01&quot;,
+      &quot;s&quot;: &quot;female&quot;,
+      &quot;id&quot;: &quot;574687583&quot;,
+      &quot;m&quot;: [
+        {
+          &quot;m&quot;: &quot;L02BG03&quot;,
+          &quot;es&quot;: &quot;2015-03-01&quot;,
+          &quot;da&quot;: &quot;2015-03-15&quot;,
+          &quot;d&quot;: &quot;1 tablet once daily&quot;,
+          &quot;r&quot;: &quot;treatment for breast cancer&quot;
+        },
+        {
+          &quot;m&quot;: &quot;G02CX04&quot;,
+          &quot;es&quot;: &quot;2016-01-01&quot;,
+          &quot;d&quot;: &quot;as directed&quot;
+        }
+      ]
+    }'</assign>
+    <verify handler="ExpressionValidator" desc="Transform input &quot;medMin&quot; is non-empty (empty means an upstream extract found nothing)">
+      <input name="expression">not($medMin = &quot;&quot;)</input>
+    </verify>
+    <assign to="transformHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="transformHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="transformTplParams{content}">$medMin</assign>
+    <assign to="transformTplParams{map}">&quot;http://smart.who.int/ph4h/StructureMap/MedicationOverviewMin-to-MedicationOverviewBundle&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="transformBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;transform&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${content?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;map&quot;, &quot;value&quot;: &quot;${map?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;contentType&quot;, &quot;value&quot;: &quot;application/fhir+json&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$transformTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Transform medMin with map http://smart.who.int/ph4h/StructureMap/MedicationOverviewMin-to-MedicationOverviewBundle" handler="HttpMessagingV2" from="Client" to="FHIRValidator">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/transform/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$transformHeaders</input>
+      <input name="body">$transformBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="bundle">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <assign to="sigStatus">if (empty($lastRequest{response}{status})) then &quot;0&quot; else $lastRequest{response}{status}</assign>
+    <verify handler="NumberValidator" desc="Response status is 200">
+      <input name="actualnumber">$sigStatus</input>
+      <input name="expectednumber">&quot;200&quot;</input>
+    </verify>
+    <assign to="conformHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="conformHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="conformTplParams{resource}">$bundle</assign>
+    <assign to="conformTplParams{profile}">&quot;https://profiles.ihe.net/ITI/pharm/MEOW/StructureDefinition/IHE.PHARM.MEOW.MedicationOverviewBundle&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="conformBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;profiles&quot;, &quot;value&quot;: &quot;${profile?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$conformTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Validate bundle conforms to https://profiles.ihe.net/ITI/pharm/MEOW/StructureDefinition/IHE.PHARM.MEOW.MedicationOverviewBundle" handler="HttpMessagingV2" from="Client">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhir/validate&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$conformHeaders</input>
+      <input name="body">$conformBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="validationErrors">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/report/context/0/value&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="bundle conforms to https://profiles.ihe.net/ITI/pharm/MEOW/StructureDefinition/IHE.PHARM.MEOW.MedicationOverviewBundle">
+      <input name="actualstring">$validationErrors</input>
+      <input name="expectedstring">&quot;0&quot;</input>
+    </verify>
+  </steps>
+
+  <output>
+    <success>
+      <default>"Test case completed successfully."</default>
+    </success>
+    <failure>
+      <default>"Test case failed. Check step reports and logs."</default>
+    </failure>
+  </output>
+</testcase>

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testcase id="partial-match-with-wildcard-patterns"
+          xmlns="http://www.gitb.com/tdl/v1/"
+          xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>Partial match with wildcard patterns</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>Match comparison with wildcards</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="Client" role="SUT"/>
+    <gitb:actor id="FHIRServer" role="SIMULATED"/>
+  </actors>
+
+  <variables>
+    <var name="patient" type="string"/>
+    <var name="lastRequest" type="map"/>
+    <var name="fhirValidatorHeaders" type="map"/>
+    <var name="FHIRValidatorBase" type="string"/>
+  </variables>
+
+  <steps stopOnError="true">
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <send id="lastRequest" desc="Generate test data from profile" handler="HttpMessagingV2" from="Client">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/testdata/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">concat('{&quot;operation&quot;:&quot;generate&quot;,&quot;input&quot;:[{&quot;name&quot;:&quot;profile&quot;,&quot;value&quot;:&quot;', &quot;http://hl7.org/fhir/StructureDefinition/Patient&quot;, '&quot;,&quot;embeddingMethod&quot;:&quot;STRING&quot;}]}')</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="patient">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+  </steps>
+
+  <output>
+    <success>
+      <default>"Test case completed successfully."</default>
+    </success>
+    <failure>
+      <default>"Test case failed. Check step reports and logs."</default>
+    </failure>
+  </output>
+</testcase>

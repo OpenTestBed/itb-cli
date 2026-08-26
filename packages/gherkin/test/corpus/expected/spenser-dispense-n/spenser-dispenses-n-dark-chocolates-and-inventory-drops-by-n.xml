@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite id="spenser-dispenses-n-dark-chocolates-and-inventory-drops-by-n"
+           xmlns="http://www.gitb.com/tdl/v1/"
+           xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>Spenser dispenses N dark chocolates and inventory drops by N</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>The tester enters a number N. The test reads the current dark-chocolate count (X), POSTs N orders for &quot;chocolate-dark&quot; with a 2-second delay between each, then re-reads the inventory and asserts the count is X - N. Reference profile: http://costateixeira.github.io/spenser Default endpoint:  http://spenser.local</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="Spenser">
+      <gitb:name>Spenser</gitb:name>
+      <gitb:desc>Endpoint: http://spenser.local | Definition: http://costateixeira.github.io/spenser</gitb:desc>
+    </gitb:actor>
+    <gitb:actor id="FHIRValidator">
+      <gitb:name>FHIRValidator</gitb:name>
+      <gitb:desc>Endpoint: http://fhir-validator:8081</gitb:desc>
+    </gitb:actor>
+    <gitb:actor id="Client">
+      <gitb:name>Client</gitb:name>
+    </gitb:actor>
+  </actors>
+
+  <testcase id="dispense-n-001-inventory-delta-matches-dispense-count"/>
+
+</testsuite>

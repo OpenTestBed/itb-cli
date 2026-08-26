@@ -1,0 +1,11 @@
+{
+  "name": "@opentestbed/otb-gherkin",
+  "version": "0.0.0",
+  "description": "Gherkin -> GITB TDL compiler: the FHIR Gherkin dialect, its parser and its XML generator",
+  "license": "BSD-3-Clause",
+  "type": "module",
+  "scripts": {
+    "test": "node test/corpus.mjs",
+    "test:update": "node test/corpus.mjs --update"
+  }
+}

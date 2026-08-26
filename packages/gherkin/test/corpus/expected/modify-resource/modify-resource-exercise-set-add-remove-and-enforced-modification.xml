@@ -1,0 +1,402 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testcase id="modify-resource-exercise-set-add-remove-and-enforced-modification"
+          xmlns="http://www.gitb.com/tdl/v1/"
+          xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>modify-resource Exercise set, add, remove and enforced modification</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>FHIR Validator modify operation</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="Client" role="SUT"/>
+    <gitb:actor id="FHIRValidator" role="SIMULATED"/>
+  </actors>
+
+  <variables>
+    <var name="mappingsJson" type="string"/>
+    <var name="generateBody" type="string"/>
+    <var name="patient" type="string"/>
+    <var name="opsJson" type="string"/>
+    <var name="modifyBody" type="string"/>
+    <var name="assertBody" type="string"/>
+    <var name="assertResult" type="string"/>
+    <var name="allergy" type="string"/>
+    <var name="patient2" type="string"/>
+    <var name="modificationOutcome" type="string"/>
+    <var name="summarizeBody" type="string"/>
+    <var name="modificationErrors" type="string"/>
+    <var name="lastRequest" type="map"/>
+    <var name="summarizeRequest" type="map"/>
+    <var name="FHIRValidatorBase" type="string"/>
+    <var name="fhirValidatorHeaders" type="map"/>
+    <var name="entryTplParams" type="map"/>
+    <var name="closeTplParams" type="map"/>
+    <var name="generateTplParams" type="map"/>
+    <var name="opTplParams" type="map"/>
+    <var name="closeOpsTplParams" type="map"/>
+    <var name="modifyTplParams" type="map"/>
+    <var name="assertTplParams" type="map"/>
+    <var name="summarizeTplParams" type="map"/>
+  </variables>
+
+  <steps stopOnError="true">
+    <assign to="FHIRValidatorBase">&quot;http://fhir-validator:8081&quot;</assign>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="mappingsJson">&quot;[&quot;</assign>
+    <assign to="entryTplParams{path}">&quot;Patient.id&quot;</assign>
+    <assign to="entryTplParams{value}">&quot;modify-base-001&quot;</assign>
+    <assign to="entryTplParams{system}">&quot;&quot;</assign>
+    <assign to="entryTplParams{code}">&quot;&quot;</assign>
+    <assign to="entryTplParams{accum}">$mappingsJson</assign>
+    <process handler="TemplateProcessor" operation="process" output="mappingsJson">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'${accum}&lt;#if accum?ends_with(&quot;[&quot;)&gt;&lt;#else&gt;,&lt;/#if&gt;{&quot;path&quot;:&quot;${path}&quot;,&lt;#if value?has_content&gt;&quot;value&quot;:&quot;${value}&quot;&lt;#else&gt;&quot;parts&quot;:[{&quot;name&quot;:&quot;system&quot;,&quot;value&quot;:&quot;${system}&quot;},{&quot;name&quot;:&quot;code&quot;,&quot;value&quot;:&quot;${code}&quot;}]&lt;/#if&gt;}'</input>
+      <input name="parameters">$entryTplParams</input>
+    </process>
+    <assign to="closeTplParams{accum}">$mappingsJson</assign>
+    <process handler="TemplateProcessor" operation="process" output="mappingsJson">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'${accum}]'</input>
+      <input name="parameters">$closeTplParams</input>
+    </process>
+    <assign to="generateTplParams{profile}">&quot;http://hl7.org/fhir/StructureDefinition/Patient&quot;</assign>
+    <assign to="generateTplParams{mappings}">$mappingsJson</assign>
+    <process handler="TemplateProcessor" operation="process" output="generateBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;generate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;profile&quot;, &quot;value&quot;: &quot;${profile}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;requiredOnly&quot;, &quot;value&quot;: &quot;true&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;mappings&quot;, &quot;value&quot;: &quot;${mappings?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$generateTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Generate required-only test data with values" handler="HttpMessagingV2" from="Client">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/testdata/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$generateBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="patient">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="opsJson">&quot;[&quot;</assign>
+    <assign to="opTplParams{op}">&quot;set&quot;</assign>
+    <assign to="opTplParams{path}">&quot;Patient.id&quot;</assign>
+    <assign to="opTplParams{value}">&quot;modify-after-01&quot;</assign>
+    <assign to="opTplParams{system}">&quot;&quot;</assign>
+    <assign to="opTplParams{code}">&quot;&quot;</assign>
+    <assign to="opTplParams{accum}">$opsJson</assign>
+    <process handler="TemplateProcessor" operation="process" output="opsJson">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'${accum}&lt;#if accum?ends_with(&quot;[&quot;)&gt;&lt;#else&gt;,&lt;/#if&gt;{&quot;op&quot;:&quot;${op}&quot;,&quot;path&quot;:&quot;${path}&quot;&lt;#if op != &quot;remove&quot;&gt;&lt;#if value?has_content&gt;,&quot;value&quot;:&quot;${value}&quot;&lt;#else&gt;,&quot;parts&quot;:[{&quot;name&quot;:&quot;system&quot;,&quot;value&quot;:&quot;${system}&quot;},{&quot;name&quot;:&quot;code&quot;,&quot;value&quot;:&quot;${code}&quot;}]&lt;/#if&gt;&lt;/#if&gt;}'</input>
+      <input name="parameters">$opTplParams</input>
+    </process>
+    <assign to="closeOpsTplParams{accum}">$opsJson</assign>
+    <process handler="TemplateProcessor" operation="process" output="opsJson">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'${accum}]'</input>
+      <input name="parameters">$closeOpsTplParams</input>
+    </process>
+    <assign to="modifyTplParams{resource}">$patient</assign>
+    <assign to="modifyTplParams{operations}">$opsJson</assign>
+    <process handler="TemplateProcessor" operation="process" output="modifyBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;modify&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;resource&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;operations&quot;, &quot;value&quot;: &quot;${operations?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;enforce&quot;, &quot;value&quot;: &quot;false&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$modifyTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Modify resource (no enforcement)" handler="HttpMessagingV2" from="Client">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/testdata/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$modifyBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="patient">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="assertTplParams{resource}">$patient</assign>
+    <assign to="assertTplParams{expression}">&quot;Patient.id = 'modify-after-01'&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="assertBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$assertTplParams</input>
+    </process>
+    <send id="lastRequest" desc="FHIRPath assertion" handler="HttpMessagingV2" from="Client">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPathAssertion/validate&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$assertBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="assertResult">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/report/result&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="FHIRPath assertion succeeded">
+      <input name="actualstring">$assertResult</input>
+      <input name="expectedstring">&quot;SUCCESS&quot;</input>
+    </verify>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="mappingsJson">&quot;[&quot;</assign>
+    <assign to="entryTplParams{path}">&quot;AllergyIntolerance.clinicalStatus.coding&quot;</assign>
+    <assign to="entryTplParams{value}">&quot;&quot;</assign>
+    <assign to="entryTplParams{system}">&quot;http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical&quot;</assign>
+    <assign to="entryTplParams{code}">&quot;active&quot;</assign>
+    <assign to="entryTplParams{accum}">$mappingsJson</assign>
+    <process handler="TemplateProcessor" operation="process" output="mappingsJson">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'${accum}&lt;#if accum?ends_with(&quot;[&quot;)&gt;&lt;#else&gt;,&lt;/#if&gt;{&quot;path&quot;:&quot;${path}&quot;,&lt;#if value?has_content&gt;&quot;value&quot;:&quot;${value}&quot;&lt;#else&gt;&quot;parts&quot;:[{&quot;name&quot;:&quot;system&quot;,&quot;value&quot;:&quot;${system}&quot;},{&quot;name&quot;:&quot;code&quot;,&quot;value&quot;:&quot;${code}&quot;}]&lt;/#if&gt;}'</input>
+      <input name="parameters">$entryTplParams</input>
+    </process>
+    <assign to="closeTplParams{accum}">$mappingsJson</assign>
+    <process handler="TemplateProcessor" operation="process" output="mappingsJson">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'${accum}]'</input>
+      <input name="parameters">$closeTplParams</input>
+    </process>
+    <assign to="generateTplParams{profile}">&quot;http://hl7.org/fhir/StructureDefinition/AllergyIntolerance&quot;</assign>
+    <assign to="generateTplParams{mappings}">$mappingsJson</assign>
+    <process handler="TemplateProcessor" operation="process" output="generateBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;generate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;profile&quot;, &quot;value&quot;: &quot;${profile}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;requiredOnly&quot;, &quot;value&quot;: &quot;true&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;mappings&quot;, &quot;value&quot;: &quot;${mappings?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$generateTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Generate required-only test data with values" handler="HttpMessagingV2" from="Client">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/testdata/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$generateBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="allergy">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="opsJson">&quot;[&quot;</assign>
+    <assign to="opTplParams{op}">&quot;add&quot;</assign>
+    <assign to="opTplParams{path}">&quot;AllergyIntolerance.clinicalStatus.coding&quot;</assign>
+    <assign to="opTplParams{value}">&quot;&quot;</assign>
+    <assign to="opTplParams{system}">&quot;http://example.org/cs&quot;</assign>
+    <assign to="opTplParams{code}">&quot;extra&quot;</assign>
+    <assign to="opTplParams{accum}">$opsJson</assign>
+    <process handler="TemplateProcessor" operation="process" output="opsJson">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'${accum}&lt;#if accum?ends_with(&quot;[&quot;)&gt;&lt;#else&gt;,&lt;/#if&gt;{&quot;op&quot;:&quot;${op}&quot;,&quot;path&quot;:&quot;${path}&quot;&lt;#if op != &quot;remove&quot;&gt;&lt;#if value?has_content&gt;,&quot;value&quot;:&quot;${value}&quot;&lt;#else&gt;,&quot;parts&quot;:[{&quot;name&quot;:&quot;system&quot;,&quot;value&quot;:&quot;${system}&quot;},{&quot;name&quot;:&quot;code&quot;,&quot;value&quot;:&quot;${code}&quot;}]&lt;/#if&gt;&lt;/#if&gt;}'</input>
+      <input name="parameters">$opTplParams</input>
+    </process>
+    <assign to="opTplParams{op}">&quot;remove&quot;</assign>
+    <assign to="opTplParams{path}">&quot;AllergyIntolerance.clinicalStatus.coding[0]&quot;</assign>
+    <assign to="opTplParams{value}">&quot;&quot;</assign>
+    <assign to="opTplParams{system}">&quot;&quot;</assign>
+    <assign to="opTplParams{code}">&quot;&quot;</assign>
+    <assign to="opTplParams{accum}">$opsJson</assign>
+    <process handler="TemplateProcessor" operation="process" output="opsJson">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'${accum}&lt;#if accum?ends_with(&quot;[&quot;)&gt;&lt;#else&gt;,&lt;/#if&gt;{&quot;op&quot;:&quot;${op}&quot;,&quot;path&quot;:&quot;${path}&quot;&lt;#if op != &quot;remove&quot;&gt;&lt;#if value?has_content&gt;,&quot;value&quot;:&quot;${value}&quot;&lt;#else&gt;,&quot;parts&quot;:[{&quot;name&quot;:&quot;system&quot;,&quot;value&quot;:&quot;${system}&quot;},{&quot;name&quot;:&quot;code&quot;,&quot;value&quot;:&quot;${code}&quot;}]&lt;/#if&gt;&lt;/#if&gt;}'</input>
+      <input name="parameters">$opTplParams</input>
+    </process>
+    <assign to="closeOpsTplParams{accum}">$opsJson</assign>
+    <process handler="TemplateProcessor" operation="process" output="opsJson">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'${accum}]'</input>
+      <input name="parameters">$closeOpsTplParams</input>
+    </process>
+    <assign to="modifyTplParams{resource}">$allergy</assign>
+    <assign to="modifyTplParams{operations}">$opsJson</assign>
+    <process handler="TemplateProcessor" operation="process" output="modifyBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;modify&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;resource&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;operations&quot;, &quot;value&quot;: &quot;${operations?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;enforce&quot;, &quot;value&quot;: &quot;false&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$modifyTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Modify resource (no enforcement)" handler="HttpMessagingV2" from="Client">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/testdata/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$modifyBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="allergy">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="assertTplParams{resource}">$allergy</assign>
+    <assign to="assertTplParams{expression}">&quot;AllergyIntolerance.clinicalStatus.coding.count() = 1&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="assertBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$assertTplParams</input>
+    </process>
+    <send id="lastRequest" desc="FHIRPath assertion" handler="HttpMessagingV2" from="Client">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPathAssertion/validate&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$assertBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="assertResult">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/report/result&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="FHIRPath assertion succeeded">
+      <input name="actualstring">$assertResult</input>
+      <input name="expectedstring">&quot;SUCCESS&quot;</input>
+    </verify>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="assertTplParams{resource}">$allergy</assign>
+    <assign to="assertTplParams{expression}">&quot;AllergyIntolerance.clinicalStatus.coding.first().code = 'extra'&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="assertBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$assertTplParams</input>
+    </process>
+    <send id="lastRequest" desc="FHIRPath assertion" handler="HttpMessagingV2" from="Client">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPathAssertion/validate&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$assertBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="assertResult">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/report/result&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="FHIRPath assertion succeeded">
+      <input name="actualstring">$assertResult</input>
+      <input name="expectedstring">&quot;SUCCESS&quot;</input>
+    </verify>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="mappingsJson">&quot;[&quot;</assign>
+    <assign to="entryTplParams{path}">&quot;Patient.id&quot;</assign>
+    <assign to="entryTplParams{value}">&quot;modify-prof-base&quot;</assign>
+    <assign to="entryTplParams{system}">&quot;&quot;</assign>
+    <assign to="entryTplParams{code}">&quot;&quot;</assign>
+    <assign to="entryTplParams{accum}">$mappingsJson</assign>
+    <process handler="TemplateProcessor" operation="process" output="mappingsJson">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'${accum}&lt;#if accum?ends_with(&quot;[&quot;)&gt;&lt;#else&gt;,&lt;/#if&gt;{&quot;path&quot;:&quot;${path}&quot;,&lt;#if value?has_content&gt;&quot;value&quot;:&quot;${value}&quot;&lt;#else&gt;&quot;parts&quot;:[{&quot;name&quot;:&quot;system&quot;,&quot;value&quot;:&quot;${system}&quot;},{&quot;name&quot;:&quot;code&quot;,&quot;value&quot;:&quot;${code}&quot;}]&lt;/#if&gt;}'</input>
+      <input name="parameters">$entryTplParams</input>
+    </process>
+    <assign to="closeTplParams{accum}">$mappingsJson</assign>
+    <process handler="TemplateProcessor" operation="process" output="mappingsJson">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'${accum}]'</input>
+      <input name="parameters">$closeTplParams</input>
+    </process>
+    <assign to="generateTplParams{profile}">&quot;http://hl7.org/fhir/StructureDefinition/Patient&quot;</assign>
+    <assign to="generateTplParams{mappings}">$mappingsJson</assign>
+    <process handler="TemplateProcessor" operation="process" output="generateBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;generate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;profile&quot;, &quot;value&quot;: &quot;${profile}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;requiredOnly&quot;, &quot;value&quot;: &quot;true&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;mappings&quot;, &quot;value&quot;: &quot;${mappings?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$generateTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Generate required-only test data with values" handler="HttpMessagingV2" from="Client">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/testdata/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$generateBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="patient2">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="opsJson">&quot;[&quot;</assign>
+    <assign to="opTplParams{op}">&quot;set&quot;</assign>
+    <assign to="opTplParams{path}">&quot;Patient.gender&quot;</assign>
+    <assign to="opTplParams{value}">&quot;female&quot;</assign>
+    <assign to="opTplParams{system}">&quot;&quot;</assign>
+    <assign to="opTplParams{code}">&quot;&quot;</assign>
+    <assign to="opTplParams{accum}">$opsJson</assign>
+    <process handler="TemplateProcessor" operation="process" output="opsJson">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'${accum}&lt;#if accum?ends_with(&quot;[&quot;)&gt;&lt;#else&gt;,&lt;/#if&gt;{&quot;op&quot;:&quot;${op}&quot;,&quot;path&quot;:&quot;${path}&quot;&lt;#if op != &quot;remove&quot;&gt;&lt;#if value?has_content&gt;,&quot;value&quot;:&quot;${value}&quot;&lt;#else&gt;,&quot;parts&quot;:[{&quot;name&quot;:&quot;system&quot;,&quot;value&quot;:&quot;${system}&quot;},{&quot;name&quot;:&quot;code&quot;,&quot;value&quot;:&quot;${code}&quot;}]&lt;/#if&gt;&lt;/#if&gt;}'</input>
+      <input name="parameters">$opTplParams</input>
+    </process>
+    <assign to="closeOpsTplParams{accum}">$opsJson</assign>
+    <process handler="TemplateProcessor" operation="process" output="opsJson">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'${accum}]'</input>
+      <input name="parameters">$closeOpsTplParams</input>
+    </process>
+    <assign to="modifyTplParams{resource}">$patient2</assign>
+    <assign to="modifyTplParams{operations}">$opsJson</assign>
+    <assign to="modifyTplParams{profile}">&quot;http://hl7.org/fhir/StructureDefinition/Patient&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="modifyBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;modify&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;resource&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;operations&quot;, &quot;value&quot;: &quot;${operations?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;profile&quot;, &quot;value&quot;: &quot;${profile}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;enforce&quot;, &quot;value&quot;: &quot;true&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$modifyTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Modify resource (enforce against profile)" handler="HttpMessagingV2" from="Client">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/testdata/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$modifyBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="patient2">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <process handler="JsonPointerProcessor" operation="process" output="modificationOutcome">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/1/value&quot;</input>
+    </process>
+    <assign to="summarizeTplParams{outcome}">$modificationOutcome</assign>
+    <process handler="TemplateProcessor" operation="process" output="summarizeBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;summarize&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;outcome&quot;, &quot;value&quot;: &quot;${outcome?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$summarizeTplParams</input>
+    </process>
+    <send id="summarizeRequest" desc="Summarise modification OperationOutcome" handler="HttpMessagingV2" from="Client">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/validationResults/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$summarizeBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="modificationErrors">
+      <input name="content">$summarizeRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="Modification produced no validation errors">
+      <input name="actualstring">$modificationErrors</input>
+      <input name="expectedstring">&quot;0&quot;</input>
+    </verify>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="assertTplParams{resource}">$patient2</assign>
+    <assign to="assertTplParams{expression}">&quot;Patient.gender = 'female'&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="assertBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$assertTplParams</input>
+    </process>
+    <send id="lastRequest" desc="FHIRPath assertion" handler="HttpMessagingV2" from="Client">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPathAssertion/validate&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$assertBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="assertResult">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/report/result&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="FHIRPath assertion succeeded">
+      <input name="actualstring">$assertResult</input>
+      <input name="expectedstring">&quot;SUCCESS&quot;</input>
+    </verify>
+  </steps>
+
+  <output>
+    <success>
+      <default>"Test case completed successfully."</default>
+    </success>
+    <failure>
+      <default>"Test case failed. Check step reports and logs."</default>
+    </failure>
+  </output>
+</testcase>

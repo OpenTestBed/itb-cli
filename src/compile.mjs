@@ -23,7 +23,18 @@ export const WB = findWorkbench(ROOT);
 // Asset root: prefer the workbench sources; dependency root: the workbench
 // only if it has node_modules (the plugin's app/ ships without them),
 // else the vendored copies committed in this repo.
-export const PUB = WB ? path.join(WB, 'public') : path.join(ROOT, 'vendor/public');
+// Asset root, in precedence order:
+//   1. ITB_ASSET_ROOT   — an explicit folder holding lang/ and components/.
+//      The golden corpus uses this to compile against FROZEN fixtures, so a
+//      snapshot mismatch always means the compiler changed rather than that
+//      someone edited a dialect in another repo. It is also the first step
+//      toward CatalogSource: the asset location becomes an input, not a
+//      filesystem accident.
+//   2. the sibling workbench checkout
+//   3. the vendored copies (standalone mode)
+export const PUB = process.env.ITB_ASSET_ROOT
+  ? path.resolve(process.env.ITB_ASSET_ROOT)
+  : WB ? path.join(WB, 'public') : path.join(ROOT, 'vendor/public');
 const DEPS = (WB && fs.existsSync(path.join(WB, 'node_modules', 'jszip'))) ? WB : path.join(ROOT, 'vendor');
 const req = createRequire(path.join(ROOT, 'package.json'));
 

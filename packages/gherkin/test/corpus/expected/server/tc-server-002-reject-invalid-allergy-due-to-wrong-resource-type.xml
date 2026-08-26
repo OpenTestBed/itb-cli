@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testcase id="tc-server-002-reject-invalid-allergy-due-to-wrong-resource-type"
+          xmlns="http://www.gitb.com/tdl/v1/"
+          xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>tc-server-002 Reject invalid allergy due to wrong resource type</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>FHIR server allergy flows</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="Client" role="SUT"/>
+    <gitb:actor id="FHIRServer" role="SIMULATED"/>
+  </actors>
+
+  <variables>
+    <var name="FHIRServerDataPool" type="string">
+      <value>default</value>
+    </var>
+  </variables>
+
+  <steps stopOnError="true">
+    <!-- no steps generated for this scenario -->
+  </steps>
+
+  <output>
+    <success>
+      <default>"Test case completed successfully."</default>
+    </success>
+    <failure>
+      <default>"Test case failed. Check step reports and logs."</default>
+    </failure>
+  </output>
+</testcase>

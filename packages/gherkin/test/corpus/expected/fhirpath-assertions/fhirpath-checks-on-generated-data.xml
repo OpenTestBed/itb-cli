@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testcase id="fhirpath-checks-on-generated-data"
+          xmlns="http://www.gitb.com/tdl/v1/"
+          xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>FHIRPath checks on generated data</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>FHIRPath expression evaluation and assertions</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="Client" role="SUT"/>
+    <gitb:actor id="FHIRServer" role="SIMULATED"/>
+  </actors>
+
+  <variables>
+    <var name="patient" type="string"/>
+    <var name="fhirpathBody" type="string"/>
+    <var name="fhirpathResult" type="string"/>
+    <var name="familyName" type="string"/>
+    <var name="lastRequest" type="map"/>
+    <var name="fhirValidatorHeaders" type="map"/>
+    <var name="fhirpathTplParams" type="map"/>
+    <var name="FHIRValidatorBase" type="string"/>
+    <var name="submitResult" type="string"/>
+  </variables>
+
+  <steps stopOnError="true">
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <send id="lastRequest" desc="Generate test data from profile" handler="HttpMessagingV2" from="Client">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/testdata/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">concat('{&quot;operation&quot;:&quot;generate&quot;,&quot;input&quot;:[{&quot;name&quot;:&quot;profile&quot;,&quot;value&quot;:&quot;', &quot;http://hl7.org/fhir/StructureDefinition/Patient&quot;, '&quot;,&quot;embeddingMethod&quot;:&quot;STRING&quot;}]}')</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="patient">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="fhirpathTplParams{resource}">$submitResult{payload}</assign>
+    <assign to="fhirpathTplParams{expression}">&quot;(Patient.name).exists()&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="fhirpathBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;inputs&quot;: { &quot;resource&quot;: &quot;${resource?json_string}&quot;, &quot;expression&quot;: &quot;${expression?json_string}&quot; } }'</input>
+      <input name="parameters">$fhirpathTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Evaluate FHIRPath expression" handler="HttpMessagingV2" from="Client">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirpath/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$fhirpathBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="fhirpathResult">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/result&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="FHIRPath element exists">
+      <input name="actualstring">$fhirpathResult</input>
+      <input name="expectedstring">&quot;true&quot;</input>
+    </verify>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="fhirpathTplParams{resource}">$submitResult{payload}</assign>
+    <assign to="fhirpathTplParams{expression}">&quot;(Patient.name).count()&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="fhirpathBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;inputs&quot;: { &quot;resource&quot;: &quot;${resource?json_string}&quot;, &quot;expression&quot;: &quot;${expression?json_string}&quot; } }'</input>
+      <input name="parameters">$fhirpathTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Evaluate FHIRPath expression" handler="HttpMessagingV2" from="Client">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirpath/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$fhirpathBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="fhirpathResult">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/result&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="FHIRPath count matches">
+      <input name="actualstring">$fhirpathResult</input>
+      <input name="expectedstring">&quot;1&quot;</input>
+    </verify>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="fhirpathTplParams{resource}">$patient</assign>
+    <assign to="fhirpathTplParams{expression}">&quot;Patient.name.family&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="fhirpathBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$fhirpathTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Evaluate FHIRPath expression" handler="HttpMessagingV2" from="Client">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPath/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$fhirpathBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="familyName">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="fhirpathTplParams{resource}">$patient</assign>
+    <assign to="fhirpathTplParams{expression}">&quot;Patient.name.family&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="fhirpathBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$fhirpathTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Evaluate FHIRPath expression" handler="HttpMessagingV2" from="Client">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPath/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$fhirpathBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="fhirpathResult">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="FHIRPath result matches expected value">
+      <input name="actualstring">$fhirpathResult</input>
+      <input name="expectedstring">&quot;Smith&quot;</input>
+    </verify>
+  </steps>
+
+  <output>
+    <success>
+      <default>"Test case completed successfully."</default>
+    </success>
+    <failure>
+      <default>"Test case failed. Check step reports and logs."</default>
+    </failure>
+  </output>
+</testcase>

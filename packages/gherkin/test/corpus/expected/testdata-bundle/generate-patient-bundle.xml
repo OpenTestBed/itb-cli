@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testcase id="generate-patient-bundle"
+          xmlns="http://www.gitb.com/tdl/v1/"
+          xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>Generate Patient bundle</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>Generate a test Bundle from data rows</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="Client" role="SUT"/>
+    <gitb:actor id="FHIRServer" role="SIMULATED"/>
+  </actors>
+
+  <variables>
+    <var name="fhirpathBody" type="string"/>
+    <var name="fhirpathResult" type="string"/>
+    <var name="lastRequest" type="map"/>
+    <var name="bundleData" type="string"/>
+    <var name="fhirValidatorHeaders" type="map"/>
+    <var name="fhirpathTplParams" type="map"/>
+    <var name="generatedBundle" type="string"/>
+    <var name="FHIRValidatorBase" type="string"/>
+  </variables>
+
+  <steps stopOnError="true">
+    <assign to="bundleData" append="true">'{&quot;0&quot;:&quot;$&quot;,&quot;1&quot;:&quot;r&quot;,&quot;2&quot;:&quot;o&quot;,&quot;3&quot;:&quot;w&quot;}'</assign>
+    <assign to="bundleData" append="true">'{&quot;0&quot;:&quot;$&quot;,&quot;1&quot;:&quot;r&quot;,&quot;2&quot;:&quot;o&quot;,&quot;3&quot;:&quot;w&quot;}'</assign>
+    <assign to="bundleData" append="true">'{&quot;0&quot;:&quot;$&quot;,&quot;1&quot;:&quot;r&quot;,&quot;2&quot;:&quot;o&quot;,&quot;3&quot;:&quot;w&quot;}'</assign>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="fhirpathTplParams{resource}">$generatedBundle</assign>
+    <assign to="fhirpathTplParams{expression}">&quot;Bundle.entry.count()&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="fhirpathBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$fhirpathTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Evaluate FHIRPath expression" handler="HttpMessagingV2" from="Client">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPath/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$fhirpathBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="fhirpathResult">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="FHIRPath result matches expected value">
+      <input name="actualstring">$fhirpathResult</input>
+      <input name="expectedstring">&quot;3&quot;</input>
+    </verify>
+  </steps>
+
+  <output>
+    <success>
+      <default>"Test case completed successfully."</default>
+    </success>
+    <failure>
+      <default>"Test case failed. Check step reports and logs."</default>
+    </failure>
+  </output>
+</testcase>

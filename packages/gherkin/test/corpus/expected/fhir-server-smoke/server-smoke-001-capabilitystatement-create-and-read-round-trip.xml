@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testcase id="server-smoke-001-capabilitystatement-create-and-read-round-trip"
+          xmlns="http://www.gitb.com/tdl/v1/"
+          xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>server-smoke-001 CapabilityStatement, create, and read round-trip</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>FHIR server smoke test</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="FHIRServer" role="SUT"/>
+    <gitb:actor id="FHIRValidator" role="SIMULATED"/>
+    <gitb:actor id="Client" role="SIMULATED"/>
+  </actors>
+
+  <variables>
+    <var name="matchBody" type="string"/>
+    <var name="matchResult" type="string"/>
+    <var name="mappingsJson" type="string"/>
+    <var name="generateBody" type="string"/>
+    <var name="patient" type="string"/>
+    <var name="validateBody" type="string"/>
+    <var name="validationErrors" type="string"/>
+    <var name="assertBody" type="string"/>
+    <var name="assertResult" type="string"/>
+    <var name="lastRequest" type="map"/>
+    <var name="FHIRServerBase" type="string"/>
+    <var name="FHIRValidatorBase" type="string"/>
+    <var name="jsonHeaders" type="map"/>
+    <var name="metadata" type="string"/>
+    <var name="sigStatus" type="string"/>
+    <var name="fhirValidatorHeaders" type="map"/>
+    <var name="matchTplParams" type="map"/>
+    <var name="entryTplParams" type="map"/>
+    <var name="closeTplParams" type="map"/>
+    <var name="generateTplParams" type="map"/>
+    <var name="validateTplParams" type="map"/>
+    <var name="fetched" type="string"/>
+    <var name="assertTplParams" type="map"/>
+  </variables>
+
+  <steps stopOnError="true">
+    <assign to="FHIRServerBase">&quot;http://localhost:8080/fhir&quot;</assign>
+    <assign to="FHIRValidatorBase">&quot;http://fhir-validator:8081&quot;</assign>
+    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <send id="lastRequest" desc="GET" handler="HttpMessagingV2" from="Client">
+      <input name="uri">&quot;$FHIRServerBase/metadata&quot;</input>
+      <input name="method">&quot;GET&quot;</input>
+      <input name="headers">$jsonHeaders</input>
+    </send>
+    <assign to="metadata">$lastRequest{response}{body}</assign>
+    <assign to="sigStatus">if (empty($lastRequest{response}{status})) then &quot;0&quot; else $lastRequest{response}{status}</assign>
+    <verify handler="NumberValidator" desc="Response status is 200">
+      <input name="actualnumber">$sigStatus</input>
+      <input name="expectednumber">&quot;200&quot;</input>
+    </verify>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="matchTplParams{resource}">$metadata</assign>
+    <assign to="matchTplParams{matchetype}">'{&quot;resourceType&quot;: &quot;CapabilityStatement&quot;}'</assign>
+    <process handler="TemplateProcessor" operation="process" output="matchBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;matchetype&quot;, &quot;value&quot;: &quot;${matchetype?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$matchTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Matchetype validate" handler="HttpMessagingV2" from="FHIRServer">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/matchetype/validate&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$matchBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="matchResult">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/report/result&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="Matchetype comparison succeeded">
+      <input name="actualstring">$matchResult</input>
+      <input name="expectedstring">&quot;SUCCESS&quot;</input>
+    </verify>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="mappingsJson">&quot;[&quot;</assign>
+    <assign to="entryTplParams{path}">&quot;Patient.id&quot;</assign>
+    <assign to="entryTplParams{value}">&quot;smoke-pat-001&quot;</assign>
+    <assign to="entryTplParams{system}">&quot;&quot;</assign>
+    <assign to="entryTplParams{code}">&quot;&quot;</assign>
+    <assign to="entryTplParams{accum}">$mappingsJson</assign>
+    <process handler="TemplateProcessor" operation="process" output="mappingsJson">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'${accum}&lt;#if accum?ends_with(&quot;[&quot;)&gt;&lt;#else&gt;,&lt;/#if&gt;{&quot;path&quot;:&quot;${path}&quot;,&lt;#if value?has_content&gt;&quot;value&quot;:&quot;${value}&quot;&lt;#else&gt;&quot;parts&quot;:[{&quot;name&quot;:&quot;system&quot;,&quot;value&quot;:&quot;${system}&quot;},{&quot;name&quot;:&quot;code&quot;,&quot;value&quot;:&quot;${code}&quot;}]&lt;/#if&gt;}'</input>
+      <input name="parameters">$entryTplParams</input>
+    </process>
+    <assign to="closeTplParams{accum}">$mappingsJson</assign>
+    <process handler="TemplateProcessor" operation="process" output="mappingsJson">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'${accum}]'</input>
+      <input name="parameters">$closeTplParams</input>
+    </process>
+    <assign to="generateTplParams{profile}">&quot;http://hl7.org/fhir/StructureDefinition/Patient&quot;</assign>
+    <assign to="generateTplParams{mappings}">$mappingsJson</assign>
+    <process handler="TemplateProcessor" operation="process" output="generateBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;generate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;profile&quot;, &quot;value&quot;: &quot;${profile}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;requiredOnly&quot;, &quot;value&quot;: &quot;true&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;mappings&quot;, &quot;value&quot;: &quot;${mappings?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$generateTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Generate required-only test data with values" handler="HttpMessagingV2" from="FHIRServer">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/testdata/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$generateBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="patient">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="validateTplParams{resource}">$patient</assign>
+    <assign to="validateTplParams{resourceType}">&quot;Patient&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="validateBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;profiles&quot;, &quot;value&quot;: &quot;http://hl7.org/fhir/StructureDefinition/${resourceType}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$validateTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Validate against base FHIR profile for Patient" handler="HttpMessagingV2" from="FHIRServer">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhir/validate&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$validateBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="validationErrors">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/report/context/0/value&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="patient is a valid Patient resource">
+      <input name="actualstring">$validationErrors</input>
+      <input name="expectedstring">&quot;0&quot;</input>
+    </verify>
+    <assign to="jsonHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <send id="lastRequest" desc="POST" handler="HttpMessagingV2" from="Client" to="FHIRServer">
+      <input name="uri">concat($FHIRServerBase, &quot;/Patient&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$jsonHeaders</input>
+      <input name="body">$patient</input>
+    </send>
+    <assign to="sigStatus">if (empty($lastRequest{response}{status})) then &quot;0&quot; else $lastRequest{response}{status}</assign>
+    <verify handler="NumberValidator" desc="Response status is 201">
+      <input name="actualnumber">$sigStatus</input>
+      <input name="expectednumber">&quot;201&quot;</input>
+    </verify>
+    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <send id="lastRequest" desc="GET" handler="HttpMessagingV2" from="Client">
+      <input name="uri">&quot;$FHIRServerBase/Patient/smoke-pat-001&quot;</input>
+      <input name="method">&quot;GET&quot;</input>
+      <input name="headers">$jsonHeaders</input>
+    </send>
+    <assign to="fetched">$lastRequest{response}{body}</assign>
+    <assign to="sigStatus">if (empty($lastRequest{response}{status})) then &quot;0&quot; else $lastRequest{response}{status}</assign>
+    <verify handler="NumberValidator" desc="Response status is 200">
+      <input name="actualnumber">$sigStatus</input>
+      <input name="expectednumber">&quot;200&quot;</input>
+    </verify>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="matchTplParams{resource}">$fetched</assign>
+    <assign to="matchTplParams{matchetype}">'{&quot;resourceType&quot;: &quot;Patient&quot;, &quot;id&quot;: &quot;smoke-pat-001&quot;}'</assign>
+    <process handler="TemplateProcessor" operation="process" output="matchBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;matchetype&quot;, &quot;value&quot;: &quot;${matchetype?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$matchTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Matchetype validate" handler="HttpMessagingV2" from="FHIRServer">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/matchetype/validate&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$matchBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="matchResult">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/report/result&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="Matchetype comparison succeeded">
+      <input name="actualstring">$matchResult</input>
+      <input name="expectedstring">&quot;SUCCESS&quot;</input>
+    </verify>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="assertTplParams{resource}">$fetched</assign>
+    <assign to="assertTplParams{expression}">&quot;Patient.id = 'smoke-pat-001'&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="assertBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$assertTplParams</input>
+    </process>
+    <send id="lastRequest" desc="FHIRPath assertion" handler="HttpMessagingV2" from="FHIRServer">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPathAssertion/validate&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$assertBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="assertResult">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/report/result&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="FHIRPath assertion succeeded">
+      <input name="actualstring">$assertResult</input>
+      <input name="expectedstring">&quot;SUCCESS&quot;</input>
+    </verify>
+  </steps>
+
+  <output>
+    <success>
+      <default>"Test case completed successfully."</default>
+    </success>
+    <failure>
+      <default>"Test case failed. Check step reports and logs."</default>
+    </failure>
+  </output>
+</testcase>

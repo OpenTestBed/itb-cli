@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite id="l2-sop-clinical-decision-support-requirements"
+           xmlns="http://www.gitb.com/tdl/v1/"
+           xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>L2 SOP Clinical Decision Support Requirements</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description></gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="Client">
+      <gitb:name>Client</gitb:name>
+    </gitb:actor>
+    <gitb:actor id="FHIRServer">
+      <gitb:name>FHIRServer</gitb:name>
+    </gitb:actor>
+  </actors>
+
+  <testcase id="define-clinical-decision-support-requirements-following-l2-sop"/>
+
+</testsuite>

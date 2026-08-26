@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testcase id="tc-meow-client-001-pharm-11-query-by-patient-and-by-optional-parameters"
+          xmlns="http://www.gitb.com/tdl/v1/"
+          xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>tc-meow-client-001 PHARM-11 query by patient and by optional parameters</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>IHE MEOW Medication Overview Consumer — client-side conformance</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="MedicationOverviewConsumer" role="SUT"/>
+    <gitb:actor id="MedicationOverviewResponder" role="SIMULATED"/>
+    <gitb:actor id="FHIRValidator" role="SIMULATED"/>
+  </actors>
+
+  <variables>
+    <var name="lastReceived" type="map"/>
+    <var name="FHIRValidatorBase" type="string"/>
+  </variables>
+
+  <steps stopOnError="true">
+    <assign to="FHIRValidatorBase">&quot;http://fhir-validator:8080&quot;</assign>
+    <interact id="inform" desc="Instruction for MedicationOverviewConsumer" with="MedicationOverviewConsumer">
+      <instruct desc="ROUND 1 of 3 — query the Responder for the test patient's medication overview using ONLY the patient parameter, then wait." name="message"/>
+    </interact>
+    <receive id="lastReceived" desc="Wait for message" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="MedicationOverviewResponder">
+      <input name="timeout">&quot;300&quot;</input>
+    </receive>
+    <verify handler="StringValidator" desc="Equals">
+      <input name="actualstring">$lastReceived{method}</input>
+      <input name="expectedstring">&quot;GET&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="Contains">
+      <input name="actualstring">$lastReceived{path}</input>
+      <input name="expectedstring">&quot;/MedicationStatement&quot;</input>
+      <input name="matchType">&quot;contains&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="Contains">
+      <input name="actualstring">$lastReceived{path}</input>
+      <input name="expectedstring">&quot;patient=&quot;</input>
+      <input name="matchType">&quot;contains&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="Contains">
+      <input name="actualstring">$lastReceived{headers}{Accept}</input>
+      <input name="expectedstring">&quot;fhir+json&quot;</input>
+      <input name="matchType">&quot;contains&quot;</input>
+    </verify>
+    <interact id="inform" desc="Instruction for MedicationOverviewConsumer" with="MedicationOverviewConsumer">
+      <instruct desc="ROUND 2 of 3 — query the same patient again, this time ALSO filtering by status (for example status=active), then wait." name="message"/>
+    </interact>
+    <receive id="lastReceived" desc="Wait for message" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="MedicationOverviewResponder">
+      <input name="timeout">&quot;300&quot;</input>
+    </receive>
+    <verify handler="StringValidator" desc="Equals">
+      <input name="actualstring">$lastReceived{method}</input>
+      <input name="expectedstring">&quot;GET&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="Contains">
+      <input name="actualstring">$lastReceived{path}</input>
+      <input name="expectedstring">&quot;/MedicationStatement&quot;</input>
+      <input name="matchType">&quot;contains&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="Contains">
+      <input name="actualstring">$lastReceived{path}</input>
+      <input name="expectedstring">&quot;patient=&quot;</input>
+      <input name="matchType">&quot;contains&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="Contains">
+      <input name="actualstring">$lastReceived{path}</input>
+      <input name="expectedstring">&quot;status=&quot;</input>
+      <input name="matchType">&quot;contains&quot;</input>
+    </verify>
+    <interact id="inform" desc="Instruction for MedicationOverviewConsumer" with="MedicationOverviewConsumer">
+      <instruct desc="ROUND 3 of 3 — query the same patient again, this time ALSO filtering by _lastUpdated (an incremental sync since a given instant), then wait." name="message"/>
+    </interact>
+    <receive id="lastReceived" desc="Wait for message" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="MedicationOverviewResponder">
+      <input name="timeout">&quot;300&quot;</input>
+    </receive>
+    <verify handler="StringValidator" desc="Equals">
+      <input name="actualstring">$lastReceived{method}</input>
+      <input name="expectedstring">&quot;GET&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="Contains">
+      <input name="actualstring">$lastReceived{path}</input>
+      <input name="expectedstring">&quot;/MedicationStatement&quot;</input>
+      <input name="matchType">&quot;contains&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="Contains">
+      <input name="actualstring">$lastReceived{path}</input>
+      <input name="expectedstring">&quot;patient=&quot;</input>
+      <input name="matchType">&quot;contains&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="Contains">
+      <input name="actualstring">$lastReceived{path}</input>
+      <input name="expectedstring">&quot;_lastUpdated=&quot;</input>
+      <input name="matchType">&quot;contains&quot;</input>
+    </verify>
+    <interact id="inform" desc="Instruction for MedicationOverviewConsumer" with="MedicationOverviewConsumer">
+      <instruct desc="PHARM-11 query conformance passed: the Consumer builds well-formed queries by patient, by status, and by _lastUpdated." name="message"/>
+    </interact>
+  </steps>
+
+  <output>
+    <success>
+      <default>"Test case completed successfully."</default>
+    </success>
+    <failure>
+      <default>"Test case failed. Check step reports and logs."</default>
+    </failure>
+  </output>
+</testcase>

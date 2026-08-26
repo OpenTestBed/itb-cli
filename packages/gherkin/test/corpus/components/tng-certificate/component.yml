@@ -1,0 +1,57 @@
+# Test Image Component: TNG Certificate Governance
+# Provides WHO GDHCN certificate governance verbs over the TNG trust service.
+#
+# The dialect this implements is specified and unit-tested in the
+# tng-participant-DEV-XXR repository (tng_certificate_dialect.py, 23 step
+# definitions, docs/gherkin-dialect.md). This component is the ITB binding for
+# it: the step TEXT is byte-identical, so one .feature file runs unchanged in
+# both harnesses.
+id: tng-certificate
+name: TNG Certificate Governance
+version: "1.0"
+# Dialect spec range this app build satisfies. The dialect spec
+# (language.version below) is authoritative.
+implementsDialect: "^1.0"
+description: >
+  WHO GDHCN certificate governance steps — key strength, keyUsage,
+  extendedKeyUsage, basicConstraints, chain, subject and validity — asserted
+  against the facts reported by the TNG trust service. Reads only; it creates
+  no submission, holds no key and writes nowhere.
+
+# The service is FastAPI/uvicorn from the tng-participant repository. There is
+# a Dockerfile there; no image is published, so build it locally.
+docker:
+  image: tng-trust-service:local
+  ports:
+    - "8080:8080"
+  environment:
+    # Verification-only posture. With no anchor and no trust list the service
+    # verifies and refuses (503) to sign or deliver — which is all ITB needs.
+    - TNG_SKIP_DOTENV=1
+    - BIND=0.0.0.0
+  volumes: []
+
+healthCheck:
+  method: GET
+  path: /healthz
+  expect:
+    status: 200
+
+actors:
+  - id: TNGValidator
+    description: >
+      GITB validator for WHO GDHCN trust material. Serves the GITB REST
+      contract (/tng/api/info, /validate, /validateMultiple) plus /tng/api/inspect,
+      which reports what a certificate IS rather than whether it passes.
+
+services:
+  - handler: TNGValidator
+    path: /tng/api
+  - handler: TNGInspector
+    path: /tng/api/inspect
+
+language:
+  steps: steps.yml
+  version: "1.0.0"        # this extension's own language version
+  base: itb-core-en        # base language this extension is written against
+  baseVersion: ">=1 <2"    # compatible core specVersion range (semver)

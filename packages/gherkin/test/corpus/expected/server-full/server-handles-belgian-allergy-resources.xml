@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite id="server-handles-belgian-allergy-resources"
+           xmlns="http://www.gitb.com/tdl/v1/"
+           xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>Server handles Belgian allergy resources</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>As a FHIR server I want to accept valid Belgian allergy resources and reject invalid ones So that conformance to the Belgian allergy IG is verified</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="FHIRServer">
+      <gitb:name>FHIRServer</gitb:name>
+      <gitb:desc>Endpoint: http://localhost:8080/fhir | Definition: http://hl7.org/fhir/ActorDefinition/server</gitb:desc>
+    </gitb:actor>
+    <gitb:actor id="Client">
+      <gitb:name>Client</gitb:name>
+      <gitb:desc>Endpoint: http://localhost:9000/fhir | Definition: http://hl7.org/fhir/ActorDefinition/client</gitb:desc>
+    </gitb:actor>
+    <gitb:actor id="Validator">
+      <gitb:name>Validator</gitb:name>
+    </gitb:actor>
+  </actors>
+
+  <testcase id="tc-server-001-accept-a-valid-belgian-allergy"/>
+  <testcase id="tc-server-002-register-and-retrieve-multiple-allergies"/>
+  <testcase id="tc-server-003-reject-an-invalid-resource-type"/>
+  <testcase id="tc-server-004-generate-and-validate-a-belgian-patient"/>
+
+</testsuite>

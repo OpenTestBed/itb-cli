@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite id="language-showcase-all-fhir-gherkin-dialect-features"
+           xmlns="http://www.gitb.com/tdl/v1/"
+           xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>Language Showcase — All FHIR Gherkin Dialect Features</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>Demonstrates every core language step and FHIR Validator extension step. Uses a Belgian Patient profile as the test subject.</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="User">
+      <gitb:name>User</gitb:name>
+    </gitb:actor>
+    <gitb:actor id="FHIRValidator">
+      <gitb:name>FHIRValidator</gitb:name>
+      <gitb:desc>Endpoint: http://itb-fhir-validator:8081</gitb:desc>
+    </gitb:actor>
+    <gitb:actor id="FHIRServer">
+      <gitb:name>FHIRServer</gitb:name>
+      <gitb:desc>Endpoint: http://fhir-server:8080 | Definition: http://hl7.org/fhir</gitb:desc>
+    </gitb:actor>
+  </actors>
+
+  <testcase id="showcase-001-full-language-demonstration"/>
+
+</testsuite>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite id="test-data-generation-with-data-tables"
+           xmlns="http://www.gitb.com/tdl/v1/"
+           xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>Test data generation with data tables</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description></gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="Client">
+      <gitb:name>Client</gitb:name>
+    </gitb:actor>
+    <gitb:actor id="FHIRServer">
+      <gitb:name>FHIRServer</gitb:name>
+    </gitb:actor>
+    <gitb:actor id="FHIRValidator">
+      <gitb:name>FHIRValidator</gitb:name>
+    </gitb:actor>
+  </actors>
+
+  <testcase id="generate-and-validate-patient-test-data"/>
+
+</testsuite>

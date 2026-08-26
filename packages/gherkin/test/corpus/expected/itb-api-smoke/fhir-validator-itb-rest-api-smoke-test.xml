@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite id="fhir-validator-itb-rest-api-smoke-test"
+           xmlns="http://www.gitb.com/tdl/v1/"
+           xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>FHIR Validator ITB REST API smoke test</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>Exercises all GITB-aligned endpoints under /itb/* end to end: - igManager: load an IG - testdata: generate resources (required elements only) - fhir: validate against base spec and against an IG profile - matchetype: pattern-match a resource against an expected shape - fhirPath: evaluate (extract a value) - fhirPathAssertion: assert a boolean expression on a resource - validationResults: summarize an OperationOutcome</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="Client">
+      <gitb:name>Client</gitb:name>
+    </gitb:actor>
+    <gitb:actor id="FHIRValidator">
+      <gitb:name>FHIRValidator</gitb:name>
+      <gitb:desc>Endpoint: http://fhir-validator:8081</gitb:desc>
+    </gitb:actor>
+  </actors>
+
+  <testcase id="itb-smoke-001-generate-validate-load-ig-validate-against-ig-fhirpath-extract-and-assert"/>
+
+</testsuite>

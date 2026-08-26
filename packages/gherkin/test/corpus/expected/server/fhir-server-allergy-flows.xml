@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite id="fhir-server-allergy-flows"
+           xmlns="http://www.gitb.com/tdl/v1/"
+           xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>FHIR server allergy flows</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>As a FHIR server I want to handle valid and invalid allergy submissions So that clients see correct outcomes</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="Client">
+      <gitb:name>Client</gitb:name>
+    </gitb:actor>
+    <gitb:actor id="FHIRServer">
+      <gitb:name>FHIRServer</gitb:name>
+    </gitb:actor>
+  </actors>
+
+  <testcase id="tc-server-001-submit-two-allergies-and-verify"/>
+  <testcase id="tc-server-002-reject-invalid-allergy-due-to-wrong-resource-type"/>
+
+</testsuite>

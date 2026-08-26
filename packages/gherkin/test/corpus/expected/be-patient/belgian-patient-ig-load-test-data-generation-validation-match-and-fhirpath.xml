@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite id="belgian-patient-ig-load-test-data-generation-validation-match-and-fhirpath"
+           xmlns="http://www.gitb.com/tdl/v1/"
+           xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>Belgian Patient: IG load, test data generation, validation, match, and FHIRPath</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>End-to-end test: load the Belgian Core IG into the FHIR Validator, generate a BePatient resource with SSIN and MRN identifiers, validate against the be-patient profile, verify structure with match, and extract identifiers via FHIRPath.</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="Client">
+      <gitb:name>Client</gitb:name>
+    </gitb:actor>
+    <gitb:actor id="FHIRServer">
+      <gitb:name>FHIRServer</gitb:name>
+    </gitb:actor>
+    <gitb:actor id="FHIRValidator">
+      <gitb:name>FHIRValidator</gitb:name>
+    </gitb:actor>
+  </actors>
+
+  <testcase id="be-patient-001-generate-validate-match-and-fhirpath"/>
+
+</testsuite>

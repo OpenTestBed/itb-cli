@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite id="smart-guidelines-anc-workflow"
+           xmlns="http://www.gitb.com/tdl/v1/"
+           xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>SMART Guidelines ANC Workflow</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description></gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="Client">
+      <gitb:name>Client</gitb:name>
+    </gitb:actor>
+    <gitb:actor id="FHIRServer">
+      <gitb:name>FHIRServer</gitb:name>
+    </gitb:actor>
+  </actors>
+
+  <testcase id="execute-antenatal-care-workflow"/>
+
+</testsuite>

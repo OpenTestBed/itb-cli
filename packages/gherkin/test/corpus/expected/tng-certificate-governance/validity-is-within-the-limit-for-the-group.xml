@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testcase id="validity-is-within-the-limit-for-the-group"
+          xmlns="http://www.gitb.com/tdl/v1/"
+          xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>Validity is within the limit for the group</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>WHO GDHCN certificate governance</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="Participant" role="SUT"/>
+    <gitb:actor id="TNGValidator" role="SIMULATED"/>
+  </actors>
+
+  <variables>
+    <var name="tngCountry" type="string"/>
+    <var name="inspectBody" type="string"/>
+    <var name="tngAll" type="string"/>
+    <var name="certFacts" type="string"/>
+    <var name="factGroup" type="string"/>
+    <var name="factFilename" type="string"/>
+    <var name="isPlaced" type="string"/>
+    <var name="validityDays" type="string"/>
+    <var name="validityOk" type="string"/>
+    <var name="lastRequest" type="map"/>
+    <var name="TNGValidatorBase" type="string"/>
+    <var name="tngHeaders" type="map"/>
+    <var name="inspectTplParams" type="map"/>
+    <var name="placedParams" type="map"/>
+    <var name="maxYearsFor" type="map"/>
+    <var name="maxYearsHere" type="string"/>
+    <var name="validityParams" type="map"/>
+  </variables>
+
+  <steps stopOnError="true">
+    <assign to="TNGValidatorBase">&quot;http://tng-trust-service:8080&quot;</assign>
+    <assign to="tngCountry">&quot;XXR&quot;</assign>
+    <assign to="tngHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="tngHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="inspectTplParams{country}">$tngCountry</assign>
+    <process handler="TemplateProcessor" operation="process" output="inspectBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{&quot;layout&quot;:&quot;participant&quot;,&quot;country&quot;:&quot;${country}&quot;}'</input>
+      <input name="parameters">$inspectTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Inspect the participant material" handler="HttpMessagingV2" from="Participant">
+      <input name="uri">concat($TNGValidatorBase, &quot;/tng/api/inspect&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$tngHeaders</input>
+      <input name="body">$inspectBody</input>
+    </send>
+    <verify handler="NumberValidator" desc="inspect returned HTTP 200">
+      <input name="actualnumber">$lastRequest{response}{status}</input>
+      <input name="expectednumber">&quot;200&quot;</input>
+    </verify>
+    <process handler="JsonPointerProcessor" operation="process" output="tngAll">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/certificates&quot;</input>
+    </process>
+    <process handler="JsonPointerProcessor" operation="process" output="certFacts">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/certificates/0&quot;</input>
+    </process>
+    <process handler="JsonPointerProcessor" operation="process" output="factGroup">
+      <input name="content">$certFacts</input>
+      <input name="pointer">&quot;/group&quot;</input>
+    </process>
+    <process handler="JsonPointerProcessor" operation="process" output="factFilename">
+      <input name="content">$certFacts</input>
+      <input name="pointer">&quot;/filename&quot;</input>
+    </process>
+    <assign to="placedParams{group}">$factGroup</assign>
+    <assign to="placedParams{filename}">$factFilename</assign>
+    <process handler="TemplateProcessor" operation="process" output="isPlaced">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'${(group?has_content &amp;&amp; filename?has_content)?c}'</input>
+      <input name="parameters">$placedParams</input>
+    </process>
+    <verify handler="StringValidator" desc="certificate sits at &lt;domain&gt;/&lt;group&gt;/&lt;file&gt; — group and filename are known">
+      <input name="actualstring">$isPlaced</input>
+      <input name="expectedstring">&quot;true&quot;</input>
+    </verify>
+    <process handler="JsonPointerProcessor" operation="process" output="factGroup">
+      <input name="content">$certFacts</input>
+      <input name="pointer">&quot;/group&quot;</input>
+    </process>
+    <process handler="JsonPointerProcessor" operation="process" output="validityDays">
+      <input name="content">$certFacts</input>
+      <input name="pointer">&quot;/validity/days&quot;</input>
+    </process>
+    <assign to="maxYearsFor{SCA}">&quot;4&quot;</assign>
+    <assign to="maxYearsFor{DECA}">&quot;4&quot;</assign>
+    <assign to="maxYearsFor{TLS}">&quot;2&quot;</assign>
+    <assign to="maxYearsFor{UP}">&quot;2&quot;</assign>
+    <assign to="maxYearsHere">$maxYearsFor{$factGroup}</assign>
+    <assign to="validityParams{days}">$validityDays</assign>
+    <assign to="validityParams{maxYears}">$maxYearsHere</assign>
+    <process handler="TemplateProcessor" operation="process" output="validityOk">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'${(days?number &lt; maxYears?number * 366)?c}'</input>
+      <input name="parameters">$validityParams</input>
+    </process>
+    <log>concat(&quot;group &quot;, $factGroup, &quot; limit &quot;, $maxYearsHere, &quot; years; actual &quot;, $validityDays, &quot; days&quot;)</log>
+    <verify handler="StringValidator" desc="validity is within the limit for the group">
+      <input name="actualstring">$validityOk</input>
+      <input name="expectedstring">&quot;true&quot;</input>
+    </verify>
+  </steps>
+
+  <output>
+    <success>
+      <default>"Test case completed successfully."</default>
+    </success>
+    <failure>
+      <default>"Test case failed. Check step reports and logs."</default>
+    </failure>
+  </output>
+</testcase>
