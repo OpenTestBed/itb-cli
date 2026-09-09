@@ -43,7 +43,13 @@ export type IRAction =
   | { type: 'call', path: string, output?: string, from?: string, to?: string, inputs?: Record<string,string>,
       /** Raw TDL supplied inline in the feature file; becomes the scriptlet's <steps> body. */
       body?: string }
-  | { type: 'send', id?: string, desc?: string, handler: string, from?: string, to?: string, inputs: Record<string,string> }
+  | { type: 'send', id?: string, desc?: string, handler: string, from?: string, to?: string, txnId?: string, inputs: Record<string,string> }
+  /** btxn/etxn — a GITB messaging TRANSACTION. Every send and receive inside
+   *  one carries the same txnId, which is what ties a reply to the request it
+   *  answers. Without it a `send` is a new outbound message, not a response on
+   *  the open exchange, so a SUT waiting for its HTTP response times out. */
+  | { type: 'btxn', txnId: string, from: string, to: string, handler: string }
+  | { type: 'etxn', txnId: string }
   | { type: 'verify', handler: string, desc?: string, inputs: Record<string,string> }
   | { type: 'process', handler: string, operation: string, output?: string, from?: string, to?: string, inputs: Record<string,string>, hidden?: boolean }
   | { type: 'assign', to: string, value: string, append?: boolean }
@@ -60,7 +66,7 @@ export type IRAction =
    *  actor. `instructions` emit <instruct> (display-only) alongside <request>
    *  (input); the schema allows either, in any mix. */
   | { type: 'interact', id?: string, desc?: string, title?: string, inputTitle?: string, with?: string, instructions?: { desc: string, name?: string, value?: string }[], requests: { desc: string, name?: string, inputType?: string, required?: boolean, variable: string }[] }
-  | { type: 'receive', id?: string, desc?: string, handler: string, from?: string, to?: string, inputs?: Record<string,string> };
+  | { type: 'receive', id?: string, desc?: string, handler: string, from?: string, to?: string, txnId?: string, inputs?: Record<string,string> };
 
 
 type ServicesMap = Record<string, string>; // { "FHIR-validator": "1.2.0", "Monitor": "2.1.0" }
@@ -603,7 +609,7 @@ function materialize(actions: CatalogAction[], ctx: any): IRAction[] {
     }
     if (clone.send) {
       for (const k in clone.send.inputs) clone.send.inputs[k] = subst(clone.send.inputs[k]);
-      out.push({ type: 'send', id: subst(clone.send.id ?? ''), desc: subst(clone.send.desc ?? ''), handler: clone.send.handler, from: subst(clone.send.from ?? ''), to: subst(clone.send.to ?? ''), inputs: clone.send.inputs });
+      out.push({ type: 'send', id: subst(clone.send.id ?? ''), desc: subst(clone.send.desc ?? ''), handler: clone.send.handler, from: subst(clone.send.from ?? ''), to: subst(clone.send.to ?? ''), txnId: subst(clone.send.txnId ?? ''), inputs: clone.send.inputs });
       return;
     }
     if (clone.log) {
@@ -690,9 +696,17 @@ function materialize(actions: CatalogAction[], ctx: any): IRAction[] {
       });
       return;
     }
+    if (clone.btxn) {
+      out.push({ type: 'btxn', txnId: subst(clone.btxn.txnId), from: subst(clone.btxn.from), to: subst(clone.btxn.to), handler: clone.btxn.handler });
+      return;
+    }
+    if (clone.etxn) {
+      out.push({ type: 'etxn', txnId: subst(clone.etxn.txnId) });
+      return;
+    }
     if (clone.receive) {
       if (clone.receive.inputs) for (const k in clone.receive.inputs) clone.receive.inputs[k] = subst(clone.receive.inputs[k]);
-      out.push({ type: 'receive', id: subst(clone.receive.id ?? ''), desc: subst(clone.receive.desc ?? ''), handler: clone.receive.handler, from: subst(clone.receive.from ?? ''), to: subst(clone.receive.to ?? ''), inputs: clone.receive.inputs });
+      out.push({ type: 'receive', id: subst(clone.receive.id ?? ''), desc: subst(clone.receive.desc ?? ''), handler: clone.receive.handler, from: subst(clone.receive.from ?? ''), to: subst(clone.receive.to ?? ''), txnId: subst(clone.receive.txnId ?? ''), inputs: clone.receive.inputs });
       return;
     }
   };

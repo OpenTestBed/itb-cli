@@ -6,7 +6,7 @@ locale: en
 # specVersion on ANY step-pattern change: minor for additions, major for
 # changed/removed patterns (first-match merging makes silent drift unsafe).
 id: itb-core-en
-specVersion: "1.6.0"
+specVersion: "1.7.0"
 
 # ====================================================================
 # FHIR Gherkin Dialect — Core Language
@@ -523,6 +523,76 @@ steps:
           from: '$2'
           to: '$1'
           inputs: { timeout: '"60"' }
+
+  # ==================================================================
+  # 4b. EXCHANGES — ITB AS THE PEER, ANSWERING
+  # ==================================================================
+  # `waits for` above catches a request but cannot answer it: a bare <send>
+  # is a NEW outbound message, so the SUT sits waiting for an HTTP response
+  # that never arrives. Answering needs a TRANSACTION — <btxn>/<etxn> with a
+  # txnId that every send and receive inside it carries. That is what ties a
+  # reply to the request it answers.
+  #
+  #   Given Responder is listening for Client
+  #   When Responder receives a request from Client within "300" seconds
+  #   Then "lastReceived{method}" should be "PUT"
+  #   And Responder replies to Client with status "200" and:
+  #     """
+  #     { "resourceType": "OperationOutcome" }
+  #     """
+  #   And Responder stops listening for Client
+  #
+  # The txnId is derived from the actor pair, so two actors have one exchange
+  # and nested exchanges between different pairs do not collide.
+
+  - match: '^([A-Za-z][A-Za-z0-9_]*) is listening for ([A-Za-z][A-Za-z0-9_]*)$'
+    actions:
+      - btxn: { txnId: 'txn_$1_$2', from: '$2', to: '$1', handler: 'HttpMessagingV2' }
+
+  - match: '^([A-Za-z][A-Za-z0-9_]*) receives a request from ([A-Za-z][A-Za-z0-9_]*) within "([0-9]+)" seconds$'
+    actions:
+      - receive:
+          id: 'lastReceived'
+          desc: 'Receive from $2'
+          handler: 'HttpMessagingV2'
+          from: '$2'
+          to: '$1'
+          txnId: 'txn_$1_$2'
+          inputs: { timeout: '"$3"' }
+
+  - match: '^([A-Za-z][A-Za-z0-9_]*) replies to ([A-Za-z][A-Za-z0-9_]*) with status "([0-9]+)" and:$'
+    actions:
+      - assign: { to: 'replyHeaders{Content-Type}', value: '"application/json"' }
+      - send:
+          id: 'lastReply'
+          desc: 'Reply $3 to $2'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$2'
+          txnId: 'txn_$1_$2'
+          inputs:
+            status: '"$3"'
+            headers: '$replyHeaders'
+            body: '$docString'
+
+  - match: '^([A-Za-z][A-Za-z0-9_]*) replies to ([A-Za-z][A-Za-z0-9_]*) with status "([0-9]+)" and body "([A-Za-z_][A-Za-z0-9_]*)"$'
+    actions:
+      - assign: { to: 'replyHeaders{Content-Type}', value: '"application/json"' }
+      - send:
+          id: 'lastReply'
+          desc: 'Reply $3 to $2'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$2'
+          txnId: 'txn_$1_$2'
+          inputs:
+            status: '"$3"'
+            headers: '$replyHeaders'
+            body: '$$4'
+
+  - match: '^([A-Za-z][A-Za-z0-9_]*) stops listening for ([A-Za-z][A-Za-z0-9_]*)$'
+    actions:
+      - etxn: { txnId: 'txn_$1_$2' }
 
   # ==================================================================
   # 5. CONDITIONALS (single-line guard)

@@ -7,11 +7,13 @@ export type CatalogAction =
   | { assign: { to: string; value: string; append?: boolean } }
   | { listAppend: { list: string; item: Record<string,string> } }
   | { foreach: { from: string; do: CatalogAction[] } }
-  | { send: { id?: string; desc?: string; handler: string; from?: string; to?: string; inputs: Record<string,string> } }
+  | { send: { id?: string; desc?: string; handler: string; from?: string; to?: string; txnId?: string; inputs: Record<string,string> } }
   | { declareActor: { id: string; name?: string; role?: string; endpoint?: string; canonical?: string } }
   | { declareVariable: { name: string; varType?: string; value?: string } }
   | { interact: { id?: string; desc?: string; title?: string; inputTitle?: string; with?: string; instructions?: { desc: string; name?: string; value?: string }[]; requests?: { desc: string; name?: string; inputType?: string; required?: boolean; variable: string }[] } }
-  | { receive: { id?: string; desc?: string; handler: string; from?: string; to?: string; inputs?: Record<string,string> } }
+  | { receive: { id?: string; desc?: string; handler: string; from?: string; to?: string; txnId?: string; inputs?: Record<string,string> } }
+  | { btxn: { txnId: string; from: string; to: string; handler: string } }
+  | { etxn: { txnId: string } }
   | { log: string };
 
 export interface CatalogRequirement {

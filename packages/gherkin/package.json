@@ -48,13 +48,13 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/OpenTestBed/otb.git",
+    "url": "git+https://github.com/OpenTestBed/itb-cli.git",
     "directory": "packages/gherkin"
   },
   "bugs": {
-    "url": "https://github.com/OpenTestBed/otb/issues"
+    "url": "https://github.com/OpenTestBed/itb-cli/issues"
   },
-  "homepage": "https://github.com/OpenTestBed/otb/tree/main/packages/gherkin#readme",
+  "homepage": "https://github.com/OpenTestBed/itb-cli/tree/main/packages/gherkin#readme",
   "publishConfig": {
     "access": "public"
   },

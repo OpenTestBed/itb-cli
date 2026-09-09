@@ -518,7 +518,8 @@ function emitIR(ir: IRAction[]): string {
       const from = a.from || sutActor;
       const fromAttr = ` from="${escapeAttr(from)}"`;
       const toAttr = a.to ? ` to="${escapeAttr(a.to)}"` : '';
-      out.push(`<send${idAttr}${descAttr} handler="${escapeAttr(a.handler)}"${fromAttr}${toAttr}>`);
+      const txnAttr = a.txnId ? ` txnId="${escapeAttr(a.txnId)}"` : '';
+      out.push(`<send${idAttr}${descAttr} handler="${escapeAttr(a.handler)}"${fromAttr}${toAttr}${txnAttr}>`);
       out.push(...emitInputs(a.inputs));
       out.push(`</send>`);
     } else if (a.type === 'log') {
@@ -631,9 +632,18 @@ function emitIR(ir: IRAction[]): string {
       const descAttr = a.desc ? ` desc="${escapeAttr(a.desc)}"` : '';
       const fromAttr = a.from ? ` from="${escapeAttr(a.from)}"` : '';
       const toAttr = a.to ? ` to="${escapeAttr(a.to)}"` : '';
-      out.push(`<receive${idAttr}${descAttr} handler="${escapeAttr(a.handler)}"${fromAttr}${toAttr}>`);
+      const txnAttr = a.txnId ? ` txnId="${escapeAttr(a.txnId)}"` : '';
+      out.push(`<receive${idAttr}${descAttr} handler="${escapeAttr(a.handler)}"${fromAttr}${toAttr}${txnAttr}>`);
       out.push(...emitInputs(a.inputs));
       out.push(`</receive>`);
+    } else if (a.type === 'btxn') {
+      // Opens a messaging transaction. gitb_tdl.xsd makes from, to, txnId and
+      // handler all required — the txnId is the handle every send and receive
+      // inside the exchange refers to, and is what lets a reply land on the
+      // request's own connection instead of becoming a new outbound message.
+      out.push(`<btxn from="${escapeAttr(a.from)}" to="${escapeAttr(a.to)}" txnId="${escapeAttr(a.txnId)}" handler="${escapeAttr(a.handler)}"/>`);
+    } else if (a.type === 'etxn') {
+      out.push(`<etxn txnId="${escapeAttr(a.txnId)}"/>`);
     }
   }
   return out.join('\n');
