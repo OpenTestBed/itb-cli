@@ -86,10 +86,16 @@ function ensureAssets() {
   // The parser reads its assets and its enablement through a CatalogSource.
   // This used to be two globalThis patches installed before the parser was
   // imported. Same behaviour, declared instead of monkey-patched.
+  // The language comes from the package, components/ from disk. An asset root
+  // that ships its OWN lang/en.yml wins, though: the golden corpus freezes a
+  // language alongside its snapshots precisely so a mismatch means the compiler
+  // changed, and silently overriding it with the package copy would defeat that.
+  const rootLang = path.join(root, 'lang', 'en.yml');
+  const assets = fs.existsSync(rootLang) ? {} : { 'lang/en.yml': LANG_EN };
+
   setCatalogSource(createNodeSource(root, {
     components: (process.env.ITB_COMPONENTS ?? '').split(',').map(s => s.trim()).filter(Boolean),
-    // the language comes from the package, components/ from disk
-    assets: { 'lang/en.yml': LANG_EN },
+    assets,
   }));
   PUB_CACHE = root;
   assetsReady = true;
