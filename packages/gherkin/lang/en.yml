@@ -6,7 +6,7 @@ locale: en
 # specVersion on ANY step-pattern change: minor for additions, major for
 # changed/removed patterns (first-match merging makes silent drift unsafe).
 id: itb-core-en
-specVersion: "1.3.1"
+specVersion: "1.4.0"
 
 # ====================================================================
 # FHIR Gherkin Dialect — Core Language
@@ -294,6 +294,70 @@ steps:
             method: '"GET"'
             headers: '$jsonHeaders'
       - assign: { to: '$4', value: '$lastRequest{response}{body}' }
+
+  # ==================================================================
+  # 2b. PATHS WITH A RUNTIME VALUE
+  # ==================================================================
+  # The forms above compile their path to a TDL string literal, and TDL
+  # literals do not interpolate $variables — so a value produced during the
+  # run (an id returned by a create, say) cannot be written into a later
+  # path. concat() DOES take variables, though; it already takes $ActorBase.
+  # These steps emit a third concat() argument, which carries the value
+  # through:
+  #
+  #   concat($ServerBase, "/DocumentReference/", $createdId)
+  #
+  #   When Client posts to Server at "/DocumentReference" with: ...
+  #   And extract "/id" as "createdId"
+  #   When Client gets from Server at "/DocumentReference/" with id "createdId" as "doc"
+  #
+  # Note the trailing slash in the path — the value is appended verbatim, so
+  # the step does not guess at separators.
+
+  - match: '^([A-Za-z][A-Za-z0-9_]*) gets from ([A-Za-z][A-Za-z0-9_]*) at "([^"]+)" with id "([A-Za-z_][A-Za-z0-9_]*)" as "([A-Za-z_][A-Za-z0-9_]*)"$'
+    actions:
+      - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
+      - send:
+          id: 'lastRequest'
+          desc: 'GET $3$$4'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$2'
+          inputs:
+            uri: 'concat($$2Base, "$3", $$4)'
+            method: '"GET"'
+            headers: '$jsonHeaders'
+      - assign: { to: '$5', value: '$lastRequest{response}{body}' }
+
+  - match: '^([A-Za-z][A-Za-z0-9_]*) puts to ([A-Za-z][A-Za-z0-9_]*) at "([^"]+)" with id "([A-Za-z_][A-Za-z0-9_]*)" and:$'
+    actions:
+      - assign: { to: 'jsonHeaders{Content-Type}', value: '"application/json"' }
+      - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
+      - send:
+          id: 'lastRequest'
+          desc: 'PUT $3$$4'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$2'
+          inputs:
+            uri: 'concat($$2Base, "$3", $$4)'
+            method: '"PUT"'
+            headers: '$jsonHeaders'
+            body: '$docString'
+
+  - match: '^([A-Za-z][A-Za-z0-9_]*) deletes on ([A-Za-z][A-Za-z0-9_]*) at "([^"]+)" with id "([A-Za-z_][A-Za-z0-9_]*)"$'
+    actions:
+      - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
+      - send:
+          id: 'lastRequest'
+          desc: 'DELETE $3$$4'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$2'
+          inputs:
+            uri: 'concat($$2Base, "$3", $$4)'
+            method: '"DELETE"'
+            headers: '$jsonHeaders'
 
   # GET and store result — absolute URL form. CAVEAT: TDL string literals do
   # NOT interpolate $variables, so writing `gets "$ActorBase/path"` won't work
