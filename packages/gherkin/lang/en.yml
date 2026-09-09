@@ -6,7 +6,7 @@ locale: en
 # specVersion on ANY step-pattern change: minor for additions, major for
 # changed/removed patterns (first-match merging makes silent drift unsafe).
 id: itb-core-en
-specVersion: "1.4.0"
+specVersion: "1.6.0"
 
 # ====================================================================
 # FHIR Gherkin Dialect — Core Language
@@ -179,6 +179,74 @@ steps:
   - match: '^set header "([^"]+)" to "([^"]+)"$'
     actions:
       - assign: { to: 'jsonHeaders{$1}', value: '"$2"' }
+
+  # Bodies held in a VARIABLE rather than written inline. The docstring forms
+  # take a literal, so a payload fetched at run time — an upstream fixture,
+  # a resource read from another server — could not be sent. These forms take
+  # the variable, which lets a test use the same files the reference
+  # implementation uses instead of a hand-written approximation.
+  - match: '^([A-Za-z][A-Za-z0-9_]*) posts to ([A-Za-z][A-Za-z0-9_]*) at "([^"]+)" with body "([A-Za-z_][A-Za-z0-9_]*)"$'
+    actions:
+      - assign: { to: 'jsonHeaders{Content-Type}', value: '"application/json"' }
+      - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
+      - send:
+          id: 'lastRequest'
+          desc: 'POST $3'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$2'
+          inputs:
+            uri: 'concat($$2Base, "$3")'
+            method: '"POST"'
+            headers: '$jsonHeaders'
+            body: '$$4'
+
+  - match: '^([A-Za-z][A-Za-z0-9_]*) puts to ([A-Za-z][A-Za-z0-9_]*) at "([^"]+)" with body "([A-Za-z_][A-Za-z0-9_]*)"$'
+    actions:
+      - assign: { to: 'jsonHeaders{Content-Type}', value: '"application/json"' }
+      - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
+      - send:
+          id: 'lastRequest'
+          desc: 'PUT $3'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$2'
+          inputs:
+            uri: 'concat($$2Base, "$3")'
+            method: '"PUT"'
+            headers: '$jsonHeaders'
+            body: '$$4'
+
+  # …and the same with a runtime id in the path.
+  - match: '^([A-Za-z][A-Za-z0-9_]*) puts to ([A-Za-z][A-Za-z0-9_]*) at "([^"]+)" with id "([A-Za-z_][A-Za-z0-9_]*)" and body "([A-Za-z_][A-Za-z0-9_]*)"$'
+    actions:
+      - assign: { to: 'jsonHeaders{Content-Type}', value: '"application/json"' }
+      - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
+      - send:
+          id: 'lastRequest'
+          desc: 'PUT $3$$4'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$2'
+          inputs:
+            uri: 'concat($$2Base, "$3", $$4)'
+            method: '"PUT"'
+            headers: '$jsonHeaders'
+            body: '$$5'
+
+  # Header carrying a RUNTIME value — a token fetched earlier in the run, say.
+  # The literal form above cannot do that: its value becomes a TDL string
+  # literal, and TDL literals do not interpolate $variables. This form assigns
+  # the variable itself, so an auth flow can be part of the test rather than a
+  # prerequisite someone pastes in.
+  - match: '^set header "([^"]+)" from "([A-Za-z_][A-Za-z0-9_]*)"$'
+    actions:
+      - assign: { to: 'jsonHeaders{$1}', value: '$$2' }
+
+  # The common case: Authorization: Bearer <token from a previous step>.
+  - match: '^set bearer token from "([A-Za-z_][A-Za-z0-9_]*)"$'
+    actions:
+      - assign: { to: 'jsonHeaders{Authorization}', value: 'concat("Bearer ", $$1)' }
 
   # POST with body
   - match: '^([A-Za-z][A-Za-z0-9_]*) posts to ([A-Za-z][A-Za-z0-9_]*) at "([^"]+)" with:$'
