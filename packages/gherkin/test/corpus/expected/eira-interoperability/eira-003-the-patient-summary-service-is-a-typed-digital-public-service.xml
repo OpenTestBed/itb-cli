@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testcase id="eira-003-the-patient-summary-service-is-a-typed-digital-public-service"
+          xmlns="http://www.gitb.com/tdl/v1/"
+          xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>eira-003 the patient summary service is a typed digital public service</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>EIRA alignment of the national eHealth exchange architecture</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="Architect" role="SUT"/>
+    <gitb:actor id="ModelRepo" role="SIMULATED"/>
+    <gitb:actor id="EiraValidator" role="SIMULATED"/>
+  </actors>
+
+  <variables>
+    <var name="archiQueryBody" type="string"/>
+    <var name="pathValue" type="string"/>
+    <var name="lastRequest" type="map"/>
+    <var name="ModelRepoBase" type="string"/>
+    <var name="EiraValidatorBase" type="string"/>
+    <var name="archiHeaders" type="map"/>
+    <var name="model" type="string"/>
+    <var name="archiQueryParams" type="map"/>
+  </variables>
+
+  <steps stopOnError="true">
+    <assign to="ModelRepoBase">&quot;http://archi:8080&quot;</assign>
+    <assign to="EiraValidatorBase">&quot;http://eira:8080&quot;</assign>
+    <assign to="archiHeaders{Accept}">&quot;application/json&quot;</assign>
+    <send id="lastRequest" desc="Load model ehealth-exchange" handler="HttpMessagingV2" from="Architect" to="ModelRepo">
+      <input name="uri">concat($ModelRepoBase, &quot;/archimate/api/models/&quot;, &quot;ehealth-exchange&quot;)</input>
+      <input name="method">&quot;GET&quot;</input>
+      <input name="headers">$archiHeaders</input>
+    </send>
+    <verify handler="NumberValidator" desc="Model ehealth-exchange found (HTTP 200)">
+      <input name="actualnumber">$lastRequest{response}{status}</input>
+      <input name="expectednumber">&quot;200&quot;</input>
+    </verify>
+    <assign to="model">$lastRequest{response}{body}</assign>
+    <assign to="archiHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="archiHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="archiQueryParams{content}">$model</assign>
+    <assign to="archiQueryParams{query}">&quot;elements[type='ApplicationService'].count()&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="archiQueryBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${content?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;query&quot;, &quot;value&quot;: &quot;${query?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$archiQueryParams</input>
+    </process>
+    <send id="lastRequest" desc="Query elements[type='ApplicationService'].count()" handler="HttpMessagingV2" from="Architect" to="ModelRepo">
+      <input name="uri">concat($ModelRepoBase, &quot;/archimate/api/query&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$archiHeaders</input>
+      <input name="body">$archiQueryBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="pathValue">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <verify handler="ExpressionValidator" desc="$model at elements[type='ApplicationService'].count() &gt;= 1">
+      <input name="expression">number($pathValue) &gt;= number(&quot;1&quot;)</input>
+    </verify>
+    <assign to="archiHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="archiHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="archiQueryParams{content}">$model</assign>
+    <assign to="archiQueryParams{query}">&quot;elements[name='Patient Summary Service'].specialization&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="archiQueryBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${content?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;query&quot;, &quot;value&quot;: &quot;${query?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$archiQueryParams</input>
+    </process>
+    <send id="lastRequest" desc="Query elements[name='Patient Summary Service'].specialization" handler="HttpMessagingV2" from="Architect" to="ModelRepo">
+      <input name="uri">concat($ModelRepoBase, &quot;/archimate/api/query&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$archiHeaders</input>
+      <input name="body">$archiQueryBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="pathValue">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="$model at elements[name='Patient Summary Service'].specialization is eira:DigitalPublicService">
+      <input name="actualstring">$pathValue</input>
+      <input name="expectedstring">&quot;eira:DigitalPublicService&quot;</input>
+    </verify>
+    <assign to="archiHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="archiHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="archiQueryParams{content}">$model</assign>
+    <assign to="archiQueryParams{query}">&quot;elements[name='Patient Summary Service'].properties['eira:ABB']&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="archiQueryBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${content?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;query&quot;, &quot;value&quot;: &quot;${query?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$archiQueryParams</input>
+    </process>
+    <send id="lastRequest" desc="Query elements[name='Patient Summary Service'].properties['eira:ABB']" handler="HttpMessagingV2" from="Architect" to="ModelRepo">
+      <input name="uri">concat($ModelRepoBase, &quot;/archimate/api/query&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$archiHeaders</input>
+      <input name="body">$archiQueryBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="pathValue">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <verify handler="ExpressionValidator" desc="$model at elements[name='Patient Summary Service'].properties['eira:ABB'] is not empty">
+      <input name="expression">string-length($pathValue) &gt; 0</input>
+    </verify>
+  </steps>
+
+  <output>
+    <success>
+      <default>"Test case completed successfully."</default>
+    </success>
+    <failure>
+      <default>"Test case failed. Check step reports and logs."</default>
+    </failure>
+  </output>
+</testcase>

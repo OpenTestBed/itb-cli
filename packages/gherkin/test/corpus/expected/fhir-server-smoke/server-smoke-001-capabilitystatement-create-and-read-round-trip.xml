@@ -64,7 +64,7 @@
       <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;matchetype&quot;, &quot;value&quot;: &quot;${matchetype?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$matchTplParams</input>
     </process>
-    <send id="lastRequest" desc="Matchetype validate" handler="HttpMessagingV2" from="FHIRServer">
+    <send id="lastRequest" desc="Matchetype validate" handler="HttpMessagingV2" from="FHIRServer" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/matchetype/validate&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
@@ -74,7 +74,7 @@
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/report/result&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="Matchetype comparison succeeded">
+    <verify handler="StringValidator" desc="$metadata matches the pattern">
       <input name="actualstring">$matchResult</input>
       <input name="expectedstring">&quot;SUCCESS&quot;</input>
     </verify>
@@ -104,7 +104,7 @@
       <input name="template">'{ &quot;operation&quot;: &quot;generate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;profile&quot;, &quot;value&quot;: &quot;${profile}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;requiredOnly&quot;, &quot;value&quot;: &quot;true&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;mappings&quot;, &quot;value&quot;: &quot;${mappings?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$generateTplParams</input>
     </process>
-    <send id="lastRequest" desc="Generate required-only test data with values" handler="HttpMessagingV2" from="FHIRServer">
+    <send id="lastRequest" desc="Generate required-only test data with values" handler="HttpMessagingV2" from="FHIRServer" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/testdata/process&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
@@ -123,7 +123,7 @@
       <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;profiles&quot;, &quot;value&quot;: &quot;http://hl7.org/fhir/StructureDefinition/${resourceType}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$validateTplParams</input>
     </process>
-    <send id="lastRequest" desc="Validate against base FHIR profile for Patient" handler="HttpMessagingV2" from="FHIRServer">
+    <send id="lastRequest" desc="Validate against base FHIR profile for Patient" handler="HttpMessagingV2" from="FHIRServer" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhir/validate&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
@@ -133,7 +133,7 @@
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/report/context/0/value&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="patient is a valid Patient resource">
+    <verify handler="StringValidator" desc="$patient is a valid Patient resource">
       <input name="actualstring">$validationErrors</input>
       <input name="expectedstring">&quot;0&quot;</input>
     </verify>
@@ -171,7 +171,7 @@
       <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;matchetype&quot;, &quot;value&quot;: &quot;${matchetype?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$matchTplParams</input>
     </process>
-    <send id="lastRequest" desc="Matchetype validate" handler="HttpMessagingV2" from="FHIRServer">
+    <send id="lastRequest" desc="Matchetype validate" handler="HttpMessagingV2" from="FHIRServer" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/matchetype/validate&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
@@ -181,7 +181,7 @@
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/report/result&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="Matchetype comparison succeeded">
+    <verify handler="StringValidator" desc="$fetched matches the pattern">
       <input name="actualstring">$matchResult</input>
       <input name="expectedstring">&quot;SUCCESS&quot;</input>
     </verify>
@@ -194,7 +194,7 @@
       <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$assertTplParams</input>
     </process>
-    <send id="lastRequest" desc="FHIRPath assertion" handler="HttpMessagingV2" from="FHIRServer">
+    <send id="lastRequest" desc="FHIRPath assertion: Patient.id = 'smoke-pat-001'" handler="HttpMessagingV2" from="FHIRServer" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPathAssertion/validate&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
@@ -204,7 +204,7 @@
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/report/result&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="FHIRPath assertion succeeded">
+    <verify handler="StringValidator" desc="$fetched satisfies Patient.id = 'smoke-pat-001'">
       <input name="actualstring">$assertResult</input>
       <input name="expectedstring">&quot;SUCCESS&quot;</input>
     </verify>

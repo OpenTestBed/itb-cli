@@ -17,7 +17,7 @@
     <var name="tngCountry" type="string"/>
     <var name="inspectBody" type="string"/>
     <var name="tngAll" type="string"/>
-    <var name="certFacts" type="string"/>
+    <var name="cert" type="string"/>
     <var name="factGroup" type="string"/>
     <var name="factFilename" type="string"/>
     <var name="isPlaced" type="string"/>
@@ -27,8 +27,8 @@
     <var name="tngHeaders" type="map"/>
     <var name="inspectTplParams" type="map"/>
     <var name="placedParams" type="map"/>
-    <var name="endEntityGroups" type="map"/>
-    <var name="groupIsEndEntity" type="string"/>
+    <var name="listedGroups" type="map"/>
+    <var name="groupIsListed" type="string"/>
   </variables>
 
   <steps stopOnError="true">
@@ -42,7 +42,7 @@
       <input name="template">'{&quot;layout&quot;:&quot;participant&quot;,&quot;country&quot;:&quot;${country}&quot;}'</input>
       <input name="parameters">$inspectTplParams</input>
     </process>
-    <send id="lastRequest" desc="Inspect the participant material" handler="HttpMessagingV2" from="Participant">
+    <send id="lastRequest" desc="Inspect the participant material" handler="HttpMessagingV2" from="Participant" to="TNGValidator">
       <input name="uri">concat($TNGValidatorBase, &quot;/tng/api/inspect&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$tngHeaders</input>
@@ -56,16 +56,16 @@
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/certificates&quot;</input>
     </process>
-    <process handler="JsonPointerProcessor" operation="process" output="certFacts">
+    <process handler="JsonPointerProcessor" operation="process" output="cert">
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/certificates/0&quot;</input>
     </process>
     <process handler="JsonPointerProcessor" operation="process" output="factGroup">
-      <input name="content">$certFacts</input>
+      <input name="content">$cert</input>
       <input name="pointer">&quot;/group&quot;</input>
     </process>
     <process handler="JsonPointerProcessor" operation="process" output="factFilename">
-      <input name="content">$certFacts</input>
+      <input name="content">$cert</input>
       <input name="pointer">&quot;/filename&quot;</input>
     </process>
     <assign to="placedParams{group}">$factGroup</assign>
@@ -75,23 +75,23 @@
       <input name="template">'${(group?has_content &amp;&amp; filename?has_content)?c}'</input>
       <input name="parameters">$placedParams</input>
     </process>
-    <verify handler="StringValidator" desc="certificate sits at &lt;domain&gt;/&lt;group&gt;/&lt;file&gt; — group and filename are known">
+    <verify handler="StringValidator" desc="$cert sits at &lt;domain&gt;/&lt;group&gt;/&lt;file&gt; — group and filename are known">
       <input name="actualstring">$isPlaced</input>
       <input name="expectedstring">&quot;true&quot;</input>
     </verify>
     <process handler="JsonPointerProcessor" operation="process" output="factGroup">
-      <input name="content">$certFacts</input>
+      <input name="content">$cert</input>
       <input name="pointer">&quot;/group&quot;</input>
     </process>
-    <assign to="endEntityGroups{TLS}">&quot;yes&quot;</assign>
-    <assign to="endEntityGroups{UP}">&quot;yes&quot;</assign>
-    <assign to="groupIsEndEntity">$endEntityGroups{$factGroup}</assign>
+    <assign to="listedGroups{TLS}">&quot;yes&quot;</assign>
+    <assign to="listedGroups{UP}">&quot;yes&quot;</assign>
+    <assign to="groupIsListed">$listedGroups{$factGroup}</assign>
     <process handler="JsonPointerProcessor" operation="process" output="bcCa">
-      <input name="content">$certFacts</input>
+      <input name="content">$cert</input>
       <input name="pointer">&quot;/basicConstraints/ca&quot;</input>
     </process>
-    <log>concat(&quot;group &quot;, $factGroup, &quot; listed as end-entity: &quot;, $groupIsEndEntity, &quot; ; basicConstraints CA = &quot;, $bcCa)</log>
-    <verify handler="StringValidator" desc="an end-entity certificate is not a CA">
+    <log>concat(&quot;group &quot;, $factGroup, &quot; listed: &quot;, $groupIsListed, &quot; ; basicConstraints CA = &quot;, $bcCa)</log>
+    <verify handler="StringValidator" desc="basicConstraints CA is false for the listed groups">
       <input name="actualstring">$bcCa</input>
       <input name="expectedstring">&quot;false&quot;</input>
     </verify>

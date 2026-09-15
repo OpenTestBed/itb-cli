@@ -16,7 +16,7 @@
 
   <variables>
     <var name="fhirpathBody" type="string"/>
-    <var name="fhirpathResult" type="string"/>
+    <var name="pathValue" type="string"/>
     <var name="lastRequest" type="map"/>
     <var name="MedicationOverviewResponderBase" type="string"/>
     <var name="FHIRValidatorBase" type="string"/>
@@ -28,7 +28,7 @@
   </variables>
 
   <steps stopOnError="true">
-    <assign to="MedicationOverviewResponderBase">&quot;http://meow-responder:8080/fhir&quot;</assign>
+    <assign to="MedicationOverviewResponderBase">&quot;https://hapi.fhir.org/baseR4&quot;</assign>
     <assign to="FHIRValidatorBase">&quot;http://fhir-validator:8080&quot;</assign>
     <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
     <send id="lastRequest" desc="GET /MedicationStatement" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="MedicationOverviewResponder">
@@ -51,18 +51,18 @@
       <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$fhirpathTplParams</input>
     </process>
-    <send id="lastRequest" desc="Evaluate FHIRPath expression" handler="HttpMessagingV2" from="MedicationOverviewResponder">
+    <send id="lastRequest" desc="FHIRPath OperationOutcome.issue.exists()" handler="HttpMessagingV2" from="MedicationOverviewResponder" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPath/process&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
       <input name="body">$fhirpathBody</input>
     </send>
-    <process handler="JsonPointerProcessor" operation="process" output="fhirpathResult">
+    <process handler="JsonPointerProcessor" operation="process" output="pathValue">
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/output/0/value&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="FHIRPath result matches expected value">
-      <input name="actualstring">$fhirpathResult</input>
+    <verify handler="StringValidator" desc="$unscoped at OperationOutcome.issue.exists() is true">
+      <input name="actualstring">$pathValue</input>
       <input name="expectedstring">&quot;true&quot;</input>
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
@@ -74,18 +74,18 @@
       <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$fhirpathTplParams</input>
     </process>
-    <send id="lastRequest" desc="Evaluate FHIRPath expression" handler="HttpMessagingV2" from="MedicationOverviewResponder">
+    <send id="lastRequest" desc="FHIRPath OperationOutcome.issue.where(severity in ('error' | 'fatal')).exists()" handler="HttpMessagingV2" from="MedicationOverviewResponder" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPath/process&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
       <input name="body">$fhirpathBody</input>
     </send>
-    <process handler="JsonPointerProcessor" operation="process" output="fhirpathResult">
+    <process handler="JsonPointerProcessor" operation="process" output="pathValue">
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/output/0/value&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="FHIRPath result matches expected value">
-      <input name="actualstring">$fhirpathResult</input>
+    <verify handler="StringValidator" desc="$unscoped at OperationOutcome.issue.where(severity in ('error' | 'fatal')).exists() is true">
+      <input name="actualstring">$pathValue</input>
       <input name="expectedstring">&quot;true&quot;</input>
     </verify>
   </steps>

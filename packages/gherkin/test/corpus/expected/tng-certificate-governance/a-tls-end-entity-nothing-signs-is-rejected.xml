@@ -17,12 +17,16 @@
     <var name="tngCountry" type="string"/>
     <var name="inspectBody" type="string"/>
     <var name="tngAll" type="string"/>
-    <var name="certFacts" type="string"/>
+    <var name="cert" type="string"/>
     <var name="factGroup" type="string"/>
     <var name="factFilename" type="string"/>
     <var name="isPlaced" type="string"/>
     <var name="tlsSelBody" type="string"/>
+    <var name="tlsCert" type="string"/>
+    <var name="caSelBody" type="string"/>
+    <var name="caCert" type="string"/>
     <var name="leafIssuer" type="string"/>
+    <var name="caSubject" type="string"/>
     <var name="nothingSignsIt" type="string"/>
     <var name="lastRequest" type="map"/>
     <var name="TNGValidatorBase" type="string"/>
@@ -30,8 +34,8 @@
     <var name="inspectTplParams" type="map"/>
     <var name="placedParams" type="map"/>
     <var name="tlsSelParams" type="map"/>
+    <var name="caSelParams" type="map"/>
     <var name="rejectParams" type="map"/>
-    <var name="caSubject" type="string"/>
   </variables>
 
   <steps stopOnError="true">
@@ -45,7 +49,7 @@
       <input name="template">'{&quot;layout&quot;:&quot;participant&quot;,&quot;country&quot;:&quot;${country}&quot;}'</input>
       <input name="parameters">$inspectTplParams</input>
     </process>
-    <send id="lastRequest" desc="Inspect the participant material" handler="HttpMessagingV2" from="Participant">
+    <send id="lastRequest" desc="Inspect the participant material" handler="HttpMessagingV2" from="Participant" to="TNGValidator">
       <input name="uri">concat($TNGValidatorBase, &quot;/tng/api/inspect&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$tngHeaders</input>
@@ -59,16 +63,16 @@
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/certificates&quot;</input>
     </process>
-    <process handler="JsonPointerProcessor" operation="process" output="certFacts">
+    <process handler="JsonPointerProcessor" operation="process" output="cert">
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/certificates/0&quot;</input>
     </process>
     <process handler="JsonPointerProcessor" operation="process" output="factGroup">
-      <input name="content">$certFacts</input>
+      <input name="content">$cert</input>
       <input name="pointer">&quot;/group&quot;</input>
     </process>
     <process handler="JsonPointerProcessor" operation="process" output="factFilename">
-      <input name="content">$certFacts</input>
+      <input name="content">$cert</input>
       <input name="pointer">&quot;/filename&quot;</input>
     </process>
     <assign to="placedParams{group}">$factGroup</assign>
@@ -78,34 +82,58 @@
       <input name="template">'${(group?has_content &amp;&amp; filename?has_content)?c}'</input>
       <input name="parameters">$placedParams</input>
     </process>
-    <verify handler="StringValidator" desc="certificate sits at &lt;domain&gt;/&lt;group&gt;/&lt;file&gt; — group and filename are known">
+    <verify handler="StringValidator" desc="$cert sits at &lt;domain&gt;/&lt;group&gt;/&lt;file&gt; — group and filename are known">
       <input name="actualstring">$isPlaced</input>
       <input name="expectedstring">&quot;true&quot;</input>
     </verify>
+    <assign to="tngHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="tngHeaders{Accept}">&quot;application/json&quot;</assign>
     <assign to="tlsSelParams{country}">$tngCountry</assign>
     <process handler="TemplateProcessor" operation="process" output="tlsSelBody">
       <input name="syntax">&quot;freemarker&quot;</input>
       <input name="template">'{&quot;layout&quot;:&quot;participant&quot;,&quot;country&quot;:&quot;${country}&quot;,&quot;group&quot;:&quot;TLS&quot;,&quot;filename&quot;:&quot;TLS.pem&quot;}'</input>
       <input name="parameters">$tlsSelParams</input>
     </process>
-    <send id="lastRequest" desc="Bind the TLS end-entity certificate" handler="HttpMessagingV2" from="Participant">
+    <send id="lastRequest" desc="Bind the TLS end-entity certificate" handler="HttpMessagingV2" from="Participant" to="TNGValidator">
       <input name="uri">concat($TNGValidatorBase, &quot;/tng/api/inspect&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$tngHeaders</input>
       <input name="body">$tlsSelBody</input>
     </send>
-    <process handler="JsonPointerProcessor" operation="process" output="certFacts">
+    <process handler="JsonPointerProcessor" operation="process" output="tlsCert">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/certificate&quot;</input>
+    </process>
+    <assign to="tngHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="tngHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="caSelParams{country}">$tngCountry</assign>
+    <process handler="TemplateProcessor" operation="process" output="caSelBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{&quot;layout&quot;:&quot;participant&quot;,&quot;country&quot;:&quot;${country}&quot;,&quot;group&quot;:&quot;TLS&quot;,&quot;filename&quot;:&quot;CA.pem&quot;}'</input>
+      <input name="parameters">$caSelParams</input>
+    </process>
+    <send id="lastRequest" desc="Bind the CA certificate beside it" handler="HttpMessagingV2" from="Participant" to="TNGValidator">
+      <input name="uri">concat($TNGValidatorBase, &quot;/tng/api/inspect&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$tngHeaders</input>
+      <input name="body">$caSelBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="caCert">
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/certificate&quot;</input>
     </process>
     <process handler="JsonPointerProcessor" operation="process" output="leafIssuer">
-      <input name="content">$certFacts</input>
+      <input name="content">$tlsCert</input>
       <input name="pointer">&quot;/issuer/rfc4514&quot;</input>
     </process>
-    <log>concat(&quot;leaf issuer DN = &quot;, $leafIssuer, &quot; ; sibling CA subject DN = &quot;, $caSubject)</log>
+    <log>concat(&quot;leaf issuer DN = &quot;, $leafIssuer)</log>
     <process handler="JsonPointerProcessor" operation="process" output="leafIssuer">
-      <input name="content">$certFacts</input>
+      <input name="content">$tlsCert</input>
       <input name="pointer">&quot;/issuer/rfc4514&quot;</input>
+    </process>
+    <process handler="JsonPointerProcessor" operation="process" output="caSubject">
+      <input name="content">$caCert</input>
+      <input name="pointer">&quot;/subject/rfc4514&quot;</input>
     </process>
     <assign to="rejectParams{issuer}">$leafIssuer</assign>
     <assign to="rejectParams{caSubject}">$caSubject</assign>

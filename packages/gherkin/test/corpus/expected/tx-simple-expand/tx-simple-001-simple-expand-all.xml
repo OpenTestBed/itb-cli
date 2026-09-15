@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testcase id="tx-simple-001-simple-expand-all"
+          xmlns="http://www.gitb.com/tdl/v1/"
+          xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>tx-simple-001 simple-expand-all</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>FHIR terminology server — simple expansion</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="TxServer" role="SUT"/>
+    <gitb:actor id="FHIRValidator" role="SIMULATED"/>
+    <gitb:actor id="Client" role="SIMULATED"/>
+  </actors>
+
+  <variables>
+    <var name="matchBody" type="string"/>
+    <var name="matchResult" type="string"/>
+    <var name="fhirpathBody" type="string"/>
+    <var name="pathValue" type="string"/>
+    <var name="lastRequest" type="map"/>
+    <var name="TxServerBase" type="string"/>
+    <var name="FHIRValidatorBase" type="string"/>
+    <var name="jsonHeaders" type="map"/>
+    <var name="csSimple" type="string"/>
+    <var name="vsAll" type="string"/>
+    <var name="sigStatus" type="string"/>
+    <var name="fhirValidatorHeaders" type="map"/>
+    <var name="matchTplParams" type="map"/>
+    <var name="fhirpathTplParams" type="map"/>
+    <var name="expand" type="string"/>
+    <var name="optional" type="string"/>
+    <var name="id" type="string"/>
+    <var name="uuid" type="string"/>
+    <var name="instant" type="string"/>
+  </variables>
+
+  <steps stopOnError="true">
+    <assign to="TxServerBase">&quot;https://tx.fhir.org/r5&quot;</assign>
+    <assign to="FHIRValidatorBase">&quot;http://fhir-validator:8081&quot;</assign>
+    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <send id="lastRequest" desc="GET https://raw.githubusercontent.com/HL7/fhir-tx-ecosystem-ig/main/tests/simple/codesystem-simple.json" handler="HttpMessagingV2" from="Client">
+      <input name="uri">&quot;https://raw.githubusercontent.com/HL7/fhir-tx-ecosystem-ig/main/tests/simple/codesystem-simple.json&quot;</input>
+      <input name="method">&quot;GET&quot;</input>
+      <input name="headers">$jsonHeaders</input>
+    </send>
+    <assign to="csSimple">$lastRequest{response}{body}</assign>
+    <verify handler="ExpressionValidator" desc="$csSimple is not empty">
+      <input name="expression">string-length($csSimple) &gt; 0</input>
+    </verify>
+    <assign to="jsonHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <send id="lastRequest" desc="POST /CodeSystem" handler="HttpMessagingV2" from="Client" to="TxServer">
+      <input name="uri">concat($TxServerBase, &quot;/CodeSystem&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$jsonHeaders</input>
+      <input name="body">$csSimple</input>
+    </send>
+    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <send id="lastRequest" desc="GET https://raw.githubusercontent.com/HL7/fhir-tx-ecosystem-ig/main/tests/simple/valueset-all.json" handler="HttpMessagingV2" from="Client">
+      <input name="uri">&quot;https://raw.githubusercontent.com/HL7/fhir-tx-ecosystem-ig/main/tests/simple/valueset-all.json&quot;</input>
+      <input name="method">&quot;GET&quot;</input>
+      <input name="headers">$jsonHeaders</input>
+    </send>
+    <assign to="vsAll">$lastRequest{response}{body}</assign>
+    <verify handler="ExpressionValidator" desc="$vsAll is not empty">
+      <input name="expression">string-length($vsAll) &gt; 0</input>
+    </verify>
+    <assign to="jsonHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <send id="lastRequest" desc="POST /ValueSet" handler="HttpMessagingV2" from="Client" to="TxServer">
+      <input name="uri">concat($TxServerBase, &quot;/ValueSet&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$jsonHeaders</input>
+      <input name="body">$vsAll</input>
+    </send>
+    <assign to="jsonHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <send id="lastRequest" desc="POST /ValueSet/$expand" handler="HttpMessagingV2" from="Client" to="TxServer">
+      <input name="uri">concat($TxServerBase, &quot;/ValueSet/$expand&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$jsonHeaders</input>
+      <input name="body">'{
+      &quot;resourceType&quot;: &quot;Parameters&quot;,
+      &quot;parameter&quot;: [
+        { &quot;name&quot;: &quot;url&quot;, &quot;valueUri&quot;: &quot;http://hl7.org/fhir/test/ValueSet/simple-all&quot; },
+        { &quot;name&quot;: &quot;excludeNested&quot;, &quot;valueBoolean&quot;: true }
+      ]
+    }'</input>
+    </send>
+    <assign to="sigStatus">if (empty($lastRequest{response}{status})) then &quot;0&quot; else $lastRequest{response}{status}</assign>
+    <verify handler="NumberValidator" desc="Response status is 200">
+      <input name="actualnumber">$sigStatus</input>
+      <input name="expectednumber">&quot;200&quot;</input>
+    </verify>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="matchTplParams{resource}">$lastRequest{response}{body}</assign>
+    <assign to="matchTplParams{matchetype}">'{
+      &quot;$optional-properties$&quot;: [&quot;id&quot;, &quot;date&quot;, &quot;publisher&quot;, &quot;compose&quot;],
+      &quot;resourceType&quot;: &quot;ValueSet&quot;,
+      &quot;id&quot;: &quot;$id$&quot;,
+      &quot;url&quot;: &quot;http://hl7.org/fhir/test/ValueSet/simple-all&quot;,
+      &quot;version&quot;: &quot;5.0.0&quot;,
+      &quot;name&quot;: &quot;SimpleValueSetAll&quot;,
+      &quot;status&quot;: &quot;active&quot;,
+      &quot;expansion&quot;: {
+        &quot;$optional-properties$&quot;: [&quot;id&quot;, &quot;offset&quot;],
+        &quot;id&quot;: &quot;$id$&quot;,
+        &quot;identifier&quot;: &quot;$uuid$&quot;,
+        &quot;timestamp&quot;: &quot;$instant$&quot;,
+        &quot;total&quot;: 7
+      }
+    }'</assign>
+    <process handler="TemplateProcessor" operation="process" output="matchBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;matchetype&quot;, &quot;value&quot;: &quot;${matchetype?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$matchTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Matchetype validate" handler="HttpMessagingV2" from="TxServer" to="FHIRValidator">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/matchetype/validate&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$matchBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="matchResult">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/report/result&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="$response matches the pattern">
+      <input name="actualstring">$matchResult</input>
+      <input name="expectedstring">&quot;SUCCESS&quot;</input>
+    </verify>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="fhirpathTplParams{resource}">$lastRequest{response}{body}</assign>
+    <assign to="fhirpathTplParams{expression}">&quot;ValueSet.expansion.total&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="fhirpathBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$fhirpathTplParams</input>
+    </process>
+    <send id="lastRequest" desc="FHIRPath ValueSet.expansion.total" handler="HttpMessagingV2" from="TxServer" to="FHIRValidator">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPath/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$fhirpathBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="pathValue">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="$response at ValueSet.expansion.total is 7">
+      <input name="actualstring">$pathValue</input>
+      <input name="expectedstring">&quot;7&quot;</input>
+    </verify>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="fhirpathTplParams{resource}">$lastRequest{response}{body}</assign>
+    <assign to="fhirpathTplParams{expression}">&quot;ValueSet.expansion.contains.exists()&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="fhirpathBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$fhirpathTplParams</input>
+    </process>
+    <send id="lastRequest" desc="FHIRPath ValueSet.expansion.contains.exists()" handler="HttpMessagingV2" from="TxServer" to="FHIRValidator">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPath/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$fhirpathBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="pathValue">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="$response at ValueSet.expansion.contains.exists() is true">
+      <input name="actualstring">$pathValue</input>
+      <input name="expectedstring">&quot;true&quot;</input>
+    </verify>
+  </steps>
+
+  <output>
+    <success>
+      <default>"Test case completed successfully."</default>
+    </success>
+    <failure>
+      <default>"Test case failed. Check step reports and logs."</default>
+    </failure>
+  </output>
+</testcase>

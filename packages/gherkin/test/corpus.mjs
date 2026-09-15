@@ -1,9 +1,14 @@
 // Golden corpus — the regression net for the parser extraction.
 //
 // WHY THIS EXISTS: before this file there was exactly one test for 2,402 lines
-// of compiler. The corpus is the 39 feature files that compile today; the
-// snapshots are what they compiled to BEFORE any code moved. Every later phase
-// has to reproduce them byte for byte.
+// of compiler. The corpus is every feature file that compiles clean — the
+// generation-2 features plus two `legacy-1-*` fixtures tagged for the previous
+// language, which prove lang/en-1.yml and the dialects' steps-v1.yml still
+// load. The snapshots are what they compile to; every change has to reproduce
+// them byte for byte or re-record them in a reviewed diff.
+//
+// A file with a parser error FAILS here (it used to be silently ignored, so an
+// unmapped step never turned the corpus red).
 //
 //   node test/corpus.mjs --update    regenerate snapshots (review the diff!)
 //   node test/corpus.mjs             verify — exits non-zero on any drift

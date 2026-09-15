@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite id="ihe-mhd-document-responder-immutable-metadata-is-rejected"
+           xmlns="http://www.gitb.com/tdl/v1/"
+           xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>IHE MHD Document Responder — immutable metadata is rejected</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description></gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="DocumentResponder">
+      <gitb:name>DocumentResponder</gitb:name>
+      <gitb:desc>Endpoint: https://ehealthsuisse.ihe-europe.net/fhir | Definition: https://profiles.ihe.net/ITI/MHD/StructureDefinition/IHE.MHD.DocumentResponder</gitb:desc>
+    </gitb:actor>
+    <gitb:actor id="DocumentSource">
+      <gitb:name>DocumentSource</gitb:name>
+      <gitb:desc>Definition: https://profiles.ihe.net/ITI/MHD/StructureDefinition/IHE.MHD.DocumentSource</gitb:desc>
+    </gitb:actor>
+    <gitb:actor id="AuthServer">
+      <gitb:name>AuthServer</gitb:name>
+      <gitb:desc>Endpoint: https://ehealthsuisse.ihe-europe.net/auth</gitb:desc>
+    </gitb:actor>
+    <gitb:actor id="FHIRValidator">
+      <gitb:name>FHIRValidator</gitb:name>
+      <gitb:desc>Endpoint: http://fhir-validator:8081</gitb:desc>
+    </gitb:actor>
+  </actors>
+
+  <testcase id="mhd-imm-001-update-changing-no-iua-token-on-the-request-is-rejected"/>
+  <testcase id="mhd-imm-002-update-changing-a-different-patient-id-is-rejected"/>
+  <testcase id="mhd-imm-003-update-changing-creationtime-is-rejected"/>
+  <testcase id="mhd-imm-004-update-changing-documentavailability-is-rejected"/>
+  <testcase id="mhd-imm-005-update-changing-entryuuid-is-rejected"/>
+  <testcase id="mhd-imm-006-update-changing-hash-is-rejected"/>
+  <testcase id="mhd-imm-007-update-changing-homecommunityid-is-rejected"/>
+  <testcase id="mhd-imm-008-update-changing-limitedmetadata-is-rejected"/>
+  <testcase id="mhd-imm-009-update-changing-logicalid-is-rejected"/>
+  <testcase id="mhd-imm-010-update-changing-objecttype-is-rejected"/>
+  <testcase id="mhd-imm-011-update-changing-repositoryuniqueid-is-rejected"/>
+  <testcase id="mhd-imm-012-update-changing-size-is-rejected"/>
+  <testcase id="mhd-imm-013-update-changing-originalproviderrole-is-rejected"/>
+
+</testsuite>

@@ -1,0 +1,146 @@
+# ArchiMate / EIRA dialect — generation 2
+#
+#   kinds  archimate-repository     "ModelRepo is an archimate-repository at …"
+#          eira-validator           "EiraValidator is an eira-validator at …"
+#   type   archimate:Model          path language: ArchiMate model query
+#   conforms                        $model should conform to "<EIRA canonical>"
+#
+#   Architect loads model "ehealth-exchange" from ModelRepo as $model
+#   $model at "elements[type='ApplicationService']" count should be at least 1
+#   $model at "elements[name='Patient Summary'].specialization" should be "eira:DigitalPublicService"
+#   $model should conform to "https://eira.ec.europa.eu/eira/6.0" with:
+#     | option | value                 |
+#     | view   | Solution Architecture |
+#
+# Everything an author writes is a core sentence shape; this file only says
+# what "load", "at" and "conform" mean for an ArchiMate model.
+id: archimate
+name: ArchiMate / EIRA Steps
+language: 2
+description: >
+  Load ArchiMate models, evaluate model queries, and check EIRA alignment.
+
+kinds: [archimate-repository, eira-validator]
+
+x-json: &json
+  - assign: { to: 'archiHeaders{Content-Type}', value: '"application/json"' }
+  - assign: { to: 'archiHeaders{Accept}', value: '"application/json"' }
+
+types:
+  archimate:Model:
+    name: ArchiMate model
+    # $model at "<query>" — evaluated by the query endpoint. The query
+    # language is the validator's (element/relation selectors with
+    # attribute filters, `.count()` and property access); its result is a
+    # string, like every other path evaluation.
+    path:
+      kind: archimate-repository
+      actions:
+        - assign: { to: 'archiHeaders{Content-Type}', value: '"application/json"' }
+        - assign: { to: 'archiHeaders{Accept}', value: '"application/json"' }
+        - assign: { to: 'archiQueryParams{content}', value: '$subject' }
+        - assign: { to: 'archiQueryParams{query}', value: '"$path"' }
+        - process:
+            handler: 'TemplateProcessor'
+            operation: 'process'
+            output: 'archiQueryBody'
+            inputs:
+              syntax: '"freemarker"'
+              template: "'{ \"input\": [ { \"name\": \"content\", \"value\": \"${content?json_string}\", \"embeddingMethod\": \"STRING\" }, { \"name\": \"query\", \"value\": \"${query?json_string}\", \"embeddingMethod\": \"STRING\" } ] }'"
+              parameters: '$archiQueryParams'
+        - send:
+            id: 'lastRequest'
+            desc: 'Query $path'
+            handler: 'HttpMessagingV2'
+            to: '$target'
+            inputs:
+              uri: 'concat($targetBase, "/archimate/api/query")'
+              method: '"POST"'
+              headers: '$archiHeaders'
+              body: '$archiQueryBody'
+        - process: { handler: 'JsonPointerProcessor', operation: 'process', output: '$pathVar', inputs: { content: '$lastRequest{response}{body}', pointer: '"/output/0/value"' } }
+
+# $model should conform to "<EIRA canonical>" [with: | option | value |]
+# Contract with the core: leave the error count in $conformanceErrors.
+# Options are forwarded as GITB inputs (`view`, `level`, …).
+conforms:
+  kind: eira-validator
+  actions:
+    - *json
+    - assign: { to: 'eiraParams{content}', value: '$subject' }
+    - assign: { to: 'eiraParams{profile}', value: '"$profile"' }
+    - assign: { to: 'eiraParams{view}', value: '"$opt.view"' }
+    - process:
+        handler: 'TemplateProcessor'
+        operation: 'process'
+        output: 'eiraBody'
+        inputs:
+          syntax: '"freemarker"'
+          template: "'{ \"input\": [ { \"name\": \"contentToValidate\", \"value\": \"${content?json_string}\", \"embeddingMethod\": \"STRING\" }, { \"name\": \"validationType\", \"value\": \"${profile?json_string}\", \"embeddingMethod\": \"STRING\" }<#if view?has_content>, { \"name\": \"view\", \"value\": \"${view?json_string}\", \"embeddingMethod\": \"STRING\" }</#if> ] }'"
+          parameters: '$eiraParams'
+    - send:
+        id: 'lastRequest'
+        desc: 'Check $subject against $profile'
+        handler: 'HttpMessagingV2'
+        to: '$target'
+        inputs:
+          uri: 'concat($targetBase, "/eira/api/validate")'
+          method: '"POST"'
+          headers: '$archiHeaders'
+          body: '$eiraBody'
+    - verify:
+        handler: 'NumberValidator'
+        desc: 'EIRA validator answered (HTTP 200)'
+        inputs: { actualnumber: '$lastRequest{response}{status}', expectednumber: '"200"' }
+    - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'conformanceErrors', inputs: { content: '$lastRequest{response}{body}', pointer: '"/report/context/0/value"' } }
+    - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'validationErrors',   inputs: { content: '$lastRequest{response}{body}', pointer: '"/report/context/0/value"' } }
+    - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'validationWarnings', inputs: { content: '$lastRequest{response}{body}', pointer: '"/report/context/1/value"' } }
+
+verbs:
+  - text: '{actor} loads model {string}( from {actor:archimate-repository})? as {var}'
+    doc: Read an ArchiMate model by name from the repository.
+    output: { type: 'archimate:Model' }
+    actions:
+      - assign: { to: 'archiHeaders{Accept}', value: '"application/json"' }
+      - send:
+          id: 'lastRequest'
+          desc: 'Load model $2'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
+          inputs:
+            uri: 'concat($targetBase, "/archimate/api/models/", "$2")'
+            method: '"GET"'
+            headers: '$archiHeaders'
+      - verify:
+          handler: 'NumberValidator'
+          desc: 'Model $2 found (HTTP 200)'
+          inputs: { actualnumber: '$lastRequest{response}{status}', expectednumber: '"200"' }
+      - assign: { to: '$4', value: '$lastRequest{response}{body}' }
+
+  - text: '{actor} lists the views of {ref}( on {actor:archimate-repository})? as {var}'
+    doc: Bind the names of the model's views (comma-separated) for membership assertions.
+    actions:
+      - *json
+      - assign: { to: 'archiQueryParams{content}', value: '$2' }
+      - assign: { to: 'archiQueryParams{query}', value: '"views.name"' }
+      - process:
+          handler: 'TemplateProcessor'
+          operation: 'process'
+          output: 'archiQueryBody'
+          inputs:
+            syntax: '"freemarker"'
+            template: "'{ \"input\": [ { \"name\": \"content\", \"value\": \"${content?json_string}\", \"embeddingMethod\": \"STRING\" }, { \"name\": \"query\", \"value\": \"${query?json_string}\", \"embeddingMethod\": \"STRING\" } ] }'"
+            parameters: '$archiQueryParams'
+      - send:
+          id: 'lastRequest'
+          desc: 'List views'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
+          inputs:
+            uri: 'concat($targetBase, "/archimate/api/query")'
+            method: '"POST"'
+            headers: '$archiHeaders'
+            body: '$archiQueryBody'
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: '$4', inputs: { content: '$lastRequest{response}{body}', pointer: '"/output/0/value"' } }

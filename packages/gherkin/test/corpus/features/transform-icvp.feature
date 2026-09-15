@@ -5,7 +5,7 @@ Feature: FHIR Validator transform operation
 
   Background:
     Given Client is the system under test
-    And FHIRValidator is infrastructure at "http://fhir-validator:8081"
+    And FHIRValidator is a fhir-validator at "http://fhir-validator:8081"
 
   Scenario: transform-001 ICVP claim → IPS Bundle (real StructureMap)
 
@@ -17,7 +17,7 @@ Feature: FHIR Validator transform operation
     # ------------------------------------------------------------------
     # Step 2: Stash a small ICVP claim payload as the source resource
     # ------------------------------------------------------------------
-    Given define resource "icvpClaim" as:
+    Given set $icvpClaim to:
       """
       {
         "dob": "1994-10-13",
@@ -42,7 +42,7 @@ Feature: FHIR Validator transform operation
     # ------------------------------------------------------------------
     # Step 3: Run the transform — produce the IPS Bundle
     # ------------------------------------------------------------------
-    When transform "icvpClaim" using map "http://smart.who.int/icvp/StructureMap/ICVPClaimtoIPS" as "ipsBundle"
+    When Client transforms $icvpClaim with map "http://smart.who.int/icvp/StructureMap/ICVPClaimtoIPS" as $ipsBundle
 
     # ------------------------------------------------------------------
     # Step 4: Assert the invariant parts of the resulting Bundle (UUIDs vary)
@@ -51,10 +51,10 @@ Feature: FHIR Validator transform operation
     # is NOT a FHIR model property, only a JSON serialisation marker, so
     # `.where(resourceType = '...')` always returns empty.
     # ------------------------------------------------------------------
-    Then assert FHIRPath "Bundle.type = 'document'" on "ipsBundle"
-    And  assert FHIRPath "Bundle.entry.resource.ofType(Patient).name.text.first() = 'Cristina Rodriguez'" on "ipsBundle"
-    And  assert FHIRPath "Bundle.entry.resource.ofType(Patient).gender = 'male'" on "ipsBundle"
-    And  assert FHIRPath "Bundle.entry.resource.ofType(Patient).birthDate = '1994-10-13'" on "ipsBundle"
-    And  assert FHIRPath "Bundle.entry.resource.ofType(Immunization).lotNumber = 'A1234'" on "ipsBundle"
-    And  assert FHIRPath "Bundle.entry.resource.ofType(Immunization).vaccineCode.coding.code.first() = 'YellowFever'" on "ipsBundle"
-    And  assert FHIRPath "Bundle.entry.resource.ofType(Composition).type.coding.code.first() = '60591-5'" on "ipsBundle"
+    Then $ipsBundle should satisfy "Bundle.type = 'document'"
+    And  $ipsBundle should satisfy "Bundle.entry.resource.ofType(Patient).name.text.first() = 'Cristina Rodriguez'"
+    And  $ipsBundle should satisfy "Bundle.entry.resource.ofType(Patient).gender = 'male'"
+    And  $ipsBundle should satisfy "Bundle.entry.resource.ofType(Patient).birthDate = '1994-10-13'"
+    And  $ipsBundle should satisfy "Bundle.entry.resource.ofType(Immunization).lotNumber = 'A1234'"
+    And  $ipsBundle should satisfy "Bundle.entry.resource.ofType(Immunization).vaccineCode.coding.code.first() = 'YellowFever'"
+    And  $ipsBundle should satisfy "Bundle.entry.resource.ofType(Composition).type.coding.code.first() = '60591-5'"

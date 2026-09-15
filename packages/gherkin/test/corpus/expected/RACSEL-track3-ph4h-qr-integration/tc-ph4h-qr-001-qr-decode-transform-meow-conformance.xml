@@ -15,19 +15,15 @@
   </actors>
 
   <variables>
-    <var name="uploadedFile" type="binary"/>
-    <var name="rawQRData" type="string"/>
-    <var name="decodeHc1Body" type="string"/>
-    <var name="coseVal" type="string"/>
-    <var name="payloadVal" type="string"/>
-    <var name="hcertVal" type="string"/>
-    <var name="coseRaw" type="string"/>
+    <var name="qrImage" type="binary"/>
+    <var name="qrData" type="string"/>
+    <var name="decodeBody" type="string"/>
+    <var name="innerContent" type="string"/>
     <var name="coseRawProtected" type="string"/>
     <var name="coseRawPayload" type="string"/>
     <var name="coseRawSignature" type="string"/>
-    <var name="innerContent" type="string"/>
     <var name="verifyBody" type="string"/>
-    <var name="sigValid" type="string"/>
+    <var name="signatureValid" type="string"/>
     <var name="loadIgBody" type="string"/>
     <var name="transformBody" type="string"/>
     <var name="bundleResult" type="string"/>
@@ -43,18 +39,14 @@
     <var name="FHIRValidatorBase" type="string"/>
     <var name="imgPart" type="map"/>
     <var name="sendParts" type="list[map]"/>
-    <var name="reqHeaders" type="map"/>
-    <var name="decodeHc1TplParams" type="map"/>
-    <var name="decodeHc1Headers" type="map"/>
+    <var name="hcertHeaders" type="map"/>
+    <var name="decodeTplParams" type="map"/>
+    <var name="hcert" type="string"/>
     <var name="verifyParams" type="map"/>
     <var name="verifyTpl" type="string"/>
-    <var name="verifyHeaders" type="map"/>
-    <var name="sigStatus" type="string"/>
-    <var name="loadIgHeaders" type="map"/>
-    <var name="loadIgTplParams" type="map"/>
-    <var name="transformHeaders" type="map"/>
-    <var name="transformTplParams" type="map"/>
     <var name="fhirValidatorHeaders" type="map"/>
+    <var name="loadIgTplParams" type="map"/>
+    <var name="transformTplParams" type="map"/>
     <var name="validateTplParams" type="map"/>
     <var name="fhirpathTplParams" type="map"/>
   </variables>
@@ -62,70 +54,63 @@
   <steps stopOnError="true">
     <assign to="HCertDecoderBase">&quot;http://hcert-validator:8080&quot;</assign>
     <assign to="FHIRValidatorBase">&quot;http://fhir-validator:8080&quot;</assign>
-    <interact id="userFileUpload" desc="Upload QR code image">
-      <request desc="Upload a QRCode:" name="uploadedFile" inputType="UPLOAD" required="true">$uploadedFile</request>
+    <interact id="upload" desc="Upload a file" with="User">
+      <request desc="Upload a file:" name="qrImage" inputType="UPLOAD" required="true">$qrImage</request>
     </interact>
     <assign to="imgPart{name}">&quot;image&quot;</assign>
     <assign to="imgPart{contentType}">&quot;image/png&quot;</assign>
     <assign to="imgPart{fileName}">&quot;upload.png&quot;</assign>
-    <assign to="imgPart{content}">$uploadedFile</assign>
+    <assign to="imgPart{content}">$qrImage</assign>
     <assign to="sendParts" append="true">$imgPart</assign>
-    <assign to="reqHeaders{Accept}">&quot;application/json&quot;</assign>
-    <send id="lastRequest" desc="Decode QR image" handler="HttpMessagingV2" from="User" to="HCertDecoder">
+    <assign to="hcertHeaders{Accept}">&quot;application/json&quot;</assign>
+    <send id="lastRequest" desc="Decode QR image $qrImage" handler="HttpMessagingV2" from="User" to="HCertDecoder">
       <input name="uri">concat($HCertDecoderBase, &quot;/decode/image&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="parts">$sendParts</input>
-      <input name="headers">$reqHeaders</input>
+      <input name="headers">$hcertHeaders</input>
     </send>
-    <process handler="JsonPointerProcessor" operation="process" output="rawQRData">
+    <verify handler="NumberValidator" desc="QR image decoded (HTTP 200)">
+      <input name="actualnumber">$lastRequest{response}{status}</input>
+      <input name="expectednumber">&quot;200&quot;</input>
+    </verify>
+    <process handler="JsonPointerProcessor" operation="process" output="qrData">
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/qr_data&quot;</input>
     </process>
-    <assign to="decodeHc1TplParams{value}">$rawQRData</assign>
-    <process handler="TemplateProcessor" operation="process" output="decodeHc1Body">
+    <assign to="decodeTplParams{value}">$qrData</assign>
+    <process handler="TemplateProcessor" operation="process" output="decodeBody">
       <input name="syntax">&quot;freemarker&quot;</input>
       <input name="template">'{&quot;qr_data&quot;:&quot;${value?json_string}&quot;,&quot;include_raw&quot;:true}'</input>
-      <input name="parameters">$decodeHc1TplParams</input>
+      <input name="parameters">$decodeTplParams</input>
     </process>
-    <assign to="decodeHc1Headers{Content-Type}">&quot;application/json&quot;</assign>
-    <assign to="decodeHc1Headers{Accept}">&quot;application/json&quot;</assign>
+    <assign to="hcertHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="hcertHeaders{Accept}">&quot;application/json&quot;</assign>
     <send id="lastRequest" desc="Decode HC1" handler="HttpMessagingV2" from="User" to="HCertDecoder">
       <input name="uri">concat($HCertDecoderBase, &quot;/decode/hcert&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
-      <input name="headers">$decodeHc1Headers</input>
-      <input name="body">$decodeHc1Body</input>
+      <input name="headers">$hcertHeaders</input>
+      <input name="body">$decodeBody</input>
     </send>
-    <process handler="JsonPointerProcessor" operation="process" output="coseVal">
-      <input name="content">$lastRequest{response}{body}</input>
-      <input name="pointer">&quot;/cose&quot;</input>
-    </process>
-    <process handler="JsonPointerProcessor" operation="process" output="payloadVal">
-      <input name="content">$lastRequest{response}{body}</input>
-      <input name="pointer">&quot;/payload&quot;</input>
-    </process>
-    <process handler="JsonPointerProcessor" operation="process" output="hcertVal">
-      <input name="content">$lastRequest{response}{body}</input>
-      <input name="pointer">&quot;/hcert&quot;</input>
-    </process>
-    <process handler="JsonPointerProcessor" operation="process" output="coseRaw">
-      <input name="content">$lastRequest{response}{body}</input>
-      <input name="pointer">&quot;/cose/_raw&quot;</input>
+    <verify handler="NumberValidator" desc="HC1 decoded (HTTP 200)">
+      <input name="actualnumber">$lastRequest{response}{status}</input>
+      <input name="expectednumber">&quot;200&quot;</input>
+    </verify>
+    <assign to="hcert">$lastRequest{response}{body}</assign>
+    <process handler="JsonPointerProcessor" operation="process" output="innerContent">
+      <input name="content">$hcert</input>
+      <input name="pointer">&quot;/hcert_inner_json&quot;</input>
     </process>
     <process handler="JsonPointerProcessor" operation="process" output="coseRawProtected">
-      <input name="content">$lastRequest{response}{body}</input>
+      <input name="content">$hcert</input>
       <input name="pointer">&quot;/cose/_raw/protected_bstr&quot;</input>
     </process>
     <process handler="JsonPointerProcessor" operation="process" output="coseRawPayload">
-      <input name="content">$lastRequest{response}{body}</input>
+      <input name="content">$hcert</input>
       <input name="pointer">&quot;/cose/_raw/payload_bstr&quot;</input>
     </process>
     <process handler="JsonPointerProcessor" operation="process" output="coseRawSignature">
-      <input name="content">$lastRequest{response}{body}</input>
+      <input name="content">$hcert</input>
       <input name="pointer">&quot;/cose/_raw/signature&quot;</input>
-    </process>
-    <process handler="JsonPointerProcessor" operation="process" output="innerContent">
-      <input name="content">$lastRequest{response}{body}</input>
-      <input name="pointer">&quot;/hcert_inner_json&quot;</input>
     </process>
     <assign to="verifyParams{cose_raw_protected}">$coseRawProtected</assign>
     <assign to="verifyParams{cose_raw_payload}">$coseRawPayload</assign>
@@ -139,34 +124,34 @@
     <assign to="verifyParams{allow_unverified_trustlist}">&quot;true&quot;</assign>
     <assign to="verifyParams{allow_remote_contexts}">&quot;true&quot;</assign>
     <assign to="verifyParams{context_dir}">&quot;contexts&quot;</assign>
-    <assign to="verifyTpl">'{&quot;cose_raw&quot;:{&quot;protected_bstr&quot;:&quot;${cose_raw_protected?json_string}&quot;,&quot;payload_bstr&quot;:&quot;${cose_raw_payload?json_string}&quot;,&quot;signature&quot;:&quot;${cose_raw_signature?json_string}&quot;},&quot;use_gdhcn&quot;:${use_gdhcn},&quot;gdhcn_env&quot;:&quot;${gdhcn_env}&quot;&lt;#if (domain!&quot;&quot;)?has_content&gt;,&quot;domain&quot;:&quot;${domain}&quot;&lt;/#if&gt;,&quot;participant&quot;:&quot;${participant}&quot;,&quot;usage&quot;:&quot;${usage}&quot;,&quot;verify_did_proof&quot;:${verify_did_proof},&quot;allow_unverified_trustlist&quot;:${allow_unverified_trustlist},&quot;allow_remote_contexts&quot;:${allow_remote_contexts},&quot;context_dir&quot;:&quot;${context_dir}&quot;}'</assign>
+    <assign to="verifyTpl">'{&quot;cose_raw&quot;:{&quot;protected_bstr&quot;:&quot;${cose_raw_protected?json_string}&quot;,&quot;payload_bstr&quot;:&quot;${cose_raw_payload?json_string}&quot;,&quot;signature&quot;:&quot;${cose_raw_signature?json_string}&quot;},&quot;use_gdhcn&quot;:${use_gdhcn!&quot;true&quot;},&quot;gdhcn_env&quot;:&quot;${gdhcn_env!&quot;prod&quot;}&quot;&lt;#if (domain!&quot;&quot;)?has_content&gt;,&quot;domain&quot;:&quot;${domain}&quot;&lt;/#if&gt;,&quot;participant&quot;:&quot;${participant!&quot;-&quot;}&quot;,&quot;usage&quot;:&quot;${usage!&quot;DSC&quot;}&quot;,&quot;verify_did_proof&quot;:${verify_did_proof!&quot;true&quot;},&quot;allow_unverified_trustlist&quot;:${allow_unverified_trustlist!&quot;false&quot;},&quot;allow_remote_contexts&quot;:${allow_remote_contexts!&quot;true&quot;},&quot;context_dir&quot;:&quot;${context_dir!&quot;contexts&quot;}&quot;}'</assign>
     <process handler="TemplateProcessor" operation="process" output="verifyBody">
       <input name="syntax">&quot;freemarker&quot;</input>
       <input name="template">$verifyTpl</input>
       <input name="parameters">$verifyParams</input>
     </process>
-    <assign to="verifyHeaders{Content-Type}">&quot;application/json&quot;</assign>
-    <send id="lastRequest" desc="Verify COSE signature" handler="HttpMessagingV2" from="User" to="HCertDecoder">
+    <assign to="hcertHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="hcertHeaders{Accept}">&quot;application/json&quot;</assign>
+    <send id="lastRequest" desc="Verify COSE signature of $hcert" handler="HttpMessagingV2" from="User" to="HCertDecoder">
       <input name="uri">concat($HCertDecoderBase, &quot;/verify/signature&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
-      <input name="headers">$verifyHeaders</input>
+      <input name="headers">$hcertHeaders</input>
       <input name="body">$verifyBody</input>
     </send>
-    <assign to="sigStatus">if (empty($lastRequest{response}{status})) then &quot;0&quot; else $lastRequest{response}{status}</assign>
-    <verify handler="NumberValidator" desc="Response status is 200">
-      <input name="actualnumber">$sigStatus</input>
+    <verify handler="NumberValidator" desc="Signature verification answered (HTTP 200)">
+      <input name="actualnumber">$lastRequest{response}{status}</input>
       <input name="expectednumber">&quot;200&quot;</input>
     </verify>
-    <process handler="JsonPointerProcessor" operation="process" output="sigValid">
+    <process handler="JsonPointerProcessor" operation="process" output="signatureValid">
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/valid&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="Equals">
-      <input name="actualstring">$sigValid</input>
+    <verify handler="StringValidator" desc="Signature of $hcert is valid">
+      <input name="actualstring">$signatureValid</input>
       <input name="expectedstring">&quot;true&quot;</input>
     </verify>
-    <assign to="loadIgHeaders{Content-Type}">&quot;application/json&quot;</assign>
-    <assign to="loadIgHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
     <assign to="loadIgTplParams{ig}">&quot;https://worldhealthorganization.github.io/smart-ph4h/branches/MeOW-r4/package.tgz&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="loadIgBody">
       <input name="syntax">&quot;freemarker&quot;</input>
@@ -176,16 +161,15 @@
     <send id="lastRequest" desc="Load IG https://worldhealthorganization.github.io/smart-ph4h/branches/MeOW-r4/package.tgz" handler="HttpMessagingV2" from="User" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/igManager/process&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
-      <input name="headers">$loadIgHeaders</input>
+      <input name="headers">$fhirValidatorHeaders</input>
       <input name="body">$loadIgBody</input>
     </send>
-    <assign to="sigStatus">if (empty($lastRequest{response}{status})) then &quot;0&quot; else $lastRequest{response}{status}</assign>
-    <verify handler="NumberValidator" desc="Response status is 200">
-      <input name="actualnumber">$sigStatus</input>
+    <verify handler="NumberValidator" desc="IG https://worldhealthorganization.github.io/smart-ph4h/branches/MeOW-r4/package.tgz loaded (HTTP 200)">
+      <input name="actualnumber">$lastRequest{response}{status}</input>
       <input name="expectednumber">&quot;200&quot;</input>
     </verify>
-    <assign to="loadIgHeaders{Content-Type}">&quot;application/json&quot;</assign>
-    <assign to="loadIgHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
     <assign to="loadIgTplParams{ig}">&quot;https://profiles.ihe.net/PHARM/MEOW/package.tgz&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="loadIgBody">
       <input name="syntax">&quot;freemarker&quot;</input>
@@ -195,19 +179,18 @@
     <send id="lastRequest" desc="Load IG https://profiles.ihe.net/PHARM/MEOW/package.tgz" handler="HttpMessagingV2" from="User" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/igManager/process&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
-      <input name="headers">$loadIgHeaders</input>
+      <input name="headers">$fhirValidatorHeaders</input>
       <input name="body">$loadIgBody</input>
     </send>
-    <assign to="sigStatus">if (empty($lastRequest{response}{status})) then &quot;0&quot; else $lastRequest{response}{status}</assign>
-    <verify handler="NumberValidator" desc="Response status is 200">
-      <input name="actualnumber">$sigStatus</input>
+    <verify handler="NumberValidator" desc="IG https://profiles.ihe.net/PHARM/MEOW/package.tgz loaded (HTTP 200)">
+      <input name="actualnumber">$lastRequest{response}{status}</input>
       <input name="expectednumber">&quot;200&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="Transform input &quot;innerContent&quot; is non-empty (empty means an upstream extract found nothing)">
+    <verify handler="ExpressionValidator" desc="Transform input $innerContent is non-empty">
       <input name="expression">not($innerContent = &quot;&quot;)</input>
     </verify>
-    <assign to="transformHeaders{Content-Type}">&quot;application/json&quot;</assign>
-    <assign to="transformHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
     <assign to="transformTplParams{content}">$innerContent</assign>
     <assign to="transformTplParams{map}">&quot;http://smart.who.int/ph4h/StructureMap/MedicationOverviewMinToMedicationOverviewBundle&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="transformBody">
@@ -215,31 +198,30 @@
       <input name="template">'{ &quot;operation&quot;: &quot;transform&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${content?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;map&quot;, &quot;value&quot;: &quot;${map?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;contentType&quot;, &quot;value&quot;: &quot;application/fhir+json&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$transformTplParams</input>
     </process>
-    <send id="lastRequest" desc="Transform innerContent with map http://smart.who.int/ph4h/StructureMap/MedicationOverviewMinToMedicationOverviewBundle" handler="HttpMessagingV2" from="User" to="FHIRValidator">
+    <send id="lastRequest" desc="Transform $innerContent with map http://smart.who.int/ph4h/StructureMap/MedicationOverviewMinToMedicationOverviewBundle" handler="HttpMessagingV2" from="User" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/transform/process&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
-      <input name="headers">$transformHeaders</input>
+      <input name="headers">$fhirValidatorHeaders</input>
       <input name="body">$transformBody</input>
     </send>
+    <verify handler="NumberValidator" desc="Transform with http://smart.who.int/ph4h/StructureMap/MedicationOverviewMinToMedicationOverviewBundle succeeded (HTTP 200)">
+      <input name="actualnumber">$lastRequest{response}{status}</input>
+      <input name="expectednumber">&quot;200&quot;</input>
+    </verify>
     <process handler="JsonPointerProcessor" operation="process" output="bundleResult">
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/output/0/value&quot;</input>
     </process>
-    <assign to="sigStatus">if (empty($lastRequest{response}{status})) then &quot;0&quot; else $lastRequest{response}{status}</assign>
-    <verify handler="NumberValidator" desc="Response status is 200">
-      <input name="actualnumber">$sigStatus</input>
-      <input name="expectednumber">&quot;200&quot;</input>
-    </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
     <assign to="validateTplParams{resource}">$bundleResult</assign>
     <assign to="validateTplParams{profiles}">&quot;https://profiles.ihe.net/PHARM/MEOW/StructureDefinition/MedicationOverview&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="validateBody">
       <input name="syntax">&quot;freemarker&quot;</input>
-      <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;profiles&quot;, &quot;value&quot;: &quot;${profiles}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;profiles&quot;, &quot;value&quot;: &quot;${profiles?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$validateTplParams</input>
     </process>
-    <send id="lastRequest" desc="Validate resource against profile" handler="HttpMessagingV2" from="User">
+    <send id="lastRequest" desc="Validate $bundleResult against https://profiles.ihe.net/PHARM/MEOW/StructureDefinition/MedicationOverview" handler="HttpMessagingV2" from="User" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhir/validate&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
@@ -270,7 +252,7 @@
       <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$fhirpathTplParams</input>
     </process>
-    <send id="lastRequest" desc="Evaluate FHIRPath expression" handler="HttpMessagingV2" from="User">
+    <send id="lastRequest" desc="FHIRPath issue.where(severity = 'error' and (details.text = 'Profile https://profiles.ihe.net/PHARM/MEOW/StructureDefinition/MedicationOverview|1.0.0-preview, Element matches more than one slice - Patient, MedRecordOrder' or details.text = 'Profile https://profiles.ihe.net/PHARM/MEOW/StructureDefinition/MedicationOverview|1.0.0-preview, Element matches more than one slice - Patient, MedRecordDispense' or details.text = 'Profile https://profiles.ihe.net/PHARM/MEOW/StructureDefinition/MedicationOverview|1.0.0-preview, Element matches more than one slice - Patient, MedRecordAdministration' or details.text = 'Profile https://profiles.ihe.net/PHARM/MEOW/StructureDefinition/MedicationOverview|1.0.0-preview, Element matches more than one slice - Patient, MedRecordUsage' or details.text = 'Slice \'Bundle.entry:Composition\': a matching slice is required, but not found (from https://profiles.ihe.net/PHARM/MEOW/StructureDefinition/MedicationOverview|1.0.0-preview). Note that other slices are allowed in addition to this required slice' or details.text = 'Bundle.entry:Patient: max allowed = 1, but found 3 (from https://profiles.ihe.net/PHARM/MEOW/StructureDefinition/MedicationOverview|1.0.0-preview)' or details.text = 'The Profile \'https://profiles.ihe.net/PHARM/MEOW/StructureDefinition/MedicationOverview|1.0.0-preview\' definition allows for the type Patient but found type Composition' or details.text = 'The type \'Composition\' is not valid - no resources allowed here (allowed = Patient)' or details.text = 'The Profile \'https://profiles.ihe.net/PHARM/MEOW/StructureDefinition/MedicationOverview|1.0.0-preview\' definition allows for the type Patient but found type MedicationStatement' or details.text = 'The type \'MedicationStatement\' is not valid - no resources allowed here (allowed = Patient)').not()).count()" handler="HttpMessagingV2" from="User" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPath/process&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
@@ -280,7 +262,7 @@
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/output/0/value&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="Equals">
+    <verify handler="StringValidator" desc="$newErrors is 0">
       <input name="actualstring">$newErrors</input>
       <input name="expectedstring">&quot;0&quot;</input>
     </verify>

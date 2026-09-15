@@ -1,4 +1,5 @@
 import yaml from 'js-yaml';
+import { compileStepText, ParamSpec } from './stepText.js';
 
 export type CatalogAction =
   | { call: { path: string; output?: string; inputs?: Record<string,string> } }
@@ -22,12 +23,51 @@ export interface CatalogRequirement {
 }
 
 export interface CatalogStep {
+  /** Anchored regex. For a v2 entry this is COMPILED from `text`. */
   match: string;
+  /** v2: the typed step text this entry was written as. */
+  text?: string;
+  /** v2: the type of every capture group, in order. */
+  params?: ParamSpec[];
+  /** One-line description for catalogs and completions. */
+  doc?: string;
   table?: { required: string[] };
   actions: CatalogAction[];
   requires?: CatalogRequirement | CatalogRequirement[];
+  /** v2: the step's actions come from a registry looked up at expand time —
+   *  the subject's value type (`path`), the target's dialect (`conforms`) —
+   *  or the step only records a type (`type`). */
+  dispatch?: 'path' | 'conforms' | 'type';
+  /** v2: the value type bound to the step's LAST {var} capture. */
+  output?: { type: string };
+  /** v2: extra named values for the action templates, computed from the
+   *  captures with the same `$N` substitution (`bind: { ignore: '$4' }`). */
+  bind?: Record<string, string>;
+  /** v2 `dispatch: path`: 1-based capture that names the output variable;
+   *  default writes to $pathValue. */
+  pathOutput?: number;
   /** Which component provided this step (undefined = core language) */
   _source?: { componentId: string; componentName: string; enabled: boolean };
+}
+
+/** A value type a dialect knows how to read: its display name for
+ *  `$x is a <name>`, and how to evaluate a path on it. */
+export interface TypeDecl {
+  name?: string;
+  /** Path evaluator: actions that read $subject at $path into $pathVar.
+   *  `kind` names which of the dialect's actor kinds serves it, when the
+   *  dialect declares more than one. */
+  path?: { actions: CatalogAction[]; outputType?: string; kind?: string };
+  /** Filled in at merge time. */
+  componentId?: string;
+}
+
+/** A conformance handler: actions that check $subject against $profile on
+ *  $target, honouring $ignore and $opt.<name>. */
+export interface ConformsDecl {
+  actions: CatalogAction[];
+  /** Which of the dialect's actor kinds checks conformance (optional). */
+  kind?: string;
 }
 
 export interface Catalog {
@@ -40,6 +80,16 @@ export interface Catalog {
    *  range via language.baseVersion. */
   specVersion?: string;
   steps: CatalogStep[];
+  /** v2: well-known dotted references ($response.status → TDL path). */
+  refs?: Record<string, string>;
+  /** v2: path evaluators that need no dialect (JSON pointer). */
+  pathEvaluators?: Record<string, { actions: CatalogAction[] }>;
+  /** v2, merged: actor kind → component id ('core' for the core language). */
+  kinds?: Record<string, string>;
+  /** v2, merged: value type key → declaration. */
+  types?: Record<string, TypeDecl>;
+  /** v2, merged: component id → conformance handler. */
+  conforms?: Record<string, ConformsDecl>;
 }
 
 /** Extension catalog loaded from a component's steps.yml */
@@ -48,6 +98,70 @@ export interface ExtensionCatalog {
   name: string;
   description?: string;
   steps: CatalogStep[];
+  /** v2: actor kinds this dialect's actors are declared as. */
+  kinds?: string[];
+  types?: Record<string, TypeDecl>;
+  conforms?: ConformsDecl;
+}
+
+/**
+ * Read a language file — core or extension — in either schema.
+ *
+ * v1: `steps:` with `match:` regexes.
+ * v2: `verbs:` with `text:` placeholders (plus kinds/types/conforms/refs).
+ * A file may carry both; v1 entries stay ahead of v2 ones, in file order.
+ */
+export function normalizeLanguageFile(raw: any): any {
+  if (!raw || typeof raw !== 'object') return raw;
+  const steps: CatalogStep[] = [];
+  for (const s of raw.steps ?? []) steps.push({ ...s, actions: flattenActions(s.actions) });
+  for (const v of raw.verbs ?? []) {
+    if (!v || typeof v.text !== 'string') continue;
+    const { text, ...rest } = v;
+    steps.push({ ...rest, text, match: rest.match ?? '', actions: flattenActions(rest.actions) });
+  }
+  const out = { ...raw, steps };
+  delete out.verbs;
+  for (const t of Object.values(out.types ?? {}) as any[]) {
+    if (t?.path?.actions) t.path.actions = flattenActions(t.path.actions);
+  }
+  if (out.conforms?.actions) out.conforms.actions = flattenActions(out.conforms.actions);
+  for (const e of Object.values(out.pathEvaluators ?? {}) as any[]) {
+    if (e?.actions) e.actions = flattenActions(e.actions);
+  }
+  // Top-level keys starting with `x-` are anchor definitions, not language.
+  for (const k of Object.keys(out)) if (k.startsWith('x-')) delete out[k];
+  return out;
+}
+
+/**
+ * A YAML alias to a LIST of actions (`- *headers`) lands as a nested array.
+ * Splice such items in place so shared action blocks can be reused, and do
+ * the same inside foreach/repeat bodies.
+ */
+export function flattenActions(actions: any): CatalogAction[] {
+  if (!Array.isArray(actions)) return [];
+  const out: any[] = [];
+  for (const a of actions) {
+    if (Array.isArray(a)) { out.push(...flattenActions(a)); continue; }
+    if (a && typeof a === 'object') {
+      if (a.foreach?.do) a.foreach.do = flattenActions(a.foreach.do);
+      if (a.repeat?.do) a.repeat.do = flattenActions(a.repeat.do);
+    }
+    out.push(a);
+  }
+  return out;
+}
+
+/** Compile every v2 `text` to its regex, given the registered type names. */
+export function compileCatalogSteps(steps: CatalogStep[], types: Record<string, TypeDecl> = {}): void {
+  const typeNames = Object.entries(types).map(([k, t]) => t.name ?? k);
+  for (const s of steps) {
+    if (!s.text) continue;
+    const c = compileStepText(s.text, typeNames);
+    s.match = c.match;
+    s.params = c.params;
+  }
 }
 
 /** Versioned language declaration (component.yml `language:` object form).
@@ -63,6 +177,10 @@ export interface LanguageDecl {
   base?: string;
   /** Semver range of compatible base specVersions (e.g. ">=1 <2") */
   baseVersion?: string;
+  /** Steps file for the 1.x core language (regex `match:` entries), used
+   *  when a feature declares `@lang:itb-core-en@^1`. Absent = the dialect
+   *  has no 1.x form and is skipped for such files. */
+  legacy?: string;
 }
 
 /** Component manifest loaded from component.yml */
@@ -407,7 +525,7 @@ export async function loadRemoteComponent(baseUrl: string): Promise<ComponentInf
     let extension: ExtensionCatalog | null = null;
     const langFile = languageDecl(manifest)?.steps ?? 'steps.yml';
     const etext = await readUrl(`${effectiveBase}/${langFile}`);
-    if (etext !== null) extension = yaml.load(etext) as ExtensionCatalog;
+    if (etext !== null) extension = normalizeLanguageFile(yaml.load(etext)) as ExtensionCatalog;
 
     const scriptlets: ComponentScriptlet[] = [];
     for (const file of manifest.scriptlets ?? []) {
@@ -424,14 +542,27 @@ export async function loadRemoteComponent(baseUrl: string): Promise<ComponentInf
   }
 }
 
+export interface LoadOptions {
+  /** Load the 1.x core language (`lang/<locale>-1.yml`) instead of the
+   *  current one. Chosen per feature file from its `@lang:` tag. */
+  legacy?: boolean;
+}
+
+/** Asset path of the core language file. */
+export function coreLanguagePath(locale = 'en', legacy = false): string {
+  return `lang/${locale}${legacy ? '-1' : ''}.yml`;
+}
+
 /** Load the core language catalog */
-export async function loadCatalog(locale = 'en'): Promise<Catalog> {
-  const url = `${base()}lang/${locale}.yml`;
+export async function loadCatalog(locale = 'en', opts: LoadOptions = {}): Promise<Catalog> {
+  const url = `${base()}${coreLanguagePath(locale, opts.legacy)}`;
   const text = await src().read(url);
   if (text === null) {
     throw new Error(`Failed to load catalog: ${url}`);
   }
-  return yaml.load(text) as Catalog;
+  const core = normalizeLanguageFile(yaml.load(text)) as Catalog;
+  compileCatalogSteps(core.steps, core.types);
+  return core;
 }
 
 /** Discover available components from the index */
@@ -464,7 +595,7 @@ export async function loadComponentExtension(componentId: string, languageFile: 
     const url = `${base()}components/${componentId}/${languageFile}`;
     const text = await src().read(url);
     if (text === null) return null;
-    return yaml.load(text) as ExtensionCatalog;
+    return normalizeLanguageFile(yaml.load(text)) as ExtensionCatalog;
   } catch {
     return null;
   }
@@ -473,9 +604,9 @@ export async function loadComponentExtension(componentId: string, languageFile: 
 /** Load all components and their extensions.
  *  Pass the core catalog when you have it (so base-compatibility is judged
  *  against the right locale); otherwise the default core is fetched here. */
-export async function loadAllComponents(core?: Catalog): Promise<ComponentInfo[]> {
+export async function loadAllComponents(core?: Catalog, opts: LoadOptions = {}): Promise<ComponentInfo[]> {
   if (!core) {
-    try { core = await loadCatalog(); } catch { core = undefined; }
+    try { core = await loadCatalog('en', opts); } catch { core = undefined; }
   }
   const ids = await discoverComponents();
   const results: ComponentInfo[] = [];
@@ -485,7 +616,10 @@ export async function loadAllComponents(core?: Catalog): Promise<ComponentInfo[]
     if (!manifest) continue;
 
     let extension: ExtensionCatalog | null = null;
-    const langFile = languageDecl(manifest)?.steps;
+    const decl = languageDecl(manifest);
+    // A 1.x feature file gets the dialect's 1.x steps, or nothing: mixing a
+    // 2.x dialect into a 1.x core would shadow steps in ways nobody wrote.
+    const langFile = opts.legacy ? decl?.legacy : decl?.steps;
     if (langFile) {
       extension = await loadComponentExtension(id, langFile);
     }
@@ -540,27 +674,46 @@ export async function loadAllComponents(core?: Catalog): Promise<ComponentInfo[]
  */
 export function mergeCatalog(core: Catalog, components: ComponentInfo[]): Catalog {
   const merged: CatalogStep[] = [...core.steps];
+  const kinds: Record<string, string> = { ...(core.kinds ?? {}) };
+  const types: Record<string, TypeDecl> = {};
+  for (const [k, t] of Object.entries(core.types ?? {})) types[k] = { ...t, componentId: t.componentId ?? 'core' };
+  const conforms: Record<string, ConformsDecl> = { ...(core.conforms ?? {}) };
 
   for (const comp of components) {
     if (comp.compat && !comp.compat.ok) {
       console.warn(`dialect "${comp.manifest.id}" not merged: ${comp.compat.message}`);
       continue;
     }
-    if (comp.extension?.steps) {
+    const ext = comp.extension;
+    if (!ext) continue;
+    const id = comp.manifest.id;
+    if (ext.steps) {
       // Tag each extension step with its source component and enabled status
-      const tagged = comp.extension.steps.map(s => ({
+      const tagged = ext.steps.map(s => ({
         ...s,
         _source: {
-          componentId: comp.manifest.id,
+          componentId: id,
           componentName: comp.manifest.name,
           enabled: comp.enabled,
         },
       }));
       merged.push(...tagged);
     }
+    for (const k of ext.kinds ?? []) {
+      if (kinds[k] && kinds[k] !== id) console.warn(`actor kind "${k}" is declared by both ${kinds[k]} and ${id}; keeping ${kinds[k]}`);
+      else kinds[k] = id;
+    }
+    for (const [k, t] of Object.entries(ext.types ?? {})) {
+      if (types[k]) { console.warn(`value type "${k}" is declared by both ${types[k].componentId} and ${id}; keeping ${types[k].componentId}`); continue; }
+      types[k] = { ...t, componentId: id };
+    }
+    if (ext.conforms) conforms[id] = ext.conforms;
   }
 
-  return { ...core, steps: merged };
+  // `{type}` placeholders need the full registry, so compile once more now.
+  compileCatalogSteps(merged, types);
+
+  return { ...core, steps: merged, kinds, types, conforms };
 }
 
 /** Check health of a component.

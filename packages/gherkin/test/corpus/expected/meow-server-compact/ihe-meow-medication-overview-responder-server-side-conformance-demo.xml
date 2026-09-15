@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite id="ihe-meow-medication-overview-responder-server-side-conformance-demo"
+           xmlns="http://www.gitb.com/tdl/v1/"
+           xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>IHE MEOW Medication Overview Responder — server-side conformance-demo</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description></gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="MedicationOverviewResponder">
+      <gitb:name>MedicationOverviewResponder</gitb:name>
+      <gitb:desc>Endpoint: https://hapi.fhir.org/baseR4 | Definition: https://profiles.ihe.net/PHARM/MEOW/CapabilityStatement/MedicationOverviewResponder</gitb:desc>
+    </gitb:actor>
+    <gitb:actor id="MedicationOverviewConsumer">
+      <gitb:name>MedicationOverviewConsumer</gitb:name>
+      <gitb:desc>Definition: https://profiles.ihe.net/PHARM/MEOW/CapabilityStatement/MedicationOverviewConsumer</gitb:desc>
+    </gitb:actor>
+    <gitb:actor id="FHIRValidator">
+      <gitb:name>FHIRValidator</gitb:name>
+      <gitb:desc>Endpoint: http://fhir-validator:8080</gitb:desc>
+    </gitb:actor>
+  </actors>
+
+  <testcase id="tc-meow-server-001-pharm-11-query-by-patient-returns-treatment-lines"/>
+  <testcase id="tc-meow-server-002-pharm-11-honours-the-optional-search-parameters"/>
+  <testcase id="tc-meow-server-003-pharm-11-rejects-a-query-without-the-required-patient"/>
+  <testcase id="tc-meow-server-004-pharm-12-returns-a-conformant-medicationoverview"/>
+
+</testsuite>

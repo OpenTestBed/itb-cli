@@ -35,8 +35,35 @@ function parseDocString(lines: string[], startIdx: number): { text: string; endI
   return { text: contentLines.join('\n'), endIdx: j };
 }
 
-import { loadCatalog, Catalog, CatalogAction, loadAllComponents, mergeCatalog, ComponentInfo } from './languageCatalog.js';
+import { loadCatalog, Catalog, CatalogAction, CatalogStep, loadAllComponents, mergeCatalog, ComponentInfo, LoadOptions } from './languageCatalog.js';
 import { parseITBHeader } from './itbHeader.js';
+import { parseRequirements } from './languageRequirements.js';
+import { SlotValue, slotValue } from './stepText.js';
+
+/**
+ * What the parser knows about a scenario while expanding it, step by step.
+ * Reset per scenario; Background steps are prepended to every scenario so
+ * they are re-read each time and the state is always complete.
+ */
+export interface ScenarioState {
+  /** Declared actors: id -> role and kind (`is a <kind>`). */
+  actors: Map<string, { role?: string; kind?: string }>;
+  /** Value types of bound variables ($x -> 'fhir:Resource'). */
+  varTypes: Map<string, string>;
+}
+
+export function newScenarioState(): ScenarioState {
+  return { actors: new Map(), varTypes: new Map() };
+}
+
+/** Does the `@lang:` range ask for the 1.x core language? */
+export function wantsLegacyCore(featureTags: string[]): boolean {
+  const req = parseRequirements(featureTags);
+  const range = req.base?.range;
+  if (!range) return false;
+  const m = /^(?:\^|~|=)?\s*v?(\d+)/.exec(range);
+  return !!m && m[1] === '1';
+}
 
 
 export type IRAction =
@@ -58,7 +85,7 @@ export type IRAction =
   | { type: 'foreach', from: string, do: IRAction[] }
   | { type: 'repeat', count: string, do: IRAction[] }
   | { type: 'wait', durationMs: string }
-  | { type: 'declareActor', id: string, name?: string, role?: string, endpoint?: string, canonical?: string }
+  | { type: 'declareActor', id: string, name?: string, role?: string, endpoint?: string, canonical?: string, kind?: string }
   | { type: 'declareVariable', name: string, varType: string, value?: string }
   /** `with` targets the interaction at one actor (gitb_tdl.xsd: UserInteraction
    *  allows `with` and `title`). It is an actor ID, not a variable, so it can
@@ -78,6 +105,9 @@ export class GherkinParser {
   private services: ServicesMap;
   private strictRequirements: boolean;
   private components: ComponentInfo[] = [];
+  /** Both generations of the language, loaded on demand. A feature picks
+   *  one with its `@lang:` tag; the current one is the default. */
+  private loaded = new Map<string, { catalog: Catalog; components: ComponentInfo[] }>();
 
   constructor(model?: DataModel, options?: { services?: ServicesMap; strictRequirements?: boolean }) {
     this.model = model;
@@ -85,18 +115,29 @@ export class GherkinParser {
     this.strictRequirements = options?.strictRequirements ?? false; // warning by default
   }
 
-  /** Loads /lang/en.yml + enabled component extensions, merges them */
-  async ensureCatalog(locale='en') {
-    if (!this.catalog) {
-      const core = await loadCatalog(locale);
-      this.components = await loadAllComponents(core);
-      this.catalog = mergeCatalog(core, this.components);
+  /** Loads lang/en.yml (or en-1.yml) + enabled component extensions, merges
+   *  them, and makes that generation the active catalog. */
+  async ensureCatalog(locale='en', opts: LoadOptions = {}) {
+    const key = `${locale}:${opts.legacy ? 1 : 2}`;
+    let entry = this.loaded.get(key);
+    if (!entry) {
+      const core = await loadCatalog(locale, opts);
+      const components = await loadAllComponents(core, opts);
+      entry = { catalog: mergeCatalog(core, components), components };
+      this.loaded.set(key, entry);
     }
+    this.catalog = entry.catalog;
+    this.components = entry.components;
   }
 
   /** Get loaded components (available after ensureCatalog) */
   getComponents(): ComponentInfo[] {
     return this.components;
+  }
+
+  /** The merged catalog in use (available after ensureCatalog). */
+  getCatalog(): Catalog | undefined {
+    return this.catalog;
   }
 
   /** Basic Gherkin parser: Feature/Scenarios/Steps (+ DataTables) -> ParsedFeature
@@ -146,6 +187,15 @@ export class GherkinParser {
       if (/^Background:/i.test(line)) {
         inFeaturePreamble = false;
         currentTarget = backgroundSteps;
+        i++; continue;
+      }
+
+      // `Rule:` groups scenarios under a business rule (Gherkin 6). It carries
+      // no steps of its own here; the grouping is documentation, and the
+      // scenarios beneath it compile as they would anywhere else.
+      if (/^Rule:/i.test(line)) {
+        inFeaturePreamble = false;
+        currentTarget = null;
         i++; continue;
       }
 
@@ -281,8 +331,10 @@ export class GherkinParser {
     return null;
   }
 
-  /** Expand a single step to IR actions using the language catalog */
-  expandStep(step: Step): { actions: IRAction[]; mappingLabel?: string; issues: ParseIssue[] } {
+  /** Expand a single step to IR actions using the language catalog.
+   *  `state` carries the scenario's declared actors and variable types; pass
+   *  one per scenario so kind checks and type dispatch can work. */
+  expandStep(step: Step, state: ScenarioState = newScenarioState()): { actions: IRAction[]; mappingLabel?: string; issues: ParseIssue[] } {
     const issues: ParseIssue[] = [];
     const text = normalizeSpaces(step.text.trim());
 
@@ -291,7 +343,9 @@ export class GherkinParser {
       return { actions: [], issues };
     }
 
+    let skipped: string | undefined;
     for (const entry of this.catalog.steps) {
+      if (!entry.match) continue;
       const re = new RegExp(entry.match, 'i');
       const m = re.exec(text);
       if (!m) continue;
@@ -305,7 +359,7 @@ export class GherkinParser {
         });
       }
 
-      // 1) Table validation (unchanged)
+      // 1) Table validation
       if (entry.table?.required?.length) {
         if (!step.table || step.table.length === 0) {
           issues.push({ line: step.line, severity: 'error', message: 'Step requires a table' });
@@ -318,7 +372,7 @@ export class GherkinParser {
         }
       }
 
-      // 2) REQUIREMENTS CHECK (NEW)
+      // 2) Requirements check
       const reqs = Array.isArray(entry.requires) ? entry.requires : (entry.requires ? [entry.requires] : []);
       for (const req of reqs) {
         const available = this.services[req.service];
@@ -334,20 +388,232 @@ export class GherkinParser {
         }
       }
 
-      // 3) Expand actions (unchanged)
-      const ctx = { groups: m.slice(1), tableRows: step.table || [], docString: step.docString || '' };
-      const actions = materialize(entry.actions, ctx);
-      const label = entry.match.replace(/^\^|\$$/g, '');
-      return { actions, mappingLabel: label, issues };
+      const label = (entry.text ?? entry.match).replace(/^\^|\$$/g, '');
+
+      // 3) v1 entry: raw regex groups, as always.
+      if (!entry.params) {
+        const ctx: MaterializeCtx = { groups: m.slice(1), tableRows: step.table || [], docString: step.docString || '' };
+        const actions = materialize(entry.actions, ctx);
+        this.noteDeclarations(actions, state);
+        return { actions, mappingLabel: label, issues };
+      }
+
+      // 4) v2 entry: typed slots. A kind mismatch is not yet an error: the
+      // same text may be served by another dialect's entry further down
+      // (`validates … on SmartHelper` vs `… on FHIRValidator`).
+      const result = this.expandTyped(entry, m, step, state, issues);
+      if (result === null) return { actions: [], issues };
+      if (!Array.isArray(result)) { skipped = skipped ?? result.skip; continue; }
+      this.noteDeclarations(result, state);
+      return { actions: result, mappingLabel: label, issues };
     }
 
-    issues.push({ line: step.line, severity: 'error', message: `No mapping for step: "${text}"` });
+    issues.push({ line: step.line, severity: 'error', message: skipped ?? `No mapping for step: "${text}"` });
     return { actions: [], issues };
   }
 
+  /** Record actor declarations from the IR into the scenario state. */
+  private noteDeclarations(actions: IRAction[], state: ScenarioState): void {
+    for (const a of actions) {
+      if (a.type === 'declareActor') {
+        const prev = state.actors.get(a.id) ?? {};
+        state.actors.set(a.id, { role: a.role || prev.role, kind: a.kind || prev.kind });
+      }
+    }
+  }
 
+  /** Expand a v2 (typed) entry. Returns null when an issue stops expansion,
+   *  or { skip } when the entry does not apply to the declared actors. */
+  private expandTyped(entry: CatalogStep, m: RegExpExecArray, step: Step, state: ScenarioState, issues: ParseIssue[]): IRAction[] | { skip: string } | null {
+    const catalog = this.catalog!;
+    const params = entry.params!;
+    const refs = catalog.refs ?? {};
+    const slots: SlotValue[] = params.map((p, i) => slotValue(p, m[i + 1], refs));
+    const err = (message: string) => { issues.push({ line: step.line, severity: 'error', message }); };
+    const warn = (message: string) => { issues.push({ line: step.line, severity: 'warning', message }); };
 
-  
+    // Actors that must be of a kind: check, or fill in when omitted.
+    for (let i = 0; i < params.length; i++) {
+      const p = params[i];
+      if (p.type !== 'actor' || !p.kind) continue;
+      const wantedComponent = catalog.kinds?.[p.kind];
+      const sameDialect = (k?: string) => !!k && !!wantedComponent && catalog.kinds?.[k] === wantedComponent;
+      if (m[i + 1]) {
+        const id = m[i + 1];
+        const a = state.actors.get(id);
+        if (!a) {
+          warn(`${id} is not declared in this scenario — declare it with "${id} is a ${p.kind} at \"http://…\""`);
+        } else if (a.kind && a.kind !== p.kind && !sameDialect(a.kind)) {
+          return { skip: `${id} is declared as a ${a.kind}, but this step needs a ${p.kind}` };
+        }
+        continue;
+      }
+      const candidates = [...state.actors.entries()].filter(([, a]) => a.kind === p.kind || sameDialect(a.kind)).map(([id]) => id);
+      if (candidates.length === 1) {
+        slots[i] = { expr: candidates[0], raw: candidates[0] };
+      } else if (candidates.length === 0) {
+        return { skip: `This step needs an actor declared as "is a ${p.kind}" — none is declared in this scenario` };
+      } else {
+        err(`Several actors are a ${p.kind} (${candidates.join(', ')}) — say which one with "on <Actor>"`);
+        return null;
+      }
+    }
+
+    // Options table: | option | value | rows -> $opt.<name>
+    const options: Record<string, string> = {};
+    for (const row of step.table ?? []) {
+      if (row.option !== undefined) options[row.option.trim()] = (row.value ?? '').trim();
+    }
+
+    const ctx: MaterializeCtx = {
+      groups: slots.map(s => s.raw),
+      slots,
+      tableRows: step.table || [],
+      docString: step.docString || '',
+      options,
+      extra: {},
+    };
+
+    // `bind:` — named values for the templates, computed from the captures.
+    for (const [k, v] of Object.entries(entry.bind ?? {})) ctx.extra![k] = substitute(v, ctx);
+
+    const subjectIdx = params.findIndex(p => p.type === 'ref');
+    const subject = subjectIdx >= 0 ? slots[subjectIdx] : undefined;
+    const subjectVar = subject?.name?.split('.')[0];
+    const subjectType = subjectVar ? state.varTypes.get(subjectVar) : undefined;
+
+    // $target / $targetBase for the templates: the first kind-qualified actor
+    // slot when the step has one, else (for a dialect verb that mentions
+    // $target) the one declared actor of the dialect's kind.
+    const kindSlot = params.findIndex(p => p.type === 'actor' && !!p.kind);
+    if (kindSlot >= 0 && slots[kindSlot].raw) {
+      ctx.extra!.target = slots[kindSlot].raw;
+      ctx.extra!.targetBase = `$${slots[kindSlot].raw}Base`;
+    } else if (entry._source && !entry.dispatch && JSON.stringify(entry.actions).includes('$target')) {
+      if (!this.bindTarget(entry._source.componentId, state, ctx, err)) return null;
+    }
+
+    if (entry.dispatch === 'type') {
+      // `$x is a <type>` — compile-time typing, nothing to run.
+      const typeIdx = params.findIndex(p => p.type === 'type');
+      const typeName = slots[typeIdx]?.raw ?? '';
+      const key = Object.entries(catalog.types ?? {}).find(([k, t]) => (t.name ?? k).toLowerCase() === typeName.toLowerCase())?.[0];
+      if (!key || !subjectVar) { err(`Unknown value type "${typeName}"`); return null; }
+      state.varTypes.set(subjectVar, key);
+      ctx.extra!.subject = subject!.expr;
+      ctx.extra!.type = key;
+      return materialize(entry.actions, ctx);
+    }
+
+    if (entry.dispatch === 'path') {
+      const pathIdx = params.findIndex(p => p.type === 'path' || p.type === 'string');
+      if (!subject || pathIdx < 0) { err(`Step "${entry.text}" dispatches on a path but has no {ref} and {path} slots`); return null; }
+      const pathText = slots[pathIdx].raw;
+      const outVar = entry.pathOutput ? slots[entry.pathOutput - 1].raw : 'pathValue';
+      ctx.extra!.subject = subject.expr;
+      ctx.extra!.path = pathText;
+      ctx.extra!.pathVar = outVar;
+      ctx.extra!.pathValue = '$' + outVar;
+      let evaluator: { actions: CatalogAction[]; outputType?: string } | undefined;
+      if (pathText.startsWith('/')) {
+        evaluator = catalog.pathEvaluators?.['json-pointer'];
+        if (!evaluator) { err('The core language has no JSON pointer evaluator'); return null; }
+      } else {
+        let decl = subjectType ? catalog.types?.[subjectType] : undefined;
+        if (!decl && !subjectType) {
+          // Untyped value: when exactly one path-capable dialect has an actor
+          // declared in this scenario, its path language is the only thing
+          // "Bundle.type" can mean — use it, so a raw response body can take
+          // a FHIRPath without ceremony. Two candidates need a declaration.
+          const declaredKinds = new Set([...state.actors.values()].map(a => a.kind).filter(Boolean) as string[]);
+          const usable = Object.values(catalog.types ?? {}).filter(t => t.path && t.componentId
+            && [...declaredKinds].some(k => catalog.kinds?.[k] === t.componentId));
+          const byComponent = new Map(usable.map(t => [t.componentId!, t]));
+          if (byComponent.size === 1) decl = [...byComponent.values()][0];
+        }
+        if (!decl?.path) {
+          err(subjectType
+            ? `Values of type ${subjectType} have no path language, so "${pathText}" cannot be evaluated on $${subject.raw}`
+            : `$${subject.raw} has no known type, so "${pathText}" cannot be evaluated on it — bind it with a typed step, declare it ("$${subjectVar} is a FHIR resource"), or use a JSON pointer ("/…")`);
+          return null;
+        }
+        evaluator = decl.path;
+        if (!this.bindTarget(decl.componentId, state, ctx, err, decl.path.kind)) return null;
+      }
+      const actions = [...materialize(evaluator.actions, ctx), ...materialize(entry.actions, ctx)];
+      if (entry.pathOutput) {
+        if (evaluator.outputType) state.varTypes.set(outVar, evaluator.outputType);
+        else state.varTypes.delete(outVar);
+      }
+      return actions;
+    }
+
+    if (entry.dispatch === 'conforms') {
+      const profileIdx = params.findIndex(p => p.type === 'canonical' || p.type === 'string' || p.type === 'value');
+      const targetIdx = params.findIndex(p => p.type === 'actor');
+      if (!subject) { err(`Step "${entry.text}" dispatches on conformance but has no {ref} slot`); return null; }
+      ctx.extra!.subject = subject.expr;
+      ctx.extra!.profile = profileIdx >= 0 ? slots[profileIdx].raw : '';
+      // Which dialect checks conformance: the named target's, the subject
+      // type's, or the only one whose actor is declared.
+      let componentId: string | undefined;
+      const targetId = targetIdx >= 0 ? slots[targetIdx].raw : '';
+      if (targetId) {
+        const kind = state.actors.get(targetId)?.kind;
+        componentId = kind ? catalog.kinds?.[kind] : undefined;
+        if (!componentId || !catalog.conforms?.[componentId]) {
+          err(`${targetId} is ${kind ? `a ${kind}, which` : 'not declared with a kind, so it'} cannot check conformance — declare it as a validator ("${targetId} is a fhir-validator at …")`);
+          return null;
+        }
+        ctx.extra!.target = targetId;
+        ctx.extra!.targetBase = `$${targetId}Base`;
+      } else {
+        componentId = subjectType ? catalog.types?.[subjectType]?.componentId : undefined;
+        if (!componentId || !catalog.conforms?.[componentId]) {
+          const declaredKinds = new Set([...state.actors.values()].map(a => a.kind).filter(Boolean) as string[]);
+          const usable = [...declaredKinds].map(k => catalog.kinds?.[k]).filter((c): c is string => !!c && !!catalog.conforms?.[c]);
+          const unique = [...new Set(usable)];
+          if (unique.length === 1) componentId = unique[0];
+          else if (unique.length === 0) { err(`No declared actor can check conformance — declare a validator ("FHIRValidator is a fhir-validator at …")`); return null; }
+          else { err(`Several declared validators could check this (${unique.join(', ')}) — say which with "on <Actor>"`); return null; }
+        }
+        if (!this.bindTarget(componentId, state, ctx, err, catalog.conforms![componentId].kind)) return null;
+      }
+      const handler = catalog.conforms![componentId];
+      return [...materialize(handler.actions, ctx), ...materialize(entry.actions, ctx)];
+    }
+
+    // Plain verb.
+    const actions = materialize(entry.actions, ctx);
+    if (entry.output?.type) {
+      const lastVar = [...params.keys()].reverse().find(i => params[i].type === 'var' && slots[i].raw);
+      if (lastVar !== undefined) state.varTypes.set(slots[lastVar].raw, entry.output.type);
+    }
+    return actions;
+  }
+
+  /** Resolve the one declared actor a dialect's handler should talk to, and
+   *  expose it as $target / $targetBase. */
+  private bindTarget(componentId: string | undefined, state: ScenarioState, ctx: MaterializeCtx, err: (m: string) => void, onlyKind?: string): boolean {
+    const catalog = this.catalog!;
+    if (!componentId) return true;
+    if (ctx.extra?.target) return true;
+    const kindsOf = Object.entries(catalog.kinds ?? {})
+      .filter(([k, c]) => c === componentId && (!onlyKind || k === onlyKind))
+      .map(([k]) => k);
+    const candidates = [...state.actors.entries()].filter(([, a]) => a.kind && kindsOf.includes(a.kind)).map(([id]) => id);
+    if (candidates.length === 1) {
+      ctx.extra!.target = candidates[0];
+      ctx.extra!.targetBase = `$${candidates[0]}Base`;
+      return true;
+    }
+    if (candidates.length === 0) {
+      err(`This step needs an actor of kind ${kindsOf.join(' or ') || componentId} — declare one ("Validator is a ${kindsOf[0] ?? componentId} at \"http://…\"")`);
+      return false;
+    }
+    err(`Several actors could serve this step (${candidates.join(', ')}) — say which one with "on <Actor>"`);
+    return false;
+  }
 
   getStepMapping(text: string): string | null {
     if (!this.catalog) {
@@ -365,7 +631,8 @@ export class GherkinParser {
 
   /** Parse (if needed), load catalog, expand steps → IR; append issues to parsed.errors */
   async expandScenarioToIR(parsed: ParsedScenario) {
-    await this.ensureCatalog('en');
+    const tags: string[] = (parsed as any).__featureTags ?? [];
+    await this.ensureCatalog('en', { legacy: wantsLegacyCore(tags) });
     const allIssues: ParseIssue[] = [];
 
     // Expand all scenarios
@@ -375,8 +642,9 @@ export class GherkinParser {
     if (scenarios && scenarios.length > 0) {
       for (const sc of scenarios) {
         const scIr: IRAction[] = [];
+        const state = newScenarioState();
         for (const s of sc.steps) {
-          const { actions, issues } = this.expandStep(s);
+          const { actions, issues } = this.expandStep(s, state);
           allIssues.push(...issues);
           scIr.push(...actions);
         }
@@ -385,8 +653,9 @@ export class GherkinParser {
     } else {
       // Fallback: single scenario from parsed.scenario.steps
       const ir: IRAction[] = [];
+      const state = newScenarioState();
       for (const s of parsed.scenario.steps) {
-        const { actions, issues } = this.expandStep(s);
+        const { actions, issues } = this.expandStep(s, state);
         allIssues.push(...issues);
         ir.push(...actions);
       }
@@ -512,7 +781,53 @@ function expandDocStringTemplates(ir: IRAction[]): IRAction[] {
   return result;
 }
 
-function materialize(actions: CatalogAction[], ctx: any): IRAction[] {
+/** What the action templates can refer to while a step is materialised. */
+export interface MaterializeCtx {
+  /** Raw capture text per group (v1: exactly the regex groups). */
+  groups: string[];
+  /** v2 only: typed slot values per group. */
+  slots?: SlotValue[];
+  tableRows: Record<string, string>[];
+  docString: string;
+  /** v2: `| option | value |` rows -> $opt.<name>. */
+  options?: Record<string, string>;
+  /** v2: named values ($subject, $path, $target, $targetBase, bind: ...). */
+  extra?: Record<string, string>;
+  _row?: Record<string, string>;
+}
+
+/**
+ * Substitute `$...` references in one template string.
+ *
+ * v1 entries see `$N` = raw group text, `$$N` = "$" + text.
+ * v2 entries see `$N` = the slot's TDL expression, `$N.raw` = its text,
+ * `$$N` = "$" + text, `$opt.x` = an option-table value, and any name the
+ * parser bound for the step ($subject, $path, $pathValue, $target ...).
+ */
+function substitute(v: string, ctx: MaterializeCtx): string {
+  let result = v.replace(/\$docString/g, () => ctx.docString ?? '');
+  if (ctx.slots) {
+    const slots = ctx.slots;
+    result = result
+      .replace(/\$\$([0-9]+)/g, (_: any, i: string) => '$' + (slots[Number(i) - 1]?.raw ?? ''))
+      .replace(/\$([0-9]+)\.raw\b/g, (_: any, i: string) => slots[Number(i) - 1]?.raw ?? '')
+      .replace(/\$([0-9]+)/g, (_: any, i: string) => slots[Number(i) - 1]?.expr ?? '')
+      .replace(/\$opt\.([A-Za-z0-9_-]+)/g, (_: any, k: string) => ctx.options?.[k] ?? '');
+    const extra = ctx.extra ?? {};
+    // Longest names first so $pathValue is not eaten by $path.
+    for (const k of Object.keys(extra).sort((a, b) => b.length - a.length)) {
+      result = result.replace(new RegExp(`\\$${k}(?![A-Za-z0-9_])`, 'g'), () => extra[k]);
+    }
+    // An omitted optional slot substitutes to "" — drop it as a trailing
+    // concat() argument so `concat($Base, "/path", "")` reads as it should.
+    result = result.replace(/(,\s*"")+\)/g, ')');
+  } else {
+    result = result.replace(/\$([0-9]+)/g, (_: any, i: string) => ctx.groups[Number(i) - 1] ?? '');
+  }
+  return result.replace(/\$row\.([A-Za-z0-9_.-]+)/g, (_: any, k: string) => ctx._row?.[k] ?? '');
+}
+
+function materialize(actions: CatalogAction[], ctx: MaterializeCtx): IRAction[] {
   const out: IRAction[] = [];
   // For steps with a table but no foreach, make the first row available as $row
   if (!ctx._row && ctx.tableRows?.length > 0) {
@@ -520,10 +835,7 @@ function materialize(actions: CatalogAction[], ctx: any): IRAction[] {
   }
   const subst = (v: any): any => {
     if (typeof v !== 'string') return v;
-    let result = v
-      .replace(/\$docString/g, () => ctx.docString ?? '')
-      .replace(/\$([0-9]+)/g, (_: any, i: string) => ctx.groups[Number(i)-1] ?? '')
-      .replace(/\$row\.([A-Za-z0-9_.]+)/g, (_: any, k: string) => ctx._row?.[k] ?? '');
+    let result = substitute(v, ctx);
 
     // Build dynamic OR expression for status code checks
     // $statusOrExpr → parses status codes from $1 (which contains "422" or "400" or "500" or "422", "400")
@@ -544,9 +856,9 @@ function materialize(actions: CatalogAction[], ctx: any): IRAction[] {
       result = result.slice(1, -1);
     }
 
-    // Resolve reserved keywords to internal variable references.
-    // e.g. $$1 where $1 captured "response status" → $lastRequest{response}{status}
-    result = resolveReservedNames(result);
+    // v1 only: resolve reserved keywords to internal variable references.
+    // e.g. $$1 where $1 captured "response status" -> $lastRequest{response}{status}
+    if (!ctx.slots) result = resolveReservedNames(result);
 
     return result;
   };
@@ -554,9 +866,17 @@ function materialize(actions: CatalogAction[], ctx: any): IRAction[] {
   const visit = (a: any) => {
     const clone = JSON.parse(JSON.stringify(a));
 
+    // `when: '$3'` — skip the action when the guard substitutes to nothing.
+    // This is how one typed entry with an optional slot (`( at {url})?`)
+    // declares an actor with or without an endpoint assignment.
+    if (clone.when !== undefined) {
+      if (subst(String(clone.when)).trim() === '') return;
+      delete clone.when;
+    }
+
     if (clone.foreach) {
       for (const row of ctx.tableRows) {
-        const rctx = { ...ctx, _row: row };
+        const rctx: MaterializeCtx = { ...ctx, _row: row };
         clone.foreach.do.forEach((child: any) => {
           const before = ctx._row;
           ctx._row = rctx._row;
@@ -567,7 +887,7 @@ function materialize(actions: CatalogAction[], ctx: any): IRAction[] {
       return;
     }
     if (clone.declareActor) {
-      out.push({ type: 'declareActor', id: subst(clone.declareActor.id), name: subst(clone.declareActor.name ?? ''), role: subst(clone.declareActor.role ?? ''), endpoint: subst(clone.declareActor.endpoint ?? ''), canonical: subst(clone.declareActor.canonical ?? '') });
+      out.push({ type: 'declareActor', id: subst(clone.declareActor.id), name: subst(clone.declareActor.name ?? ''), role: subst(clone.declareActor.role ?? ''), endpoint: subst(clone.declareActor.endpoint ?? ''), canonical: subst(clone.declareActor.canonical ?? ''), kind: subst(clone.declareActor.kind ?? '') || undefined });
       return;
     }
     if (clone.wait) {

@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testcase id="mhd-src-001-the-sut-sends-a-conformant-ch-mhd-1-update"
+          xmlns="http://www.gitb.com/tdl/v1/"
+          xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>mhd-src-001 the SUT sends a conformant CH:MHD-1 update</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>IHE MHD Document Source — CH:MHD-1 update is well formed</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="DocumentSource" role="SUT"/>
+    <gitb:actor id="DocumentResponder" role="SIMULATED"/>
+    <gitb:actor id="FHIRValidator" role="SIMULATED"/>
+  </actors>
+
+  <variables>
+    <var name="fhirpathBody" type="string"/>
+    <var name="pathValue" type="string"/>
+    <var name="conformBody" type="string"/>
+    <var name="validationErrors" type="string"/>
+    <var name="validationWarnings" type="string"/>
+    <var name="validationSeverity" type="string"/>
+    <var name="validationOutcome" type="string"/>
+    <var name="lastReceived" type="map"/>
+    <var name="lastRequest" type="map"/>
+    <var name="lastReply" type="map"/>
+    <var name="FHIRValidatorBase" type="string"/>
+    <var name="fhirValidatorHeaders" type="map"/>
+    <var name="fhirpathTplParams" type="map"/>
+    <var name="conformHeaders" type="map"/>
+    <var name="conformTplParams" type="map"/>
+    <var name="conformanceErrors" type="string"/>
+    <var name="replyHeaders" type="map"/>
+  </variables>
+
+  <steps stopOnError="true">
+    <assign to="FHIRValidatorBase">&quot;http://fhir-validator:8081&quot;</assign>
+    <btxn from="DocumentSource" to="DocumentResponder" txnId="txn_DocumentResponder_DocumentSource" handler="HttpMessagingV2"/>
+    <interact id="inform" desc="Instruction for DocumentSource" with="DocumentSource">
+      <instruct desc="Send a CH:MHD-1 Update Document Metadata request to the Responder endpoint configured for this session, changing only the document description." name="message"/>
+    </interact>
+    <receive id="lastReceived" desc="Receive from DocumentSource" handler="HttpMessagingV2" from="DocumentSource" to="DocumentResponder" txnId="txn_DocumentResponder_DocumentSource">
+      <input name="timeout">&quot;300&quot;</input>
+    </receive>
+    <verify handler="StringValidator" desc="$received.method is PUT">
+      <input name="actualstring">$lastReceived{method}</input>
+      <input name="expectedstring">&quot;PUT&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="$received.path contains /DocumentReference/">
+      <input name="actualstring">$lastReceived{path}</input>
+      <input name="expectedstring">&quot;/DocumentReference/&quot;</input>
+      <input name="matchType">&quot;contains&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="$received.headers.Authorization contains Bearer">
+      <input name="actualstring">$lastReceived{headers}{Authorization}</input>
+      <input name="expectedstring">&quot;Bearer&quot;</input>
+      <input name="matchType">&quot;contains&quot;</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$received.body is not empty">
+      <input name="expression">string-length($lastReceived{body}) &gt; 0</input>
+    </verify>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="fhirpathTplParams{resource}">$lastReceived{body}</assign>
+    <assign to="fhirpathTplParams{expression}">&quot;DocumentReference.status&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="fhirpathBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$fhirpathTplParams</input>
+    </process>
+    <send id="lastRequest" desc="FHIRPath DocumentReference.status" handler="HttpMessagingV2" from="DocumentSource" to="FHIRValidator">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPath/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$fhirpathBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="pathValue">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="$received.body at DocumentReference.status is current">
+      <input name="actualstring">$pathValue</input>
+      <input name="expectedstring">&quot;current&quot;</input>
+    </verify>
+    <assign to="conformHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="conformHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="conformTplParams{resource}">$lastReceived{body}</assign>
+    <assign to="conformTplParams{profile}">&quot;http://fhir.ch/ig/ch-epr-fhir/StructureDefinition/ch-mhd-documentreference-comprehensive&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="conformBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;profiles&quot;, &quot;value&quot;: &quot;${profile?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$conformTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Validate $lastReceived{body} against http://fhir.ch/ig/ch-epr-fhir/StructureDefinition/ch-mhd-documentreference-comprehensive" handler="HttpMessagingV2" from="DocumentSource" to="FHIRValidator">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhir/validate&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$conformHeaders</input>
+      <input name="body">$conformBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="validationErrors">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/report/context/0/value&quot;</input>
+    </process>
+    <process handler="JsonPointerProcessor" operation="process" output="validationWarnings">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/report/context/1/value&quot;</input>
+    </process>
+    <process handler="JsonPointerProcessor" operation="process" output="validationSeverity">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/report/context/3/value&quot;</input>
+    </process>
+    <process handler="JsonPointerProcessor" operation="process" output="validationOutcome">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/report/context/4/value&quot;</input>
+    </process>
+    <assign to="conformanceErrors">$validationErrors</assign>
+    <verify handler="StringValidator" desc="$received.body conforms to http://fhir.ch/ig/ch-epr-fhir/StructureDefinition/ch-mhd-documentreference-comprehensive">
+      <input name="actualstring">$conformanceErrors</input>
+      <input name="expectedstring">&quot;0&quot;</input>
+    </verify>
+    <assign to="replyHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <send id="lastReply" desc="Reply 200 to DocumentSource" handler="HttpMessagingV2" from="DocumentResponder" to="DocumentSource" txnId="txn_DocumentResponder_DocumentSource">
+      <input name="status">&quot;200&quot;</input>
+      <input name="headers">$replyHeaders</input>
+      <input name="body">'{
+      &quot;resourceType&quot;: &quot;OperationOutcome&quot;,
+      &quot;issue&quot;: [{
+        &quot;severity&quot;: &quot;information&quot;,
+        &quot;code&quot;: &quot;informational&quot;,
+        &quot;details&quot;: { &quot;text&quot;: &quot;Update accepted&quot; }
+      }]
+    }'</input>
+    </send>
+    <etxn txnId="txn_DocumentResponder_DocumentSource"/>
+  </steps>
+
+  <output>
+    <success>
+      <default>"Test case completed successfully."</default>
+    </success>
+    <failure>
+      <default>"Test case failed. Check step reports and logs."</default>
+    </failure>
+  </output>
+</testcase>

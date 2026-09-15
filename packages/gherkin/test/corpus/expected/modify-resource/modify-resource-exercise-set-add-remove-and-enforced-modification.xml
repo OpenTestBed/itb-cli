@@ -68,7 +68,7 @@
       <input name="template">'{ &quot;operation&quot;: &quot;generate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;profile&quot;, &quot;value&quot;: &quot;${profile}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;requiredOnly&quot;, &quot;value&quot;: &quot;true&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;mappings&quot;, &quot;value&quot;: &quot;${mappings?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$generateTplParams</input>
     </process>
-    <send id="lastRequest" desc="Generate required-only test data with values" handler="HttpMessagingV2" from="Client">
+    <send id="lastRequest" desc="Generate required-only test data with values" handler="HttpMessagingV2" from="Client" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/testdata/process&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
@@ -100,12 +100,13 @@
     </process>
     <assign to="modifyTplParams{resource}">$patient</assign>
     <assign to="modifyTplParams{operations}">$opsJson</assign>
+    <assign to="modifyTplParams{profile}">&quot;&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="modifyBody">
       <input name="syntax">&quot;freemarker&quot;</input>
-      <input name="template">'{ &quot;operation&quot;: &quot;modify&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;resource&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;operations&quot;, &quot;value&quot;: &quot;${operations?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;enforce&quot;, &quot;value&quot;: &quot;false&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;modify&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;resource&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;operations&quot;, &quot;value&quot;: &quot;${operations?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }&lt;#if profile?has_content&gt;, { &quot;name&quot;: &quot;profile&quot;, &quot;value&quot;: &quot;${profile}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;enforce&quot;, &quot;value&quot;: &quot;true&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }&lt;#else&gt;, { &quot;name&quot;: &quot;enforce&quot;, &quot;value&quot;: &quot;false&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }&lt;/#if&gt; ] }'</input>
       <input name="parameters">$modifyTplParams</input>
     </process>
-    <send id="lastRequest" desc="Modify resource (no enforcement)" handler="HttpMessagingV2" from="Client">
+    <send id="lastRequest" desc="Modify $patient" handler="HttpMessagingV2" from="Client" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/testdata/process&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
@@ -124,7 +125,7 @@
       <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$assertTplParams</input>
     </process>
-    <send id="lastRequest" desc="FHIRPath assertion" handler="HttpMessagingV2" from="Client">
+    <send id="lastRequest" desc="FHIRPath assertion: Patient.id = 'modify-after-01'" handler="HttpMessagingV2" from="Client" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPathAssertion/validate&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
@@ -134,7 +135,7 @@
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/report/result&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="FHIRPath assertion succeeded">
+    <verify handler="StringValidator" desc="$patient satisfies Patient.id = 'modify-after-01'">
       <input name="actualstring">$assertResult</input>
       <input name="expectedstring">&quot;SUCCESS&quot;</input>
     </verify>
@@ -164,7 +165,7 @@
       <input name="template">'{ &quot;operation&quot;: &quot;generate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;profile&quot;, &quot;value&quot;: &quot;${profile}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;requiredOnly&quot;, &quot;value&quot;: &quot;true&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;mappings&quot;, &quot;value&quot;: &quot;${mappings?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$generateTplParams</input>
     </process>
-    <send id="lastRequest" desc="Generate required-only test data with values" handler="HttpMessagingV2" from="Client">
+    <send id="lastRequest" desc="Generate required-only test data with values" handler="HttpMessagingV2" from="Client" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/testdata/process&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
@@ -207,12 +208,13 @@
     </process>
     <assign to="modifyTplParams{resource}">$allergy</assign>
     <assign to="modifyTplParams{operations}">$opsJson</assign>
+    <assign to="modifyTplParams{profile}">&quot;&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="modifyBody">
       <input name="syntax">&quot;freemarker&quot;</input>
-      <input name="template">'{ &quot;operation&quot;: &quot;modify&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;resource&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;operations&quot;, &quot;value&quot;: &quot;${operations?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;enforce&quot;, &quot;value&quot;: &quot;false&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;modify&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;resource&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;operations&quot;, &quot;value&quot;: &quot;${operations?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }&lt;#if profile?has_content&gt;, { &quot;name&quot;: &quot;profile&quot;, &quot;value&quot;: &quot;${profile}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;enforce&quot;, &quot;value&quot;: &quot;true&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }&lt;#else&gt;, { &quot;name&quot;: &quot;enforce&quot;, &quot;value&quot;: &quot;false&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }&lt;/#if&gt; ] }'</input>
       <input name="parameters">$modifyTplParams</input>
     </process>
-    <send id="lastRequest" desc="Modify resource (no enforcement)" handler="HttpMessagingV2" from="Client">
+    <send id="lastRequest" desc="Modify $allergy" handler="HttpMessagingV2" from="Client" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/testdata/process&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
@@ -231,7 +233,7 @@
       <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$assertTplParams</input>
     </process>
-    <send id="lastRequest" desc="FHIRPath assertion" handler="HttpMessagingV2" from="Client">
+    <send id="lastRequest" desc="FHIRPath assertion: AllergyIntolerance.clinicalStatus.coding.count() = 1" handler="HttpMessagingV2" from="Client" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPathAssertion/validate&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
@@ -241,7 +243,7 @@
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/report/result&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="FHIRPath assertion succeeded">
+    <verify handler="StringValidator" desc="$allergy satisfies AllergyIntolerance.clinicalStatus.coding.count() = 1">
       <input name="actualstring">$assertResult</input>
       <input name="expectedstring">&quot;SUCCESS&quot;</input>
     </verify>
@@ -254,7 +256,7 @@
       <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$assertTplParams</input>
     </process>
-    <send id="lastRequest" desc="FHIRPath assertion" handler="HttpMessagingV2" from="Client">
+    <send id="lastRequest" desc="FHIRPath assertion: AllergyIntolerance.clinicalStatus.coding.first().code = 'extra'" handler="HttpMessagingV2" from="Client" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPathAssertion/validate&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
@@ -264,7 +266,7 @@
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/report/result&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="FHIRPath assertion succeeded">
+    <verify handler="StringValidator" desc="$allergy satisfies AllergyIntolerance.clinicalStatus.coding.first().code = 'extra'">
       <input name="actualstring">$assertResult</input>
       <input name="expectedstring">&quot;SUCCESS&quot;</input>
     </verify>
@@ -294,7 +296,7 @@
       <input name="template">'{ &quot;operation&quot;: &quot;generate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;profile&quot;, &quot;value&quot;: &quot;${profile}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;requiredOnly&quot;, &quot;value&quot;: &quot;true&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;mappings&quot;, &quot;value&quot;: &quot;${mappings?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$generateTplParams</input>
     </process>
-    <send id="lastRequest" desc="Generate required-only test data with values" handler="HttpMessagingV2" from="Client">
+    <send id="lastRequest" desc="Generate required-only test data with values" handler="HttpMessagingV2" from="Client" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/testdata/process&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
@@ -329,10 +331,10 @@
     <assign to="modifyTplParams{profile}">&quot;http://hl7.org/fhir/StructureDefinition/Patient&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="modifyBody">
       <input name="syntax">&quot;freemarker&quot;</input>
-      <input name="template">'{ &quot;operation&quot;: &quot;modify&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;resource&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;operations&quot;, &quot;value&quot;: &quot;${operations?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;profile&quot;, &quot;value&quot;: &quot;${profile}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;enforce&quot;, &quot;value&quot;: &quot;true&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;modify&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;resource&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;operations&quot;, &quot;value&quot;: &quot;${operations?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }&lt;#if profile?has_content&gt;, { &quot;name&quot;: &quot;profile&quot;, &quot;value&quot;: &quot;${profile}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;enforce&quot;, &quot;value&quot;: &quot;true&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }&lt;#else&gt;, { &quot;name&quot;: &quot;enforce&quot;, &quot;value&quot;: &quot;false&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }&lt;/#if&gt; ] }'</input>
       <input name="parameters">$modifyTplParams</input>
     </process>
-    <send id="lastRequest" desc="Modify resource (enforce against profile)" handler="HttpMessagingV2" from="Client">
+    <send id="lastRequest" desc="Modify $patient2" handler="HttpMessagingV2" from="Client" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/testdata/process&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
@@ -352,7 +354,7 @@
       <input name="template">'{ &quot;operation&quot;: &quot;summarize&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;outcome&quot;, &quot;value&quot;: &quot;${outcome?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$summarizeTplParams</input>
     </process>
-    <send id="summarizeRequest" desc="Summarise modification OperationOutcome" handler="HttpMessagingV2" from="Client">
+    <send id="summarizeRequest" desc="Summarise modification OperationOutcome" handler="HttpMessagingV2" from="Client" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/validationResults/process&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
@@ -362,7 +364,7 @@
       <input name="content">$summarizeRequest{response}{body}</input>
       <input name="pointer">&quot;/output/0/value&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="Modification produced no validation errors">
+    <verify handler="StringValidator" desc="Modification of $patient2 conforms to http://hl7.org/fhir/StructureDefinition/Patient">
       <input name="actualstring">$modificationErrors</input>
       <input name="expectedstring">&quot;0&quot;</input>
     </verify>
@@ -375,7 +377,7 @@
       <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$assertTplParams</input>
     </process>
-    <send id="lastRequest" desc="FHIRPath assertion" handler="HttpMessagingV2" from="Client">
+    <send id="lastRequest" desc="FHIRPath assertion: Patient.gender = 'female'" handler="HttpMessagingV2" from="Client" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPathAssertion/validate&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
@@ -385,7 +387,7 @@
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/report/result&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="FHIRPath assertion succeeded">
+    <verify handler="StringValidator" desc="$patient2 satisfies Patient.gender = 'female'">
       <input name="actualstring">$assertResult</input>
       <input name="expectedstring">&quot;SUCCESS&quot;</input>
     </verify>

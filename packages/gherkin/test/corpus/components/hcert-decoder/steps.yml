@@ -1,109 +1,121 @@
-# Language extension for HCERT Decoder component
-# Provides VHL/HCERT domain verbs for test authoring
+# HCERT Decoder dialect — generation 2
+#
+# Health-certificate QR handling: image → HC1 string → decoded certificate →
+# signature check → SMART Health Link → FHIR content. Every step names what it
+# reads and binds what it produces; nothing passes through hidden variables.
+#
+#   kind   hcert-decoder            "HCertDecoder is a hcert-decoder at …"
+#   type   hcert:Certificate        the decoded HC1 (JSON facts; read with "/…" pointers)
+#
+#   User uploads a file as $qrImage                       (core)
+#   User scans $qrImage on HCertDecoder as $qrData
+#   User decodes $qrData on HCertDecoder as $hcert
+#   User verifies the signature of $hcert on HCertDecoder with: | parameter | value |
+#   User extracts metadata from $hcert on HCertDecoder as $meta
+#   User extracts the SHL link from $hcert on HCertDecoder as $link
+#   User authorizes $link on HCertDecoder with pin $pin as $manifest
+#   User fetches the FHIR content of $manifest on HCertDecoder as $bundle
+#
+# `on HCertDecoder` may be left out when only one hcert-decoder is declared.
 id: hcert-decoder
 name: HCERT Decoder Steps
+language: 2
 description: >
-  Domain-specific steps for health certificate QR code processing,
-  COSE signature verification, and VHL/SHL authorization flows.
+  Health certificate QR decoding, COSE signature verification, and
+  SMART Health Link (VHL/SHL) authorization and FHIR retrieval.
 
-steps:
-  # Upload QR image to an actor — interact (file upload) + multipart POST
-  - match: '^([A-Za-z][A-Za-z0-9_]*) uploads a QR image to ([A-Za-z][A-Za-z0-9_]*)$'
+kinds: [hcert-decoder]
+
+types:
+  hcert:Certificate:
+    name: health certificate
+
+x-json: &json
+  - assign: { to: 'hcertHeaders{Content-Type}', value: '"application/json"' }
+  - assign: { to: 'hcertHeaders{Accept}', value: '"application/json"' }
+
+verbs:
+  # Image bytes → the QR's text payload (the HC1: string).
+  - text: '{actor} scans {ref}( on {actor:hcert-decoder})? as {var}'
+    doc: Decode a QR image (binary) into its text payload.
     actions:
-      - declareVariable:
-          name: 'uploadedFile'
-          varType: 'binary'
-      - interact:
-          id: 'userFileUpload'
-          desc: 'Upload QR code image'
-          requests:
-            - desc: 'Upload a QRCode:'
-              name: 'uploadedFile'
-              inputType: 'UPLOAD'
-              required: true
-              variable: '$uploadedFile'
-      - assign:
-          to: 'imgPart{name}'
-          value: '"image"'
-      - assign:
-          to: 'imgPart{contentType}'
-          value: '"image/png"'
-      - assign:
-          to: 'imgPart{fileName}'
-          value: '"upload.png"'
-      - assign:
-          to: 'imgPart{content}'
-          value: '$uploadedFile'
-      - assign:
-          to: 'sendParts'
-          value: '$imgPart'
-          append: true
-      - assign:
-          to: 'reqHeaders{Accept}'
-          value: '"application/json"'
+      - assign: { to: 'imgPart{name}', value: '"image"' }
+      - assign: { to: 'imgPart{contentType}', value: '"image/png"' }
+      - assign: { to: 'imgPart{fileName}', value: '"upload.png"' }
+      - assign: { to: 'imgPart{content}', value: '$2' }
+      - assign: { to: 'sendParts', value: '$imgPart', append: true }
+      - assign: { to: 'hcertHeaders{Accept}', value: '"application/json"' }
       - send:
           id: 'lastRequest'
-          desc: 'Decode QR image'
+          desc: 'Decode QR image $$2'
           handler: 'HttpMessagingV2'
           from: '$1'
-          to: '$2'
+          to: '$target'
           inputs:
-            uri: 'concat($$2Base, "/decode/image")'
+            uri: 'concat($targetBase, "/decode/image")'
             method: '"POST"'
             parts: '$sendParts'
-            headers: '$reqHeaders'
+            headers: '$hcertHeaders'
+      - verify:
+          handler: 'NumberValidator'
+          desc: 'QR image decoded (HTTP 200)'
+          inputs: { actualnumber: '$lastRequest{response}{status}', expectednumber: '"200"' }
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: '$4', inputs: { content: '$lastRequest{response}{body}', pointer: '"/qr_data"' } }
 
-  # Enter a PIN — interact for user input
-  - match: '^([A-Za-z][A-Za-z0-9_]*) enters a PIN$'
+  # HC1 text → decoded certificate: {cose, payload, hcert, cose._raw…}.
+  # include_raw exposes the COSE byte strings the signature check needs; they
+  # are read back from the bound value, so no step depends on step order.
+  - text: '{actor} decodes {ref}( on {actor:hcert-decoder})? as {var}'
+    doc: Decode an HC1 payload into its COSE structure, CWT payload and HCERT claim.
+    output: { type: 'hcert:Certificate' }
     actions:
-      - declareVariable:
-          name: 'pinValue'
-          varType: 'string'
-          value: '""'
-      - interact:
-          id: 'enterPin'
-          desc: 'Enter the PIN for retrieving the content'
-          inputTitle: 'Authorize link'
-          requests:
-            - desc: 'Enter PIN:'
-              required: false
-              variable: '$pinValue'
+      - assign: { to: 'decodeTplParams{value}', value: '$2' }
+      - process:
+          handler: 'TemplateProcessor'
+          operation: 'process'
+          output: 'decodeBody'
+          inputs:
+            syntax: '"freemarker"'
+            template: "'{\"qr_data\":\"${value?json_string}\",\"include_raw\":true}'"
+            parameters: '$decodeTplParams'
+      - *json
+      - send:
+          id: 'lastRequest'
+          desc: 'Decode HC1'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
+          inputs:
+            uri: 'concat($targetBase, "/decode/hcert")'
+            method: '"POST"'
+            headers: '$hcertHeaders'
+            body: '$decodeBody'
+      - verify:
+          handler: 'NumberValidator'
+          desc: 'HC1 decoded (HTTP 200)'
+          inputs: { actualnumber: '$lastRequest{response}{status}', expectednumber: '"200"' }
+      - assign: { to: '$4', value: '$lastRequest{response}{body}' }
 
-  # Verify COSE signature on an actor (table of parameters)
-  #
-  # Fix note (was broken): the three scalar COSE bstrs (protected_bstr,
-  # payload_bstr, signature) are captured UPSTREAM in the `decodes HC1` step,
-  # while $lastRequest still holds the /decode/hcert response. They are read
-  # here only via $coseRawProtected / $coseRawPayload / $coseRawSignature —
-  # never re-extracted from $lastRequest, which the intervening
-  # `extracts metadata` step overwrites with a response that has no
-  # /cose/_raw. Re-extracting here yielded empty strings → empty cose_raw →
-  # the service base64-decoded "" and cbor2 raised "premature end of stream"
-  # (HTTP 500). The cose_raw object is still rebuilt inline via ?json_string
-  # to avoid the ITB Map.toString trap; see docs/serialize-primitive.md.
-  - match: '^([A-Za-z][A-Za-z0-9_]*) verifies COSE signature on ([A-Za-z][A-Za-z0-9_]*) with:$'
-    table:
-      required: [parameter, value]
+  # Signature check against the GDHCN trust network. Parameters come from the
+  # table; every one has a default, so a bare `verifies the signature of $x`
+  # checks against the production network.
+  - text: '{actor} verifies the signature of {ref}( on {actor:hcert-decoder})?( with:)?'
+    doc: Verify the COSE signature of a decoded certificate; parameters via | parameter | value |.
     actions:
-      - assign:
-          to: 'verifyParams{cose_raw_protected}'
-          value: '$coseRawProtected'
-      - assign:
-          to: 'verifyParams{cose_raw_payload}'
-          value: '$coseRawPayload'
-      - assign:
-          to: 'verifyParams{cose_raw_signature}'
-          value: '$coseRawSignature'
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'coseRawProtected', inputs: { content: '$2', pointer: '"/cose/_raw/protected_bstr"' } }
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'coseRawPayload',   inputs: { content: '$2', pointer: '"/cose/_raw/payload_bstr"' } }
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'coseRawSignature', inputs: { content: '$2', pointer: '"/cose/_raw/signature"' } }
+      - assign: { to: 'verifyParams{cose_raw_protected}', value: '$coseRawProtected' }
+      - assign: { to: 'verifyParams{cose_raw_payload}', value: '$coseRawPayload' }
+      - assign: { to: 'verifyParams{cose_raw_signature}', value: '$coseRawSignature' }
       - foreach:
           from: '$tableRows'
           do:
-            - assign:
-                to: 'verifyParams{$row.parameter}'
-                value: '"$row.value"'
+            - assign: { to: 'verifyParams{$row.parameter}', value: '"$row.value"' }
       - assign:
           to: 'verifyTpl'
           value: >-
-            '{"cose_raw":{"protected_bstr":"${cose_raw_protected?json_string}","payload_bstr":"${cose_raw_payload?json_string}","signature":"${cose_raw_signature?json_string}"},"use_gdhcn":${use_gdhcn},"gdhcn_env":"${gdhcn_env}"<#if (domain!"")?has_content>,"domain":"${domain}"</#if>,"participant":"${participant}","usage":"${usage}","verify_did_proof":${verify_did_proof},"allow_unverified_trustlist":${allow_unverified_trustlist},"allow_remote_contexts":${allow_remote_contexts},"context_dir":"${context_dir}"}'
+            '{"cose_raw":{"protected_bstr":"${cose_raw_protected?json_string}","payload_bstr":"${cose_raw_payload?json_string}","signature":"${cose_raw_signature?json_string}"},"use_gdhcn":${use_gdhcn!"true"},"gdhcn_env":"${gdhcn_env!"prod"}"<#if (domain!"")?has_content>,"domain":"${domain}"</#if>,"participant":"${participant!"-"}","usage":"${usage!"DSC"}","verify_did_proof":${verify_did_proof!"true"},"allow_unverified_trustlist":${allow_unverified_trustlist!"false"},"allow_remote_contexts":${allow_remote_contexts!"true"},"context_dir":"${context_dir!"contexts"}"}'
       - process:
           handler: 'TemplateProcessor'
           operation: 'process'
@@ -112,31 +124,100 @@ steps:
             syntax: '"freemarker"'
             template: '$verifyTpl'
             parameters: '$verifyParams'
-      - assign:
-          to: 'verifyHeaders{Content-Type}'
-          value: '"application/json"'
+      - *json
       - send:
           id: 'lastRequest'
-          desc: 'Verify COSE signature'
+          desc: 'Verify COSE signature of $$2'
           handler: 'HttpMessagingV2'
           from: '$1'
-          to: '$2'
+          to: '$target'
           inputs:
-            uri: 'concat($$2Base, "/verify/signature")'
+            uri: 'concat($targetBase, "/verify/signature")'
             method: '"POST"'
-            headers: '$verifyHeaders'
+            headers: '$hcertHeaders'
             body: '$verifyBody'
+      - verify:
+          handler: 'NumberValidator'
+          desc: 'Signature verification answered (HTTP 200)'
+          inputs: { actualnumber: '$lastRequest{response}{status}', expectednumber: '"200"' }
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'signatureValid', inputs: { content: '$lastRequest{response}{body}', pointer: '"/valid"' } }
+      - verify:
+          handler: 'StringValidator'
+          desc: 'Signature of $$2 is valid'
+          inputs: { actualstring: '$signatureValid', expectedstring: '"true"' }
 
-  # Authorize SHL on an actor with url and pin
-  # Inline TemplateProcessor for proper JSON escaping
-  - match: '^([A-Za-z][A-Za-z0-9_]*) authorizes SHL on ([A-Za-z][A-Za-z0-9_]*) with url and pin$'
+  - text: '{actor} extracts metadata from {ref}( on {actor:hcert-decoder})? as {var}'
+    doc: Extract issuer, dates and other metadata from a decoded certificate.
     actions:
-      - assign:
-          to: 'authParams{url}'
-          value: '$shlinkUrl'
-      - assign:
-          to: 'authParams{pin}'
-          value: '$pinValue'
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'coseVal',    inputs: { content: '$2', pointer: '"/cose"' } }
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'payloadVal', inputs: { content: '$2', pointer: '"/payload"' } }
+      - assign: { to: 'metaTplParams{cose}', value: '$coseVal' }
+      - assign: { to: 'metaTplParams{payload}', value: '$payloadVal' }
+      - process:
+          handler: 'TemplateProcessor'
+          operation: 'process'
+          output: 'metaBody'
+          inputs:
+            syntax: '"freemarker"'
+            template: "'{\"cose\":${cose},\"payload\":${payload}}'"
+            parameters: '$metaTplParams'
+      - *json
+      - send:
+          id: 'lastRequest'
+          desc: 'Extract metadata'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
+          inputs:
+            uri: 'concat($targetBase, "/extract/metadata")'
+            method: '"POST"'
+            headers: '$hcertHeaders'
+            body: '$metaBody'
+      - verify:
+          handler: 'NumberValidator'
+          desc: 'Metadata extracted (HTTP 200)'
+          inputs: { actualnumber: '$lastRequest{response}{status}', expectednumber: '"200"' }
+      - assign: { to: '$4', value: '$lastRequest{response}{body}' }
+
+  - text: '{actor} extracts the SHL link from {ref}( on {actor:hcert-decoder})? as {var}'
+    doc: Extract the SMART Health Link URL carried by a decoded certificate.
+    actions:
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'hcertVal',   inputs: { content: '$2', pointer: '"/hcert"' } }
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'payloadVal', inputs: { content: '$2', pointer: '"/payload"' } }
+      - assign: { to: 'refTplParams{hcert}', value: '$hcertVal' }
+      - assign: { to: 'refTplParams{payload}', value: '$payloadVal' }
+      - process:
+          handler: 'TemplateProcessor'
+          operation: 'process'
+          output: 'refBody'
+          inputs:
+            syntax: '"freemarker"'
+            template: "'{\"hcert\":${hcert},\"payload\":${payload}}'"
+            parameters: '$refTplParams'
+      - *json
+      - send:
+          id: 'lastRequest'
+          desc: 'Extract SHL reference'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
+          inputs:
+            uri: 'concat($targetBase, "/extract/reference")'
+            method: '"POST"'
+            headers: '$hcertHeaders'
+            body: '$refBody'
+      - verify:
+          handler: 'NumberValidator'
+          desc: 'SHL reference extracted (HTTP 200)'
+          inputs: { actualnumber: '$lastRequest{response}{status}', expectednumber: '"200"' }
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: '$4', inputs: { content: '$lastRequest{response}{body}', pointer: '"/url"' } }
+
+  # Authorize the link with a PIN; binds the manifest.
+  - text: '{actor} authorizes {ref}( on {actor:hcert-decoder})? with pin {value} as {var}'
+    doc: Authorize a SMART Health Link with a PIN and bind the manifest.
+    actions:
+      - assign: { to: 'authParams{url}', value: '$2' }
+      - assign: { to: 'authParams{pin}', value: '$4' }
       - assign:
           to: 'authTpl'
           value: >-
@@ -152,32 +233,32 @@ steps:
             syntax: '"freemarker"'
             template: '$authTpl'
             parameters: '$authParams'
-      - assign:
-          to: 'authHeaders{Content-Type}'
-          value: '"application/json"'
+      - *json
       - send:
           id: 'lastRequest'
           desc: 'Authorize short link'
           handler: 'HttpMessagingV2'
           from: '$1'
-          to: '$2'
+          to: '$target'
           inputs:
-            uri: 'concat($$2Base, "/shlink/authorize")'
+            uri: 'concat($targetBase, "/shlink/authorize")'
             method: '"POST"'
-            headers: '$authHeaders'
+            headers: '$hcertHeaders'
             body: '$authBody'
+      - verify:
+          handler: 'NumberValidator'
+          desc: 'Link authorized (HTTP 200)'
+          inputs: { actualnumber: '$lastRequest{response}{status}', expectednumber: '"200"' }
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: '$5', inputs: { content: '$lastRequest{response}{body}', pointer: '"/manifest"' } }
 
-  # Authorize SHL with a specific wrong pin (negative test)
-  - match: '^([A-Za-z][A-Za-z0-9_]*) authorizes SHL on ([A-Za-z][A-Za-z0-9_]*) with url and wrong pin "([^"]+)"$'
+  # Negative form: the service must answer with the given status (e.g. 401).
+  - text: '{actor} authorizes {ref}( on {actor:hcert-decoder})? with pin {value} expecting status {int}'
+    doc: Attempt authorization with a (wrong) PIN and assert the refusal status.
     actions:
+      - assign: { to: 'authParams{url}', value: '$2' }
+      - assign: { to: 'authParams{pin}', value: '$4' }
       - assign:
-          to: 'authParams{url}'
-          value: '$shlinkUrl'
-      - assign:
-          to: 'authParams{pin}'
-          value: '"$3"'
-      - assign:
-          to: 'authTplWrong'
+          to: 'authTpl'
           value: >-
             '{"url":"${url?string?replace("\\","\\\\")
             ?replace("\"","\\\"")}", "pin":"${pin?string
@@ -189,576 +270,68 @@ steps:
           output: 'authBody'
           inputs:
             syntax: '"freemarker"'
-            template: '$authTplWrong'
+            template: '$authTpl'
             parameters: '$authParams'
-      - assign:
-          to: 'authHeaders{Content-Type}'
-          value: '"application/json"'
+      - *json
       - send:
           id: 'lastRequest'
-          desc: 'Authorize short link with wrong PIN'
+          desc: 'Authorize short link (expecting $5)'
           handler: 'HttpMessagingV2'
           from: '$1'
-          to: '$2'
+          to: '$target'
           inputs:
-            uri: 'concat($$2Base, "/shlink/authorize")'
+            uri: 'concat($targetBase, "/shlink/authorize")'
             method: '"POST"'
-            headers: '$authHeaders'
+            headers: '$hcertHeaders'
             body: '$authBody'
+      - verify:
+          handler: 'NumberValidator'
+          desc: 'Authorization refused with HTTP $5'
+          inputs: { actualnumber: '$lastRequest{response}{status}', expectednumber: '"$5"' }
 
-  # Fetch FHIR resources from an actor via manifest
-  - match: '^([A-Za-z][A-Za-z0-9_]*) fetches FHIR from ([A-Za-z][A-Za-z0-9_]*) with manifest$'
+  # Manifest → the first FHIR resource it points to.
+  # /shlink/fetch-fhir answers 200 even when it could NOT dereference the
+  # manifest's file URL ({"found":false,"fhir":[],"errors":[…]}); check
+  # `found` here, where the failure happens, rather than three steps later.
+  - text: '{actor} fetches the FHIR content of {ref}( on {actor:hcert-decoder})? as {var}'
+    doc: Dereference a SHL manifest and bind the first FHIR resource it delivers.
+    output: { type: 'fhir:Resource' }
     actions:
+      - assign: { to: 'fetchTplParams{manifest}', value: '$2' }
       - assign:
-          to: 'tplParamsManifest{manifest}'
-          value: '$manifestVal'
-      - assign:
-          to: 'tplManifest'
+          to: 'fetchTpl'
           value: >-
             '{"manifest": ${manifest?has_content?then(manifest, "null")}}'
       - process:
           handler: 'TemplateProcessor'
           operation: 'process'
-          output: 'templateBody'
+          output: 'fetchBody'
           inputs:
             syntax: '"freemarker"'
-            template: '$tplManifest'
-            parameters: '$tplParamsManifest'
-      - assign:
-          to: 'jsonHeaders{Content-Type}'
-          value: '"application/json"'
-      - assign:
-          to: 'jsonHeaders{Accept}'
-          value: '"application/fhir+json"'
+            template: '$fetchTpl'
+            parameters: '$fetchTplParams'
+      - assign: { to: 'fetchHeaders{Content-Type}', value: '"application/json"' }
+      - assign: { to: 'fetchHeaders{Accept}', value: '"application/fhir+json"' }
       - send:
           id: 'lastRequest'
           desc: 'Fetch FHIR via manifest'
           handler: 'HttpMessagingV2'
           from: '$1'
-          to: '$2'
+          to: '$target'
           inputs:
-            uri: 'concat($$2Base, "/shlink/fetch-fhir")'
+            uri: 'concat($targetBase, "/shlink/fetch-fhir")'
             method: '"POST"'
-            headers: '$jsonHeaders'
-            body: '$templateBody'
-      # Guard: /shlink/fetch-fhir returns HTTP 200 even when it could NOT
-      # dereference the manifest's file URL(s) — that failure is signalled by
-      # {"found":false,"fhir":[],"errors":[...]}. Without this guard an empty
-      # fhir[] silently yields an empty firstResource, and the test only dies
-      # far downstream at "conforms to" with the opaque validator error
-      # "Required input 'contentToValidate' is present but empty" while every
-      # arrow above looks green. Surface it HERE, at the actual point of
-      # failure, with the underlying fetch error in the log.
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'fhirFound'
-          inputs:
-            content: '$lastRequest{response}{body}'
-            pointer: '"/found"'
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'fhirFetchError'
-          inputs:
-            content: '$lastRequest{response}{body}'
-            pointer: '"/errors/0"'
+            headers: '$fetchHeaders'
+            body: '$fetchBody'
+      - verify:
+          handler: 'NumberValidator'
+          desc: 'Fetch answered (HTTP 200)'
+          inputs: { actualnumber: '$lastRequest{response}{status}', expectednumber: '"200"' }
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'fhirFound',      inputs: { content: '$lastRequest{response}{body}', pointer: '"/found"' } }
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'fhirFetchError', inputs: { content: '$lastRequest{response}{body}', pointer: '"/errors/0"' } }
       - log: 'concat("fetch-fhir: found=", $fhirFound, " firstError=", $fhirFetchError)'
       - verify:
           handler: 'StringValidator'
-          desc: 'IPS bundle retrieved from SHL manifest (found=true; false = the manifest file URL could not be dereferenced — see log for the fetch error, e.g. the IPS host returning HTTP 500)'
-          inputs:
-            actualstring: '$fhirFound'
-            expectedstring: '"true"'
-
-  # Precondition: variable is set (declares it so ITB knows about it, then logs)
-  - match: '^"([A-Za-z_][A-Za-z0-9_]*)" is set$'
-    actions:
-      - declareVariable:
-          name: $1
-          varType: string
-      - log: 'concat("Variable $", "$1", " = ", $$1)'
-
-  # Decode HC1 payload — POST /decode/hcert with {qr_data,include_raw:true}
-  # Prereq: $rawQRData (typically set via `extract "/qr_data" as "rawQRData"`
-  # after `uploads a QR image to <Actor>`).
-  # Sets: $coseVal, $payloadVal, $hcertVal, $coseRaw AND the three scalar
-  # bstrs $coseRawProtected / $coseRawPayload / $coseRawSignature (all consumed
-  # by subsequent extract-metadata / verify-COSE / extract-reference steps).
-  # The scalar bstrs are captured HERE on purpose: $lastRequest is the
-  # /decode/hcert response only until the next `send` (e.g. `extracts metadata`)
-  # overwrites it, and only /decode/hcert (with include_raw:true) exposes
-  # /cose/_raw/*. Capturing them later would read an empty pointer → empty
-  # cose_raw → the verify service 500s ("premature end of stream").
-  - match: '^([A-Za-z][A-Za-z0-9_]*) decodes HC1 on ([A-Za-z][A-Za-z0-9_]*)$'
-    actions:
-      - assign:
-          to: 'decodeHc1TplParams{value}'
-          value: '$rawQRData'
-      - process:
-          handler: 'TemplateProcessor'
-          operation: 'process'
-          output: 'decodeHc1Body'
-          inputs:
-            syntax: '"freemarker"'
-            template: "'{\"qr_data\":\"${value?json_string}\",\"include_raw\":true}'"
-            parameters: '$decodeHc1TplParams'
-      - assign:
-          to: 'decodeHc1Headers{Content-Type}'
-          value: '"application/json"'
-      - assign:
-          to: 'decodeHc1Headers{Accept}'
-          value: '"application/json"'
-      - send:
-          id: 'lastRequest'
-          desc: 'Decode HC1'
-          handler: 'HttpMessagingV2'
-          from: '$1'
-          to: '$2'
-          inputs:
-            uri: 'concat($$2Base, "/decode/hcert")'
-            method: '"POST"'
-            headers: '$decodeHc1Headers'
-            body: '$decodeHc1Body'
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'coseVal'
-          inputs:
-            content: '$lastRequest{response}{body}'
-            pointer: '"/cose"'
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'payloadVal'
-          inputs:
-            content: '$lastRequest{response}{body}'
-            pointer: '"/payload"'
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'hcertVal'
-          inputs:
-            content: '$lastRequest{response}{body}'
-            pointer: '"/hcert"'
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'coseRaw'
-          inputs:
-            content: '$lastRequest{response}{body}'
-            pointer: '"/cose/_raw"'
-      # Capture the three scalar COSE bstrs now, while $lastRequest is still
-      # the /decode/hcert response (include_raw:true exposes these). Consumed
-      # by the verify-COSE step, which must NOT re-extract them (by then
-      # $lastRequest has been clobbered by `extracts metadata`).
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'coseRawProtected'
-          inputs:
-            content: '$lastRequest{response}{body}'
-            pointer: '"/cose/_raw/protected_bstr"'
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'coseRawPayload'
-          inputs:
-            content: '$lastRequest{response}{body}'
-            pointer: '"/cose/_raw/payload_bstr"'
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'coseRawSignature'
-          inputs:
-            content: '$lastRequest{response}{body}'
-            pointer: '"/cose/_raw/signature"'
-
-  # Extract metadata — POST /extract/metadata with the JSON fragments
-  # {cose, payload} (raw JSON objects, not stringified) from `decodes HC1`.
-  - match: '^([A-Za-z][A-Za-z0-9_]*) extracts metadata on ([A-Za-z][A-Za-z0-9_]*)$'
-    actions:
-      - assign:
-          to: 'metaTplParams{cose}'
-          value: '$coseVal'
-      - assign:
-          to: 'metaTplParams{payload}'
-          value: '$payloadVal'
-      - process:
-          handler: 'TemplateProcessor'
-          operation: 'process'
-          output: 'metaBody'
-          inputs:
-            syntax: '"freemarker"'
-            template: "'{\"cose\":${cose},\"payload\":${payload}}'"
-            parameters: '$metaTplParams'
-      - assign:
-          to: 'metaHeaders{Content-Type}'
-          value: '"application/json"'
-      - assign:
-          to: 'metaHeaders{Accept}'
-          value: '"application/json"'
-      - send:
-          id: 'lastRequest'
-          desc: 'Extract metadata'
-          handler: 'HttpMessagingV2'
-          from: '$1'
-          to: '$2'
-          inputs:
-            uri: 'concat($$2Base, "/extract/metadata")'
-            method: '"POST"'
-            headers: '$metaHeaders'
-            body: '$metaBody'
-
-  # Extract SHL reference — POST /extract/reference with {hcert, payload}
-  # fragments; captures /url into $shlinkUrl for the SHL authorize step.
-  - match: '^([A-Za-z][A-Za-z0-9_]*) extracts SHL reference on ([A-Za-z][A-Za-z0-9_]*)$'
-    actions:
-      - assign:
-          to: 'refTplParams{hcert}'
-          value: '$hcertVal'
-      - assign:
-          to: 'refTplParams{payload}'
-          value: '$payloadVal'
-      - process:
-          handler: 'TemplateProcessor'
-          operation: 'process'
-          output: 'refBody'
-          inputs:
-            syntax: '"freemarker"'
-            template: "'{\"hcert\":${hcert},\"payload\":${payload}}'"
-            parameters: '$refTplParams'
-      - assign:
-          to: 'refHeaders{Content-Type}'
-          value: '"application/json"'
-      - assign:
-          to: 'refHeaders{Accept}'
-          value: '"application/json"'
-      - send:
-          id: 'lastRequest'
-          desc: 'Extract SHL reference'
-          handler: 'HttpMessagingV2'
-          from: '$1'
-          to: '$2'
-          inputs:
-            uri: 'concat($$2Base, "/extract/reference")'
-            method: '"POST"'
-            headers: '$refHeaders'
-            body: '$refBody'
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'shlinkUrl'
-          inputs:
-            content: '$lastRequest{response}{body}'
-            pointer: '"/url"'
-
-  # --- Legacy HCERT steps (QR code / CWT validation) ---
-
-  - match: '^a Receiver is presented a QR Code$'
-    actions:
-      - assign:
-          to: 'receiverRole'
-          value: '"active"'
-
-  - match: '^the QR code uses a format as defined in \(ISO/IEC 18004:2015\)$'
-    actions:
-      - assign:
-          to: 'qrFormat'
-          value: '"ISO18004"'
-
-  - match: '^the QR code uses Alphanumeric mode \(Mode 2\) encoding$'
-    actions:
-      - assign:
-          to: 'qrMode'
-          value: '"alphanumeric"'
-
-  - match: '^the QR code uses Base45 encoding$'
-    actions:
-      - assign:
-          to: 'qrEncoding'
-          value: '"base45"'
-
-  - match: '^the Receiver scans the QR Code$'
-    actions:
-      - call:
-          path: 'scriptlets/instructUser.xml'
-          inputs:
-            message: '"Please provide a QR code image for scanning"'
-      - process:
-          handler: 'HCERTProcessor'
-          operation: 'decodeImage'
-          output: 'qrDecodeResult'
-          inputs:
-            image: '$userProvidedImage'
-    requires:
-      service: HCERT-validator
-      version: ">=1.0"
-
-  - match: '^the QR code is successfully decoded$'
-    actions:
-      - verify:
-          handler: 'StringValidator'
-          desc: 'Verify QR decode success'
-          inputs:
-            actualstring: '$qrDecodeResult{decoded}'
-            expectedstring: '"true"'
-
-  - match: '^the decoded raw Alphanumeric string starts with "HC1:" prefix$'
-    actions:
-      - process:
-          handler: 'StringProcessor'
-          operation: 'startsWith'
-          output: 'hasHC1Prefix'
-          inputs:
-            text: '$qrDecodeResult{raw_data}'
-            prefix: '"HC1:"'
-      - verify:
-          handler: 'StringValidator'
-          desc: 'Verify HC1 prefix'
-          inputs:
-            actualstring: '$hasHC1Prefix'
-            expectedstring: '"true"'
-
-  - match: '^the decoded raw Alphanumeric string does not start with "HC1:" prefix$'
-    actions:
-      - process:
-          handler: 'StringProcessor'
-          operation: 'startsWith'
-          output: 'hasHC1Prefix'
-          inputs:
-            text: '$qrDecodeResult{raw_data}'
-            prefix: '"HC1:"'
-      - verify:
-          handler: 'StringValidator'
-          desc: 'Verify no HC1 prefix'
-          inputs:
-            actualstring: '$hasHC1Prefix'
-            expectedstring: '"false"'
-
-  - match: '^the QR Code is rejected with an Error$'
-    actions:
-      - verify:
-          handler: 'StringValidator'
-          desc: 'Verify error present'
-          inputs:
-            actualstring: '$qrDecodeResult{error}'
-            expectedstring: '"decode_failed"'
-
-  - match: '^Receiver decodes the raw Alphanumeric string from QR Code$'
-    actions:
-      - process:
-          handler: 'HCERTProcessor'
-          operation: 'decodeHCERT'
-          output: 'hcertDecoded'
-          inputs:
-            qr_data: '$qrDecodeResult{raw_data}'
-    requires:
-      service: HCERT-validator
-      version: ">=1.0"
-
-  - match: '^removes the "HC1:" prefix$'
-    actions:
-      - process:
-          handler: 'StringProcessor'
-          operation: 'removePrefix'
-          output: 'withoutPrefix'
-          inputs:
-            text: '$qrDecodeResult{raw_data}'
-            prefix: '"HC1:"'
-
-  - match: '^the remaining Alphanumeric string can be Base45 decoded to retrieve a binary payload$'
-    actions:
-      - verify:
-          handler: 'NumberValidator'
-          desc: 'Verify Base45 decode successful'
-          inputs:
-            actualnumber: '$hcertDecoded{diagnostics}{base45_decoded_len}'
-            expectednumber: '0'
-            operation: 'greater_than'
-
-  - match: '^ZLIB decompression can be applied to the binary payload$'
-    actions:
-      - verify:
-          handler: 'NumberValidator'
-          desc: 'Verify ZLIB decompression successful'
-          inputs:
-            actualnumber: '$hcertDecoded{diagnostics}{zlib_decompressed_len}'
-            expectednumber: '0'
-            operation: 'greater_than'
-
-  - match: '^the retrieved Payload is a valid CBOR Web Token \(CWT\) as defined \[here\]\((.+)\)$'
-    actions:
-      - verify:
-          handler: 'StructureValidator'
-          desc: 'Validate CWT structure'
-          inputs:
-            content: '$hcertDecoded{payload}'
-            profileUrl: '"$1"'
-    requires:
-      service: FHIR-validator
-      version: ">=1.0"
-
-  - match: '^a valid CBOR CWT token is decoded from a QR Code$'
-    actions:
-      - assign:
-          to: 'validCWT'
-          value: '$hcertDecoded{payload}'
-
-  - match: '^THE CWT is parsed$'
-    actions:
-      - process:
-          handler: 'HCERTProcessor'
-          operation: 'extractMetadata'
-          output: 'cwtMetadata'
-          inputs:
-            cose: '$hcertDecoded{cose}'
-            payload: '$hcertDecoded{payload}'
-
-  - match: '^CWT structure validates against the StructureDefinition as defined \[here\]\((.+)\)$'
-    actions:
-      - verify:
-          handler: 'StructureValidator'
-          desc: 'Validate against CWT StructureDefinition'
-          inputs:
-            content: '$validCWT'
-            profileUrl: '"$1"'
-
-  - match: '^a valid CWT$'
-    actions:
-      - assign:
-          to: 'cwtForValidation'
-          value: '$hcertDecoded{payload}'
-
-  - match: '^the Receiver validates the algorithm i\.e\. Claim ''1'' in the Header$'
-    actions:
-      - process:
-          handler: 'JSONPointerProcessor'
-          operation: 'process'
-          output: 'algorithmClaim'
-          inputs:
-            content: '$hcertDecoded{cose}{protected}'
-            pointer: '"/1"'
-
-  - match: '^the algorithm is be one of the supported types:$'
-    table:
-      required: [Algorithm, COSE Parameter, SOG-IT Level]
-    actions:
-      - foreach:
-          from: '$tableRows'
-          do:
-            - process:
-                handler: 'AlgorithmValidator'
-                operation: 'validateSupported'
-                output: 'algorithmValid'
-                inputs:
-                  algorithm: '$algorithmClaim'
-                  supportedAlgorithms: '$row.Algorithm'
-
-  - match: '^a valid CWT Structure$'
-    actions:
-      - assign:
-          to: 'cwtStructure'
-          value: '$hcertDecoded'
-
-  - match: '^the Receiver extracts the Key Identifier i\.e\. Claim ''4'' in the Header$'
-    actions:
-      - process:
-          handler: 'JSONPointerProcessor'
-          operation: 'process'
-          output: 'keyIdentifier'
-          inputs:
-            content: '$hcertDecoded{cose}{protected}'
-            pointer: '"/4"'
-
-  - match: '^extracts the Issuer i\.e\. Claim ''1'' from the Payload$'
-    actions:
-      - process:
-          handler: 'JSONPointerProcessor'
-          operation: 'process'
-          output: 'issuerClaim'
-          inputs:
-            content: '$hcertDecoded{payload}'
-            pointer: '"/1"'
-
-  - match: '^the extracted Key Id is 8 bytes$'
-    actions:
-      - verify:
-          handler: 'KeyValidator'
-          desc: 'Verify Key ID is 8 bytes'
-          inputs:
-            keyId: '$keyIdentifier'
-            expectedLength: '8'
-
-  - match: '^the extracted issuer is ISO 3166-1 alpha-2 Country Code$'
-    actions:
-      - verify:
-          handler: 'CountryCodeValidator'
-          desc: 'Verify issuer is valid country code'
-          inputs:
-            countryCode: '$issuerClaim'
-            standard: '"ISO3166-1-alpha-2"'
-
-  - match: '^the public key can be retrieved from the trust network using the Country Code and Key Id$'
-    actions:
-      - process:
-          handler: 'TrustNetworkProcessor'
-          operation: 'retrievePublicKey'
-          output: 'publicKey'
-          inputs:
-            countryCode: '$issuerClaim'
-            keyId: '$keyIdentifier'
-
-  - match: '^the Receiver extracts the public key of the issuer from the trust network that matches the Key Id in the COSE Header$'
-    actions:
-      - assign:
-          to: 'matchedPublicKey'
-          value: '$publicKey'
-
-  - match: '^the payload has not expired i\.e\. current time is between Issued at \(Claim ''6''\) and  Expiration Date \(Claim ''4''\)$'
-    actions:
-      - process:
-          handler: 'TimeValidator'
-          operation: 'validateTimeRange'
-          output: 'timeValid'
-          inputs:
-            issuedAt: '$hcertDecoded{payload}{6}'
-            expirationDate: '$hcertDecoded{payload}{4}'
-
-  - match: '^the signature is cryptographically valid$'
-    actions:
-      - verify:
-          handler: 'SignatureValidator'
-          desc: 'Verify cryptographic signature'
-          inputs:
-            signature: '$hcertDecoded{cose}{signature}'
-            publicKey: '$matchedPublicKey'
-            payload: '$hcertDecoded{payload}'
-
-  - match: '^a CWT with verified signature$'
-    actions:
-      - assign:
-          to: 'verifiedCWT'
-          value: '$hcertDecoded'
-
-  - match: '^the Receiver extracts the HCERT Payload using claim key -260$'
-    actions:
-      - process:
-          handler: 'JSONPointerProcessor'
-          operation: 'process'
-          output: 'hcertPayload'
-          inputs:
-            content: '$verifiedCWT{payload}'
-            pointer: '"/-260"'
-
-  - match: '^the extracted HCERT structure validates against the StructureDefinition as defined \[here\]\((.+)\)$'
-    actions:
-      - verify:
-          handler: 'StructureValidator'
-          desc: 'Validate HCERT structure'
-          inputs:
-            content: '$hcertPayload'
-            profileUrl: '"$1"'
-    requires:
-      service: FHIR-validator
-      version: ">=1.0"
+          desc: 'FHIR content retrieved from the SHL manifest (found=true; false = the manifest file URL could not be dereferenced — see log)'
+          inputs: { actualstring: '$fhirFound', expectedstring: '"true"' }
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: '$4', inputs: { content: '$lastRequest{response}{body}', pointer: '"/fhir/0/resource"' } }

@@ -35,16 +35,16 @@
     <assign to="loadIgTplParams{ig}">&quot;smart.who.int.icvp&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="loadIgBody">
       <input name="syntax">&quot;freemarker&quot;</input>
-      <input name="template">'{ &quot;operation&quot;: &quot;loadIG&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;ig&quot;, &quot;value&quot;: &quot;${ig}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;loadIG&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;ig&quot;, &quot;value&quot;: &quot;${ig?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$loadIgTplParams</input>
     </process>
-    <send id="lastRequest" desc="Load IG via IGManager" handler="HttpMessagingV2" from="Client" to="FHIRValidator">
+    <send id="lastRequest" desc="Load IG smart.who.int.icvp" handler="HttpMessagingV2" from="Client" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/igManager/process&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
       <input name="body">$loadIgBody</input>
     </send>
-    <verify handler="NumberValidator" desc="IGManager.loadIG returned HTTP 200">
+    <verify handler="NumberValidator" desc="IG smart.who.int.icvp loaded (HTTP 200)">
       <input name="actualnumber">$lastRequest{response}{status}</input>
       <input name="expectednumber">&quot;200&quot;</input>
     </verify>
@@ -66,21 +66,28 @@
         &quot;vp&quot;:  &quot;YellowFeverProductd2c75a15ed309658b3968519ddb31690&quot;
       }
     }'</assign>
+    <verify handler="ExpressionValidator" desc="Transform input $icvpClaim is non-empty">
+      <input name="expression">not($icvpClaim = &quot;&quot;)</input>
+    </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
     <assign to="transformTplParams{content}">$icvpClaim</assign>
     <assign to="transformTplParams{map}">&quot;http://smart.who.int/icvp/StructureMap/ICVPClaimtoIPS&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="transformBody">
       <input name="syntax">&quot;freemarker&quot;</input>
-      <input name="template">'{ &quot;operation&quot;: &quot;transform&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${content?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;map&quot;, &quot;value&quot;: &quot;${map}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;contentType&quot;, &quot;value&quot;: &quot;application/fhir+json&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;targetFormat&quot;, &quot;value&quot;: &quot;json&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;transform&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${content?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;map&quot;, &quot;value&quot;: &quot;${map?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;contentType&quot;, &quot;value&quot;: &quot;application/fhir+json&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$transformTplParams</input>
     </process>
-    <send id="lastRequest" desc="Apply StructureMap transformation" handler="HttpMessagingV2" from="Client">
+    <send id="lastRequest" desc="Transform $icvpClaim with map http://smart.who.int/icvp/StructureMap/ICVPClaimtoIPS" handler="HttpMessagingV2" from="Client" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/transform/process&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
       <input name="body">$transformBody</input>
     </send>
+    <verify handler="NumberValidator" desc="Transform with http://smart.who.int/icvp/StructureMap/ICVPClaimtoIPS succeeded (HTTP 200)">
+      <input name="actualnumber">$lastRequest{response}{status}</input>
+      <input name="expectednumber">&quot;200&quot;</input>
+    </verify>
     <process handler="JsonPointerProcessor" operation="process" output="ipsBundle">
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/output/0/value&quot;</input>
@@ -94,7 +101,7 @@
       <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$assertTplParams</input>
     </process>
-    <send id="lastRequest" desc="FHIRPath assertion" handler="HttpMessagingV2" from="Client">
+    <send id="lastRequest" desc="FHIRPath assertion: Bundle.type = 'document'" handler="HttpMessagingV2" from="Client" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPathAssertion/validate&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
@@ -104,7 +111,7 @@
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/report/result&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="FHIRPath assertion succeeded">
+    <verify handler="StringValidator" desc="$ipsBundle satisfies Bundle.type = 'document'">
       <input name="actualstring">$assertResult</input>
       <input name="expectedstring">&quot;SUCCESS&quot;</input>
     </verify>
@@ -117,7 +124,7 @@
       <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$assertTplParams</input>
     </process>
-    <send id="lastRequest" desc="FHIRPath assertion" handler="HttpMessagingV2" from="Client">
+    <send id="lastRequest" desc="FHIRPath assertion: Bundle.entry.resource.ofType(Patient).name.text.first() = 'Cristina Rodriguez'" handler="HttpMessagingV2" from="Client" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPathAssertion/validate&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
@@ -127,7 +134,7 @@
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/report/result&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="FHIRPath assertion succeeded">
+    <verify handler="StringValidator" desc="$ipsBundle satisfies Bundle.entry.resource.ofType(Patient).name.text.first() = 'Cristina Rodriguez'">
       <input name="actualstring">$assertResult</input>
       <input name="expectedstring">&quot;SUCCESS&quot;</input>
     </verify>
@@ -140,7 +147,7 @@
       <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$assertTplParams</input>
     </process>
-    <send id="lastRequest" desc="FHIRPath assertion" handler="HttpMessagingV2" from="Client">
+    <send id="lastRequest" desc="FHIRPath assertion: Bundle.entry.resource.ofType(Patient).gender = 'male'" handler="HttpMessagingV2" from="Client" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPathAssertion/validate&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
@@ -150,7 +157,7 @@
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/report/result&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="FHIRPath assertion succeeded">
+    <verify handler="StringValidator" desc="$ipsBundle satisfies Bundle.entry.resource.ofType(Patient).gender = 'male'">
       <input name="actualstring">$assertResult</input>
       <input name="expectedstring">&quot;SUCCESS&quot;</input>
     </verify>
@@ -163,7 +170,7 @@
       <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$assertTplParams</input>
     </process>
-    <send id="lastRequest" desc="FHIRPath assertion" handler="HttpMessagingV2" from="Client">
+    <send id="lastRequest" desc="FHIRPath assertion: Bundle.entry.resource.ofType(Patient).birthDate = '1994-10-13'" handler="HttpMessagingV2" from="Client" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPathAssertion/validate&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
@@ -173,7 +180,7 @@
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/report/result&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="FHIRPath assertion succeeded">
+    <verify handler="StringValidator" desc="$ipsBundle satisfies Bundle.entry.resource.ofType(Patient).birthDate = '1994-10-13'">
       <input name="actualstring">$assertResult</input>
       <input name="expectedstring">&quot;SUCCESS&quot;</input>
     </verify>
@@ -186,7 +193,7 @@
       <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$assertTplParams</input>
     </process>
-    <send id="lastRequest" desc="FHIRPath assertion" handler="HttpMessagingV2" from="Client">
+    <send id="lastRequest" desc="FHIRPath assertion: Bundle.entry.resource.ofType(Immunization).lotNumber = 'A1234'" handler="HttpMessagingV2" from="Client" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPathAssertion/validate&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
@@ -196,7 +203,7 @@
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/report/result&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="FHIRPath assertion succeeded">
+    <verify handler="StringValidator" desc="$ipsBundle satisfies Bundle.entry.resource.ofType(Immunization).lotNumber = 'A1234'">
       <input name="actualstring">$assertResult</input>
       <input name="expectedstring">&quot;SUCCESS&quot;</input>
     </verify>
@@ -209,7 +216,7 @@
       <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$assertTplParams</input>
     </process>
-    <send id="lastRequest" desc="FHIRPath assertion" handler="HttpMessagingV2" from="Client">
+    <send id="lastRequest" desc="FHIRPath assertion: Bundle.entry.resource.ofType(Immunization).vaccineCode.coding.code.first() = 'YellowFever'" handler="HttpMessagingV2" from="Client" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPathAssertion/validate&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
@@ -219,7 +226,7 @@
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/report/result&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="FHIRPath assertion succeeded">
+    <verify handler="StringValidator" desc="$ipsBundle satisfies Bundle.entry.resource.ofType(Immunization).vaccineCode.coding.code.first() = 'YellowFever'">
       <input name="actualstring">$assertResult</input>
       <input name="expectedstring">&quot;SUCCESS&quot;</input>
     </verify>
@@ -232,7 +239,7 @@
       <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$assertTplParams</input>
     </process>
-    <send id="lastRequest" desc="FHIRPath assertion" handler="HttpMessagingV2" from="Client">
+    <send id="lastRequest" desc="FHIRPath assertion: Bundle.entry.resource.ofType(Composition).type.coding.code.first() = '60591-5'" handler="HttpMessagingV2" from="Client" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPathAssertion/validate&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
@@ -242,7 +249,7 @@
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/report/result&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="FHIRPath assertion succeeded">
+    <verify handler="StringValidator" desc="$ipsBundle satisfies Bundle.entry.resource.ofType(Composition).type.coding.code.first() = '60591-5'">
       <input name="actualstring">$assertResult</input>
       <input name="expectedstring">&quot;SUCCESS&quot;</input>
     </verify>

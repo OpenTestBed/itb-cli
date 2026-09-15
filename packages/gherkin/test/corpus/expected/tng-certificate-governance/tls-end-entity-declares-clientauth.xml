@@ -17,7 +17,7 @@
     <var name="tngCountry" type="string"/>
     <var name="inspectBody" type="string"/>
     <var name="tngAll" type="string"/>
-    <var name="certFacts" type="string"/>
+    <var name="cert" type="string"/>
     <var name="factGroup" type="string"/>
     <var name="factFilename" type="string"/>
     <var name="isPlaced" type="string"/>
@@ -43,7 +43,7 @@
       <input name="template">'{&quot;layout&quot;:&quot;participant&quot;,&quot;country&quot;:&quot;${country}&quot;}'</input>
       <input name="parameters">$inspectTplParams</input>
     </process>
-    <send id="lastRequest" desc="Inspect the participant material" handler="HttpMessagingV2" from="Participant">
+    <send id="lastRequest" desc="Inspect the participant material" handler="HttpMessagingV2" from="Participant" to="TNGValidator">
       <input name="uri">concat($TNGValidatorBase, &quot;/tng/api/inspect&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$tngHeaders</input>
@@ -57,16 +57,16 @@
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/certificates&quot;</input>
     </process>
-    <process handler="JsonPointerProcessor" operation="process" output="certFacts">
+    <process handler="JsonPointerProcessor" operation="process" output="cert">
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/certificates/0&quot;</input>
     </process>
     <process handler="JsonPointerProcessor" operation="process" output="factGroup">
-      <input name="content">$certFacts</input>
+      <input name="content">$cert</input>
       <input name="pointer">&quot;/group&quot;</input>
     </process>
     <process handler="JsonPointerProcessor" operation="process" output="factFilename">
-      <input name="content">$certFacts</input>
+      <input name="content">$cert</input>
       <input name="pointer">&quot;/filename&quot;</input>
     </process>
     <assign to="placedParams{group}">$factGroup</assign>
@@ -76,10 +76,12 @@
       <input name="template">'${(group?has_content &amp;&amp; filename?has_content)?c}'</input>
       <input name="parameters">$placedParams</input>
     </process>
-    <verify handler="StringValidator" desc="certificate sits at &lt;domain&gt;/&lt;group&gt;/&lt;file&gt; — group and filename are known">
+    <verify handler="StringValidator" desc="$cert sits at &lt;domain&gt;/&lt;group&gt;/&lt;file&gt; — group and filename are known">
       <input name="actualstring">$isPlaced</input>
       <input name="expectedstring">&quot;true&quot;</input>
     </verify>
+    <assign to="tngHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="tngHeaders{Accept}">&quot;application/json&quot;</assign>
     <assign to="selectTplParams{country}">$tngCountry</assign>
     <assign to="selectTplParams{group}">&quot;TLS&quot;</assign>
     <assign to="selectTplParams{filename}">&quot;TLS&quot;</assign>
@@ -88,7 +90,7 @@
       <input name="template">'{&quot;layout&quot;:&quot;participant&quot;,&quot;country&quot;:&quot;${country}&quot;,&quot;group&quot;:&quot;${group}&quot;,&quot;filename&quot;:&quot;${filename}.pem&quot;}'</input>
       <input name="parameters">$selectTplParams</input>
     </process>
-    <send id="lastRequest" desc="Select the certificate this scenario applies to" handler="HttpMessagingV2" from="Participant">
+    <send id="lastRequest" desc="Select the certificate this scenario applies to" handler="HttpMessagingV2" from="Participant" to="TNGValidator">
       <input name="uri">concat($TNGValidatorBase, &quot;/tng/api/inspect&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$tngHeaders</input>
@@ -103,12 +105,12 @@
       <input name="actualnumber">$selectCount</input>
       <input name="expectednumber">&quot;1&quot;</input>
     </verify>
-    <process handler="JsonPointerProcessor" operation="process" output="certFacts">
+    <process handler="JsonPointerProcessor" operation="process" output="cert">
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/certificate&quot;</input>
     </process>
     <process handler="JsonPointerProcessor" operation="process" output="ekuPresent">
-      <input name="content">$certFacts</input>
+      <input name="content">$cert</input>
       <input name="pointer">&quot;/extendedKeyUsageByOid/1.3.6.1.5.5.7.3.2&quot;</input>
     </process>
     <verify handler="StringValidator" desc="extendedKeyUsage includes 1.3.6.1.5.5.7.3.2">

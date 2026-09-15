@@ -7,8 +7,11 @@
 // coupling this package exists to remove.
 
 // ── Compile pipeline ────────────────────────────────────────────────
-export { GherkinParser } from './parser/gherkinParser.js';
-export type { IRAction } from './parser/gherkinParser.js';
+export { GherkinParser, newScenarioState, wantsLegacyCore } from './parser/gherkinParser.js';
+export type { IRAction, ScenarioState } from './parser/gherkinParser.js';
+// ── Typed step text (v2 language files) ─────────────────────────────
+export { compileStepText, describeText, resolveRef } from './parser/stepText.js';
+export type { ParamSpec, ParamType, CompiledText } from './parser/stepText.js';
 export { XMLGenerator } from './parser/xmlGenerator.js';
 export type { GeneratedFile, XMLOutput } from './parser/xmlGenerator.js';
 
@@ -19,6 +22,9 @@ export type { CatalogSource, BrowserSourceOptions } from './parser/languageCatal
 // ── Catalog: loading, merging, inspecting ───────────────────────────
 export {
   loadCatalog,
+  coreLanguagePath,
+  normalizeLanguageFile,
+  compileCatalogSteps,
   loadAllComponents,
   loadRemoteComponent,
   loadComponentManifest,
@@ -35,6 +41,9 @@ export type {
   Catalog,
   CatalogStep,
   CatalogAction,
+  TypeDecl,
+  ConformsDecl,
+  LoadOptions,
   CatalogRequirement,
   ComponentInfo,
   ComponentManifest,

@@ -17,40 +17,41 @@
   <variables>
     <var name="loadIgBody" type="string"/>
     <var name="fhirpathBody" type="string"/>
-    <var name="fhirpathResult" type="string"/>
+    <var name="pathValue" type="string"/>
     <var name="conformBody" type="string"/>
     <var name="validationErrors" type="string"/>
+    <var name="validationWarnings" type="string"/>
+    <var name="validationSeverity" type="string"/>
+    <var name="validationOutcome" type="string"/>
     <var name="lastRequest" type="map"/>
     <var name="lastReceived" type="map"/>
     <var name="FHIRValidatorBase" type="string"/>
-    <var name="loadIgHeaders" type="map"/>
-    <var name="loadIgTplParams" type="map"/>
-    <var name="sigStatus" type="string"/>
     <var name="fhirValidatorHeaders" type="map"/>
+    <var name="loadIgTplParams" type="map"/>
     <var name="fhirpathTplParams" type="map"/>
     <var name="conformHeaders" type="map"/>
     <var name="conformTplParams" type="map"/>
+    <var name="conformanceErrors" type="string"/>
   </variables>
 
   <steps stopOnError="true">
     <assign to="FHIRValidatorBase">&quot;http://fhir-validator:8080&quot;</assign>
-    <assign to="loadIgHeaders{Content-Type}">&quot;application/json&quot;</assign>
-    <assign to="loadIgHeaders{Accept}">&quot;application/json&quot;</assign>
-    <assign to="loadIgTplParams{ig}">&quot;http://package-server:8000/ihe.pharm.meow/1.0.0-preview2/package.tgz&quot;</assign>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="loadIgTplParams{ig}">&quot;https://profiles.ihe.net/PHARM/MEOW/package.tgz&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="loadIgBody">
       <input name="syntax">&quot;freemarker&quot;</input>
       <input name="template">'{ &quot;operation&quot;: &quot;loadIG&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;ig&quot;, &quot;value&quot;: &quot;${ig?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$loadIgTplParams</input>
     </process>
-    <send id="lastRequest" desc="Load IG http://package-server:8000/ihe.pharm.meow/1.0.0-preview2/package.tgz" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="FHIRValidator">
+    <send id="lastRequest" desc="Load IG https://profiles.ihe.net/PHARM/MEOW/package.tgz" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/igManager/process&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
-      <input name="headers">$loadIgHeaders</input>
+      <input name="headers">$fhirValidatorHeaders</input>
       <input name="body">$loadIgBody</input>
     </send>
-    <assign to="sigStatus">if (empty($lastRequest{response}{status})) then &quot;0&quot; else $lastRequest{response}{status}</assign>
-    <verify handler="NumberValidator" desc="Response status is 200">
-      <input name="actualnumber">$sigStatus</input>
+    <verify handler="NumberValidator" desc="IG https://profiles.ihe.net/PHARM/MEOW/package.tgz loaded (HTTP 200)">
+      <input name="actualnumber">$lastRequest{response}{status}</input>
       <input name="expectednumber">&quot;200&quot;</input>
     </verify>
     <interact id="inform" desc="Instruction for MedicationOverviewConsumer" with="MedicationOverviewConsumer">
@@ -59,16 +60,16 @@
     <receive id="lastReceived" desc="Wait for message" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="MedicationOverviewResponder">
       <input name="timeout">&quot;300&quot;</input>
     </receive>
-    <verify handler="StringValidator" desc="Equals">
+    <verify handler="StringValidator" desc="$received.method is POST">
       <input name="actualstring">$lastReceived{method}</input>
       <input name="expectedstring">&quot;POST&quot;</input>
     </verify>
-    <verify handler="StringValidator" desc="Contains">
+    <verify handler="StringValidator" desc="$received.headers.Content-Type contains fhir+json">
       <input name="actualstring">$lastReceived{headers}{Content-Type}</input>
       <input name="expectedstring">&quot;fhir+json&quot;</input>
       <input name="matchType">&quot;contains&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="Not empty">
+    <verify handler="ExpressionValidator" desc="$received.body is not empty">
       <input name="expression">string-length($lastReceived{body}) &gt; 0</input>
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
@@ -80,18 +81,18 @@
       <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$fhirpathTplParams</input>
     </process>
-    <send id="lastRequest" desc="Evaluate FHIRPath expression" handler="HttpMessagingV2" from="MedicationOverviewConsumer">
+    <send id="lastRequest" desc="FHIRPath Bundle.type" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPath/process&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
       <input name="body">$fhirpathBody</input>
     </send>
-    <process handler="JsonPointerProcessor" operation="process" output="fhirpathResult">
+    <process handler="JsonPointerProcessor" operation="process" output="pathValue">
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/output/0/value&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="FHIRPath result matches expected value">
-      <input name="actualstring">$fhirpathResult</input>
+    <verify handler="StringValidator" desc="$received.body at Bundle.type is document">
+      <input name="actualstring">$pathValue</input>
       <input name="expectedstring">&quot;document&quot;</input>
     </verify>
     <assign to="conformHeaders{Content-Type}">&quot;application/json&quot;</assign>
@@ -103,7 +104,7 @@
       <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;profiles&quot;, &quot;value&quot;: &quot;${profile?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$conformTplParams</input>
     </process>
-    <send id="lastRequest" desc="Validate lastReceived{body} conforms to https://profiles.ihe.net/PHARM/MEOW/StructureDefinition/MedicationOverview" handler="HttpMessagingV2" from="MedicationOverviewConsumer">
+    <send id="lastRequest" desc="Validate $lastReceived{body} against https://profiles.ihe.net/PHARM/MEOW/StructureDefinition/MedicationOverview" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhir/validate&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$conformHeaders</input>
@@ -113,8 +114,21 @@
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/report/context/0/value&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="lastReceived{body} conforms to https://profiles.ihe.net/PHARM/MEOW/StructureDefinition/MedicationOverview">
-      <input name="actualstring">$validationErrors</input>
+    <process handler="JsonPointerProcessor" operation="process" output="validationWarnings">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/report/context/1/value&quot;</input>
+    </process>
+    <process handler="JsonPointerProcessor" operation="process" output="validationSeverity">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/report/context/3/value&quot;</input>
+    </process>
+    <process handler="JsonPointerProcessor" operation="process" output="validationOutcome">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/report/context/4/value&quot;</input>
+    </process>
+    <assign to="conformanceErrors">$validationErrors</assign>
+    <verify handler="StringValidator" desc="$received.body conforms to https://profiles.ihe.net/PHARM/MEOW/StructureDefinition/MedicationOverview">
+      <input name="actualstring">$conformanceErrors</input>
       <input name="expectedstring">&quot;0&quot;</input>
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
@@ -126,18 +140,18 @@
       <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$fhirpathTplParams</input>
     </process>
-    <send id="lastRequest" desc="Evaluate FHIRPath expression" handler="HttpMessagingV2" from="MedicationOverviewConsumer">
+    <send id="lastRequest" desc="FHIRPath Bundle.entry.resource.ofType(Composition).count()" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPath/process&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
       <input name="body">$fhirpathBody</input>
     </send>
-    <process handler="JsonPointerProcessor" operation="process" output="fhirpathResult">
+    <process handler="JsonPointerProcessor" operation="process" output="pathValue">
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/output/0/value&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="FHIRPath result matches expected value">
-      <input name="actualstring">$fhirpathResult</input>
+    <verify handler="StringValidator" desc="$received.body at Bundle.entry.resource.ofType(Composition).count() is 1">
+      <input name="actualstring">$pathValue</input>
       <input name="expectedstring">&quot;1&quot;</input>
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
@@ -149,18 +163,18 @@
       <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$fhirpathTplParams</input>
     </process>
-    <send id="lastRequest" desc="Evaluate FHIRPath expression" handler="HttpMessagingV2" from="MedicationOverviewConsumer">
+    <send id="lastRequest" desc="FHIRPath Bundle.entry.resource.ofType(Patient).exists()" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPath/process&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
       <input name="body">$fhirpathBody</input>
     </send>
-    <process handler="JsonPointerProcessor" operation="process" output="fhirpathResult">
+    <process handler="JsonPointerProcessor" operation="process" output="pathValue">
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/output/0/value&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="FHIRPath result matches expected value">
-      <input name="actualstring">$fhirpathResult</input>
+    <verify handler="StringValidator" desc="$received.body at Bundle.entry.resource.ofType(Patient).exists() is true">
+      <input name="actualstring">$pathValue</input>
       <input name="expectedstring">&quot;true&quot;</input>
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
@@ -172,18 +186,18 @@
       <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$fhirpathTplParams</input>
     </process>
-    <send id="lastRequest" desc="Evaluate FHIRPath expression" handler="HttpMessagingV2" from="MedicationOverviewConsumer">
+    <send id="lastRequest" desc="FHIRPath Bundle.entry.resource.ofType(MedicationStatement).exists()" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPath/process&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
       <input name="body">$fhirpathBody</input>
     </send>
-    <process handler="JsonPointerProcessor" operation="process" output="fhirpathResult">
+    <process handler="JsonPointerProcessor" operation="process" output="pathValue">
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/output/0/value&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="FHIRPath result matches expected value">
-      <input name="actualstring">$fhirpathResult</input>
+    <verify handler="StringValidator" desc="$received.body at Bundle.entry.resource.ofType(MedicationStatement).exists() is true">
+      <input name="actualstring">$pathValue</input>
       <input name="expectedstring">&quot;true&quot;</input>
     </verify>
     <interact id="inform" desc="Instruction for MedicationOverviewConsumer" with="MedicationOverviewConsumer">

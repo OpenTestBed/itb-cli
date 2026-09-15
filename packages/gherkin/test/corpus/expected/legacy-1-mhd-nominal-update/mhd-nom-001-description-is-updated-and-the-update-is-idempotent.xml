@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testcase id="mhd-nom-001-description-is-updated-and-the-update-is-idempotent"
+          xmlns="http://www.gitb.com/tdl/v1/"
+          xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>mhd-nom-001 description is updated, and the update is idempotent</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>IHE MHD Document Responder — CH:MHD-1 nominal update</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="DocumentResponder" role="SUT"/>
+    <gitb:actor id="DocumentSource" role="SIMULATED"/>
+    <gitb:actor id="AuthServer" role="SIMULATED"/>
+  </actors>
+
+  <variables>
+    <var name="iuaToken" type="string"/>
+    <var name="docId" type="string"/>
+    <var name="fhirpathBody" type="string"/>
+    <var name="fhirpathResult" type="string"/>
+    <var name="conformBody" type="string"/>
+    <var name="validationErrors" type="string"/>
+    <var name="lastRequest" type="map"/>
+    <var name="DocumentResponderBase" type="string"/>
+    <var name="AuthServerBase" type="string"/>
+    <var name="jsonHeaders" type="map"/>
+    <var name="originalDoc" type="string"/>
+    <var name="sigStatus" type="string"/>
+    <var name="updatePayload" type="string"/>
+    <var name="updated" type="string"/>
+    <var name="fhirValidatorHeaders" type="map"/>
+    <var name="fhirpathTplParams" type="map"/>
+    <var name="conformHeaders" type="map"/>
+    <var name="conformTplParams" type="map"/>
+    <var name="FHIRValidatorBase" type="string"/>
+  </variables>
+
+  <steps stopOnError="true">
+    <assign to="DocumentResponderBase">&quot;https://ehealthsuisse.ihe-europe.net/fhir&quot;</assign>
+    <assign to="AuthServerBase">&quot;https://ehealthsuisse.ihe-europe.net/auth&quot;</assign>
+    <assign to="jsonHeaders{Accept}">&quot;application/fhir+json&quot;</assign>
+    <assign to="jsonHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <send id="lastRequest" desc="POST /token" handler="HttpMessagingV2" from="DocumentSource" to="AuthServer">
+      <input name="uri">concat($AuthServerBase, &quot;/token&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$jsonHeaders</input>
+      <input name="body">'{ &quot;grant_type&quot;: &quot;client_credentials&quot;, &quot;scope&quot;: &quot;document&quot; }'</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="iuaToken">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/access_token&quot;</input>
+    </process>
+    <assign to="jsonHeaders{Authorization}">concat(&quot;Bearer &quot;, $iuaToken)</assign>
+    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <send id="lastRequest" desc="GET https://gitlab.inria.fr/gazelle/public/simulation/mhd-fhir-simulators/-/raw/master/mhd-fhir-simulators-domain/src/main/resources/create/MHD-1_DocumentReferenceCaseInnerPat.json" handler="HttpMessagingV2" from="DocumentSource">
+      <input name="uri">&quot;https://gitlab.inria.fr/gazelle/public/simulation/mhd-fhir-simulators/-/raw/master/mhd-fhir-simulators-domain/src/main/resources/create/MHD-1_DocumentReferenceCaseInnerPat.json&quot;</input>
+      <input name="method">&quot;GET&quot;</input>
+      <input name="headers">$jsonHeaders</input>
+    </send>
+    <assign to="originalDoc">$lastRequest{response}{body}</assign>
+    <verify handler="ExpressionValidator" desc="Not empty">
+      <input name="expression">string-length($originalDoc) &gt; 0</input>
+    </verify>
+    <assign to="jsonHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <send id="lastRequest" desc="POST /DocumentReference" handler="HttpMessagingV2" from="DocumentSource" to="DocumentResponder">
+      <input name="uri">concat($DocumentResponderBase, &quot;/DocumentReference&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$jsonHeaders</input>
+      <input name="body">$originalDoc</input>
+    </send>
+    <assign to="sigStatus">if (empty($lastRequest{response}{status})) then &quot;0&quot; else $lastRequest{response}{status}</assign>
+    <verify handler="NumberValidator" desc="Response status is 201">
+      <input name="actualnumber">$sigStatus</input>
+      <input name="expectednumber">&quot;201&quot;</input>
+    </verify>
+    <process handler="JsonPointerProcessor" operation="process" output="docId">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/id&quot;</input>
+    </process>
+    <verify handler="ExpressionValidator" desc="Not empty">
+      <input name="expression">string-length($docId) &gt; 0</input>
+    </verify>
+    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <send id="lastRequest" desc="GET https://gitlab.inria.fr/gazelle/public/simulation/mhd-fhir-simulators/-/raw/master/mhd-fhir-simulators-domain/src/main/resources/updates/OK-NominalCaseInnerCommunity-request.json" handler="HttpMessagingV2" from="DocumentSource">
+      <input name="uri">&quot;https://gitlab.inria.fr/gazelle/public/simulation/mhd-fhir-simulators/-/raw/master/mhd-fhir-simulators-domain/src/main/resources/updates/OK-NominalCaseInnerCommunity-request.json&quot;</input>
+      <input name="method">&quot;GET&quot;</input>
+      <input name="headers">$jsonHeaders</input>
+    </send>
+    <assign to="updatePayload">$lastRequest{response}{body}</assign>
+    <verify handler="ExpressionValidator" desc="Not empty">
+      <input name="expression">string-length($updatePayload) &gt; 0</input>
+    </verify>
+    <assign to="jsonHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <send id="lastRequest" desc="PUT /DocumentReference/$docId" handler="HttpMessagingV2" from="DocumentSource" to="DocumentResponder">
+      <input name="uri">concat($DocumentResponderBase, &quot;/DocumentReference/&quot;, $docId)</input>
+      <input name="method">&quot;PUT&quot;</input>
+      <input name="headers">$jsonHeaders</input>
+      <input name="body">$updatePayload</input>
+    </send>
+    <assign to="sigStatus">if (empty($lastRequest{response}{status})) then &quot;0&quot; else $lastRequest{response}{status}</assign>
+    <verify handler="NumberValidator" desc="Response status is 200">
+      <input name="actualnumber">$sigStatus</input>
+      <input name="expectednumber">&quot;200&quot;</input>
+    </verify>
+    <assign to="jsonHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <send id="lastRequest" desc="PUT /DocumentReference/$docId" handler="HttpMessagingV2" from="DocumentSource" to="DocumentResponder">
+      <input name="uri">concat($DocumentResponderBase, &quot;/DocumentReference/&quot;, $docId)</input>
+      <input name="method">&quot;PUT&quot;</input>
+      <input name="headers">$jsonHeaders</input>
+      <input name="body">$updatePayload</input>
+    </send>
+    <assign to="sigStatus">if (empty($lastRequest{response}{status})) then &quot;0&quot; else $lastRequest{response}{status}</assign>
+    <verify handler="NumberValidator" desc="Response status is 200">
+      <input name="actualnumber">$sigStatus</input>
+      <input name="expectednumber">&quot;200&quot;</input>
+    </verify>
+    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <send id="lastRequest" desc="GET /DocumentReference/$docId" handler="HttpMessagingV2" from="DocumentSource" to="DocumentResponder">
+      <input name="uri">concat($DocumentResponderBase, &quot;/DocumentReference/&quot;, $docId)</input>
+      <input name="method">&quot;GET&quot;</input>
+      <input name="headers">$jsonHeaders</input>
+    </send>
+    <assign to="updated">$lastRequest{response}{body}</assign>
+    <assign to="sigStatus">if (empty($lastRequest{response}{status})) then &quot;0&quot; else $lastRequest{response}{status}</assign>
+    <verify handler="NumberValidator" desc="Response status is 200">
+      <input name="actualnumber">$sigStatus</input>
+      <input name="expectednumber">&quot;200&quot;</input>
+    </verify>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="fhirpathTplParams{resource}">$updated</assign>
+    <assign to="fhirpathTplParams{expression}">&quot;DocumentReference.status&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="fhirpathBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$fhirpathTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Evaluate FHIRPath expression" handler="HttpMessagingV2" from="DocumentResponder">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPath/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$fhirpathBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="fhirpathResult">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="FHIRPath result matches expected value">
+      <input name="actualstring">$fhirpathResult</input>
+      <input name="expectedstring">&quot;current&quot;</input>
+    </verify>
+    <assign to="conformHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="conformHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="conformTplParams{resource}">$updated</assign>
+    <assign to="conformTplParams{profile}">&quot;http://fhir.ch/ig/ch-epr-fhir/StructureDefinition/ch-mhd-documentreference-comprehensive&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="conformBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;profiles&quot;, &quot;value&quot;: &quot;${profile?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$conformTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Validate updated conforms to http://fhir.ch/ig/ch-epr-fhir/StructureDefinition/ch-mhd-documentreference-comprehensive" handler="HttpMessagingV2" from="DocumentResponder">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhir/validate&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$conformHeaders</input>
+      <input name="body">$conformBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="validationErrors">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/report/context/0/value&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="updated conforms to http://fhir.ch/ig/ch-epr-fhir/StructureDefinition/ch-mhd-documentreference-comprehensive">
+      <input name="actualstring">$validationErrors</input>
+      <input name="expectedstring">&quot;0&quot;</input>
+    </verify>
+  </steps>
+
+  <output>
+    <success>
+      <default>"Test case completed successfully."</default>
+    </success>
+    <failure>
+      <default>"Test case failed. Check step reports and logs."</default>
+    </failure>
+  </output>
+</testcase>

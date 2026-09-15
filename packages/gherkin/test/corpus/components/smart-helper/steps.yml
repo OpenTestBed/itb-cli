@@ -1,25 +1,33 @@
-# Language extension for SMART Helper component
-# Provides IG loading and FHIR validation via HTTP actors
+# SMART Helper dialect — generation 2
+#
+#   kind   smart-helper             "SmartHelper is a smart-helper at …"
+#
+#   User loads IG "https://…" [targeting "fhir"] on SmartHelper
+#   User validates $bundle against "<profile>" on SmartHelper
+#   User validates $bundle against "<profile>" on SmartHelper targeting FHIRServer
+#   User transforms $in with map "<canonical>" on SmartHelper as $out
+#
+# The verb texts are the same as the FHIR validator's; the `on <Actor>` kind
+# decides which dialect serves them. Name the actor when both are declared.
 id: smart-helper
 name: SMART Helper Steps
+language: 2
 description: >
-  Steps for uploading Implementation Guides and validating
-  FHIR resources against profiles via actor-relative endpoints.
+  Upload Implementation Guides, run StructureMaps and validate resources
+  through the SMART Helper service.
 
-steps:
-  # Load IG on an actor (with optional target, defaults to "fhir")
-  - match: '^([A-Za-z][A-Za-z0-9_]*) loads IG "([^"]+)" (?:target "([^"]+)" )?on ([A-Za-z][A-Za-z0-9_]*)$'
+kinds: [smart-helper]
+
+verbs:
+  - text: '{actor} loads IG {string}( targeting {string})? on {actor:smart-helper}'
+    doc: Upload an IG through the helper; `targeting` names the backend (default fhir).
     actions:
-      - assign:
-          to: 'igParams{url}'
-          value: '"$2"'
-      - assign:
-          to: 'igParams{target}'
-          value: '"$3"'
+      - assign: { to: 'igParams{url}', value: '"$2"' }
+      - assign: { to: 'igParams{target}', value: '"$3"' }
       - assign:
           to: 'igTpl'
           value: >-
-            '{"ig_url":"${url}", "target":"${target}"}'
+            '{"ig_url":"${url}", "target":"<#if target?has_content>${target}<#else>fhir</#if>"}'
       - process:
           handler: 'TemplateProcessor'
           operation: 'process'
@@ -28,45 +36,116 @@ steps:
             syntax: '"freemarker"'
             template: '$igTpl'
             parameters: '$igParams'
-      - assign:
-          to: 'igHeaders{Content-Type}'
-          value: '"application/json"'
-      - assign:
-          to: 'igHeaders{Accept}'
-          value: '"application/json"'
+      - assign: { to: 'igHeaders{Content-Type}', value: '"application/json"' }
+      - assign: { to: 'igHeaders{Accept}', value: '"application/json"' }
       - send:
           id: 'lastRequest'
-          desc: 'Upload IG'
+          desc: 'Upload IG $2'
           handler: 'HttpMessagingV2'
           from: '$1'
-          to: '$4'
+          to: '$target'
           inputs:
-            uri: 'concat($$4Base, "/upload_ig")'
+            uri: 'concat($targetBase, "/upload_ig")'
             method: '"POST"'
             headers: '$igHeaders'
             body: '$igBody'
+      - verify:
+          handler: 'NumberValidator'
+          desc: 'IG $2 uploaded (HTTP 200)'
+          inputs: { actualnumber: '$lastRequest{response}{status}', expectednumber: '"200"' }
 
-  # Validate a resource against a profile on an actor (FHIR $validate)
-  - match: '^([A-Za-z][A-Za-z0-9_]*) validates "([^"]+)" against "([^"]+)" on ([A-Za-z][A-Za-z0-9_]*)$'
+  # FHIR $validate on the helper's own FHIR endpoint.
+  - text: '{actor} validates {ref} against {canonical} on {actor:smart-helper}'
+    doc: Run FHIR $validate against a profile on the helper's FHIR backend.
     actions:
-      - assign:
-          to: 'valHeaders{Content-Type}'
-          value: '"application/fhir+json"'
-      - assign:
-          to: 'valHeaders{Accept}'
-          value: '"application/fhir+json"'
-      - assign:
-          to: 'valParams{profile}'
-          value: '"$3"'
+      - assign: { to: 'valHeaders{Content-Type}', value: '"application/fhir+json"' }
+      - assign: { to: 'valHeaders{Accept}', value: '"application/fhir+json"' }
+      - assign: { to: 'valParams{profile}', value: '"$3"' }
       - send:
           id: 'lastRequest'
-          desc: 'FHIR $validate'
+          desc: 'FHIR $validate $$2 against $3'
           handler: 'HttpMessagingV2'
           from: '$1'
-          to: '$4'
+          to: '$target'
           inputs:
-            uri: 'concat($$4Base, "/Bundle/$validate")'
+            uri: 'concat($targetBase, "/Bundle/$validate")'
             method: '"POST"'
             headers: '$valHeaders'
             parameters: '$valParams'
-            body: '$$2'
+            body: '$2'
+      - verify:
+          handler: 'NumberValidator'
+          desc: '$validate answered (HTTP 200)'
+          inputs: { actualnumber: '$lastRequest{response}{status}', expectednumber: '"200"' }
+
+  # The helper's /validate proxy: {resource, profile_url, host}, delegating
+  # to a FHIR backend named by another actor. The resource is serialised by
+  # the serializeJsonObject scriptlet because a pointer-extracted object is a
+  # Map to Freemarker, and Map.toString is not JSON.
+  - text: '{actor} validates {ref} against {canonical} on {actor:smart-helper} targeting {actor}'
+    doc: Validate through the helper's proxy against the FHIR server named last.
+    actions:
+      - assign: { to: 'shValidateHeaders{Content-Type}', value: '"application/json"' }
+      - assign: { to: 'shValidateHeaders{Accept}', value: '"application/json"' }
+      - call:
+          path: 'scriptlets/serializeJsonObject.xml'
+          output: 'serializedResource'
+          inputs:
+            input: '$2'
+      - assign: { to: 'shValidateTplParams{resourceJson}', value: '$serializedResource{jsonString}' }
+      - assign: { to: 'shValidateTplParams{profile}', value: '"$3"' }
+      - assign: { to: 'shValidateTplParams{host}', value: '$$5Base' }
+      - process:
+          handler: 'TemplateProcessor'
+          operation: 'process'
+          output: 'shValidateBody'
+          inputs:
+            syntax: '"freemarker"'
+            template: "'{\"resource\":${resourceJson},\"profile_url\":\"${profile}\",\"host\":\"${host}\"}'"
+            parameters: '$shValidateTplParams'
+      - send:
+          id: 'lastRequest'
+          desc: 'SMART Helper /validate $$2 against $3'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
+          inputs:
+            uri: 'concat($targetBase, "/validate")'
+            method: '"POST"'
+            headers: '$shValidateHeaders'
+            body: '$shValidateBody'
+      - verify:
+          handler: 'NumberValidator'
+          desc: '/validate answered (HTTP 200)'
+          inputs: { actualnumber: '$lastRequest{response}{status}', expectednumber: '"200"' }
+
+  - text: '{actor} transforms {ref} with map {canonical} on {actor:smart-helper} as {var}'
+    doc: Run a StructureMap through the helper's /transform endpoint.
+    output: { type: 'fhir:Resource' }
+    actions:
+      - assign: { to: 'shTransformHeaders{Content-Type}', value: '"application/fhir+json"' }
+      - assign: { to: 'shTransformHeaders{Accept}', value: '"application/json"' }
+      - assign: { to: 'shTransformQuery{source}', value: '"$3"' }
+      - call:
+          path: 'scriptlets/serializeJsonObject.xml'
+          output: 'serializedObj'
+          inputs:
+            input: '$2'
+      - assign: { to: 'shTransformBody', value: '$serializedObj{jsonString}' }
+      - send:
+          id: 'lastRequest'
+          desc: 'SMART Helper /transform with $3'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
+          inputs:
+            uri: 'concat($targetBase, "/transform")'
+            method: '"POST"'
+            headers: '$shTransformHeaders'
+            parameters: '$shTransformQuery'
+            body: '$shTransformBody'
+      - verify:
+          handler: 'NumberValidator'
+          desc: 'Transform answered (HTTP 200)'
+          inputs: { actualnumber: '$lastRequest{response}{status}', expectednumber: '"200"' }
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: '$5', inputs: { content: '$lastRequest{response}{body}', pointer: '"/result"' } }

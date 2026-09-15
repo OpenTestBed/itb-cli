@@ -1,6 +1,6 @@
 {
   "name": "@opentestbed/otb-gherkin",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Gherkin -> GITB TDL compiler: the FHIR Gherkin dialect, its parser and its XML generator",
   "license": "BSD-3-Clause",
   "type": "module",
@@ -12,6 +12,7 @@
       "default": "./dist/index.js"
     },
     "./lang/en.yml": "./lang/en.yml",
+    "./lang/en-1.yml": "./lang/en-1.yml",
     "./node": {
       "types": "./dist/node.d.ts",
       "default": "./dist/node.js"

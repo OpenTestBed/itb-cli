@@ -3,6 +3,7 @@
     "fhir-validator",
     "hcert-decoder",
     "smart-helper",
-    "tng-certificate"
+    "tng-certificate",
+    "archimate"
   ]
 }

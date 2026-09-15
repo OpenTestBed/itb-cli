@@ -5,15 +5,16 @@
   <metadata>
     <gitb:name>FHIRPath expression evaluation and assertions</gitb:name>
     <gitb:version>1.0</gitb:version>
-    <gitb:description></gitb:description>
+    <gitb:description>A generated resource is a FHIR resource, so FHIRPath can be evaluated on it directly with `at &quot;…&quot;`; the same expressions bind values with `extract`.</gitb:description>
   </metadata>
 
   <actors>
     <gitb:actor id="Client">
       <gitb:name>Client</gitb:name>
     </gitb:actor>
-    <gitb:actor id="FHIRServer">
-      <gitb:name>FHIRServer</gitb:name>
+    <gitb:actor id="FHIRValidator">
+      <gitb:name>FHIRValidator</gitb:name>
+      <gitb:desc>Endpoint: http://fhir-validator:8081</gitb:desc>
     </gitb:actor>
   </actors>
 

@@ -36,6 +36,11 @@ const LANG_EN = fs.readFileSync(
   fileURLToPath(new URL('../lang/en.yml', import.meta.resolve('@opentestbed/otb-gherkin'))),
   'utf8',
 );
+// The 1.x language, kept for feature files tagged `@lang:itb-core-en@^1`.
+const LANG_EN_1 = fs.readFileSync(
+  fileURLToPath(new URL('../lang/en-1.yml', import.meta.resolve('@opentestbed/otb-gherkin'))),
+  'utf8',
+);
 
 /**
  * Where components/ is read from, in precedence order:
@@ -91,7 +96,7 @@ function ensureAssets() {
   // language alongside its snapshots precisely so a mismatch means the compiler
   // changed, and silently overriding it with the package copy would defeat that.
   const rootLang = path.join(root, 'lang', 'en.yml');
-  const assets = fs.existsSync(rootLang) ? {} : { 'lang/en.yml': LANG_EN };
+  const assets = fs.existsSync(rootLang) ? {} : { 'lang/en.yml': LANG_EN, 'lang/en-1.yml': LANG_EN_1 };
 
   setCatalogSource(createNodeSource(root, {
     components: (process.env.ITB_COMPONENTS ?? '').split(',').map(s => s.trim()).filter(Boolean),

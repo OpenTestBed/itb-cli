@@ -27,21 +27,21 @@
     <receive id="lastReceived" desc="Wait for message" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="MedicationOverviewResponder">
       <input name="timeout">&quot;300&quot;</input>
     </receive>
-    <verify handler="StringValidator" desc="Equals">
+    <verify handler="StringValidator" desc="$received.method is GET">
       <input name="actualstring">$lastReceived{method}</input>
       <input name="expectedstring">&quot;GET&quot;</input>
     </verify>
-    <verify handler="StringValidator" desc="Contains">
+    <verify handler="StringValidator" desc="$received.path contains /MedicationStatement">
       <input name="actualstring">$lastReceived{path}</input>
       <input name="expectedstring">&quot;/MedicationStatement&quot;</input>
       <input name="matchType">&quot;contains&quot;</input>
     </verify>
-    <verify handler="StringValidator" desc="Contains">
+    <verify handler="StringValidator" desc="$received.path contains patient=">
       <input name="actualstring">$lastReceived{path}</input>
       <input name="expectedstring">&quot;patient=&quot;</input>
       <input name="matchType">&quot;contains&quot;</input>
     </verify>
-    <verify handler="StringValidator" desc="Contains">
+    <verify handler="StringValidator" desc="$received.headers.Accept contains fhir+json">
       <input name="actualstring">$lastReceived{headers}{Accept}</input>
       <input name="expectedstring">&quot;fhir+json&quot;</input>
       <input name="matchType">&quot;contains&quot;</input>
@@ -52,21 +52,21 @@
     <receive id="lastReceived" desc="Wait for message" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="MedicationOverviewResponder">
       <input name="timeout">&quot;300&quot;</input>
     </receive>
-    <verify handler="StringValidator" desc="Equals">
+    <verify handler="StringValidator" desc="$received.method is GET">
       <input name="actualstring">$lastReceived{method}</input>
       <input name="expectedstring">&quot;GET&quot;</input>
     </verify>
-    <verify handler="StringValidator" desc="Contains">
+    <verify handler="StringValidator" desc="$received.path contains /MedicationStatement">
       <input name="actualstring">$lastReceived{path}</input>
       <input name="expectedstring">&quot;/MedicationStatement&quot;</input>
       <input name="matchType">&quot;contains&quot;</input>
     </verify>
-    <verify handler="StringValidator" desc="Contains">
+    <verify handler="StringValidator" desc="$received.path contains patient=">
       <input name="actualstring">$lastReceived{path}</input>
       <input name="expectedstring">&quot;patient=&quot;</input>
       <input name="matchType">&quot;contains&quot;</input>
     </verify>
-    <verify handler="StringValidator" desc="Contains">
+    <verify handler="StringValidator" desc="$received.path contains status=">
       <input name="actualstring">$lastReceived{path}</input>
       <input name="expectedstring">&quot;status=&quot;</input>
       <input name="matchType">&quot;contains&quot;</input>
@@ -77,21 +77,21 @@
     <receive id="lastReceived" desc="Wait for message" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="MedicationOverviewResponder">
       <input name="timeout">&quot;300&quot;</input>
     </receive>
-    <verify handler="StringValidator" desc="Equals">
+    <verify handler="StringValidator" desc="$received.method is GET">
       <input name="actualstring">$lastReceived{method}</input>
       <input name="expectedstring">&quot;GET&quot;</input>
     </verify>
-    <verify handler="StringValidator" desc="Contains">
+    <verify handler="StringValidator" desc="$received.path contains /MedicationStatement">
       <input name="actualstring">$lastReceived{path}</input>
       <input name="expectedstring">&quot;/MedicationStatement&quot;</input>
       <input name="matchType">&quot;contains&quot;</input>
     </verify>
-    <verify handler="StringValidator" desc="Contains">
+    <verify handler="StringValidator" desc="$received.path contains patient=">
       <input name="actualstring">$lastReceived{path}</input>
       <input name="expectedstring">&quot;patient=&quot;</input>
       <input name="matchType">&quot;contains&quot;</input>
     </verify>
-    <verify handler="StringValidator" desc="Contains">
+    <verify handler="StringValidator" desc="$received.path contains _lastUpdated=">
       <input name="actualstring">$lastReceived{path}</input>
       <input name="expectedstring">&quot;_lastUpdated=&quot;</input>
       <input name="matchType">&quot;contains&quot;</input>

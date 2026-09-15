@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite id="ihe-mhd-document-responder-ch-mhd-1-nominal-update"
+           xmlns="http://www.gitb.com/tdl/v1/"
+           xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>IHE MHD Document Responder — CH:MHD-1 nominal update</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>CH:MHD-1 permits one change to an existing DocumentReference: the description. These are the cases that must SUCCEED — within a community and across communities — as the counterpart to the rejection cases in mhd-immutable-metadata.feature.</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="DocumentResponder">
+      <gitb:name>DocumentResponder</gitb:name>
+      <gitb:desc>Endpoint: https://ehealthsuisse.ihe-europe.net/fhir | Definition: https://profiles.ihe.net/ITI/MHD/StructureDefinition/IHE.MHD.DocumentResponder</gitb:desc>
+    </gitb:actor>
+    <gitb:actor id="DocumentSource">
+      <gitb:name>DocumentSource</gitb:name>
+      <gitb:desc>Definition: https://profiles.ihe.net/ITI/MHD/StructureDefinition/IHE.MHD.DocumentSource</gitb:desc>
+    </gitb:actor>
+    <gitb:actor id="AuthServer">
+      <gitb:name>AuthServer</gitb:name>
+      <gitb:desc>Endpoint: https://ehealthsuisse.ihe-europe.net/auth</gitb:desc>
+    </gitb:actor>
+  </actors>
+
+  <testcase id="mhd-nom-001-description-is-updated-and-the-update-is-idempotent"/>
+  <testcase id="mhd-nom-002-cross-community-update-is-accepted"/>
+
+</testsuite>

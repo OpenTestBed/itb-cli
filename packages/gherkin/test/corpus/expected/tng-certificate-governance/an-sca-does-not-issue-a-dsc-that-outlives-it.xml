@@ -17,14 +17,14 @@
     <var name="tngCountry" type="string"/>
     <var name="inspectBody" type="string"/>
     <var name="tngAll" type="string"/>
-    <var name="certFacts" type="string"/>
+    <var name="cert" type="string"/>
     <var name="factGroup" type="string"/>
     <var name="factFilename" type="string"/>
     <var name="isPlaced" type="string"/>
     <var name="dscSelBody" type="string"/>
-    <var name="dscFacts" type="string"/>
-    <var name="dscNotAfter" type="string"/>
-    <var name="scaNotAfter" type="string"/>
+    <var name="dsc" type="string"/>
+    <var name="issuedNotAfter" type="string"/>
+    <var name="issuerNotAfter" type="string"/>
     <var name="nestingOk" type="string"/>
     <var name="lastRequest" type="map"/>
     <var name="TNGValidatorBase" type="string"/>
@@ -33,6 +33,7 @@
     <var name="placedParams" type="map"/>
     <var name="dscSelParams" type="map"/>
     <var name="nestParams" type="map"/>
+    <var name="sca" type="string"/>
   </variables>
 
   <steps stopOnError="true">
@@ -46,7 +47,7 @@
       <input name="template">'{&quot;layout&quot;:&quot;participant&quot;,&quot;country&quot;:&quot;${country}&quot;}'</input>
       <input name="parameters">$inspectTplParams</input>
     </process>
-    <send id="lastRequest" desc="Inspect the participant material" handler="HttpMessagingV2" from="Participant">
+    <send id="lastRequest" desc="Inspect the participant material" handler="HttpMessagingV2" from="Participant" to="TNGValidator">
       <input name="uri">concat($TNGValidatorBase, &quot;/tng/api/inspect&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$tngHeaders</input>
@@ -60,16 +61,16 @@
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/certificates&quot;</input>
     </process>
-    <process handler="JsonPointerProcessor" operation="process" output="certFacts">
+    <process handler="JsonPointerProcessor" operation="process" output="cert">
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/certificates/0&quot;</input>
     </process>
     <process handler="JsonPointerProcessor" operation="process" output="factGroup">
-      <input name="content">$certFacts</input>
+      <input name="content">$cert</input>
       <input name="pointer">&quot;/group&quot;</input>
     </process>
     <process handler="JsonPointerProcessor" operation="process" output="factFilename">
-      <input name="content">$certFacts</input>
+      <input name="content">$cert</input>
       <input name="pointer">&quot;/filename&quot;</input>
     </process>
     <assign to="placedParams{group}">$factGroup</assign>
@@ -79,40 +80,42 @@
       <input name="template">'${(group?has_content &amp;&amp; filename?has_content)?c}'</input>
       <input name="parameters">$placedParams</input>
     </process>
-    <verify handler="StringValidator" desc="certificate sits at &lt;domain&gt;/&lt;group&gt;/&lt;file&gt; — group and filename are known">
+    <verify handler="StringValidator" desc="$cert sits at &lt;domain&gt;/&lt;group&gt;/&lt;file&gt; — group and filename are known">
       <input name="actualstring">$isPlaced</input>
       <input name="expectedstring">&quot;true&quot;</input>
     </verify>
+    <assign to="tngHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="tngHeaders{Accept}">&quot;application/json&quot;</assign>
     <assign to="dscSelParams{country}">$tngCountry</assign>
     <process handler="TemplateProcessor" operation="process" output="dscSelBody">
       <input name="syntax">&quot;freemarker&quot;</input>
       <input name="template">'{&quot;layout&quot;:&quot;participant&quot;,&quot;country&quot;:&quot;${country}&quot;,&quot;group&quot;:&quot;DSC&quot;}'</input>
       <input name="parameters">$dscSelParams</input>
     </process>
-    <send id="lastRequest" desc="Bind a DSC and its issuing SCA" handler="HttpMessagingV2" from="Participant">
+    <send id="lastRequest" desc="Bind a DSC and its issuing SCA" handler="HttpMessagingV2" from="Participant" to="TNGValidator">
       <input name="uri">concat($TNGValidatorBase, &quot;/tng/api/inspect&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$tngHeaders</input>
       <input name="body">$dscSelBody</input>
     </send>
-    <process handler="JsonPointerProcessor" operation="process" output="dscFacts">
+    <process handler="JsonPointerProcessor" operation="process" output="dsc">
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/certificate&quot;</input>
     </process>
-    <process handler="JsonPointerProcessor" operation="process" output="dscNotAfter">
-      <input name="content">$dscFacts</input>
+    <process handler="JsonPointerProcessor" operation="process" output="issuedNotAfter">
+      <input name="content">$dsc</input>
       <input name="pointer">&quot;/validity/notAfter&quot;</input>
     </process>
-    <process handler="JsonPointerProcessor" operation="process" output="scaNotAfter">
-      <input name="content">$certFacts</input>
+    <process handler="JsonPointerProcessor" operation="process" output="issuerNotAfter">
+      <input name="content">$sca</input>
       <input name="pointer">&quot;/validity/notAfter&quot;</input>
     </process>
-    <log>concat(&quot;DSC notAfter &quot;, $dscNotAfter, &quot; ; SCA notAfter &quot;, $scaNotAfter)</log>
-    <assign to="nestParams{dsc}">$dscNotAfter</assign>
-    <assign to="nestParams{sca}">$scaNotAfter</assign>
+    <log>concat(&quot;dsc notAfter &quot;, $issuedNotAfter, &quot; ; sca notAfter &quot;, $issuerNotAfter)</log>
+    <assign to="nestParams{issued}">$issuedNotAfter</assign>
+    <assign to="nestParams{issuer}">$issuerNotAfter</assign>
     <process handler="TemplateProcessor" operation="process" output="nestingOk">
       <input name="syntax">&quot;freemarker&quot;</input>
-      <input name="template">'${(dsc &lt;= sca)?c}'</input>
+      <input name="template">'${(issued &lt;= issuer)?c}'</input>
       <input name="parameters">$nestParams</input>
     </process>
     <verify handler="StringValidator" desc="an issued certificate does not outlive its issuer">

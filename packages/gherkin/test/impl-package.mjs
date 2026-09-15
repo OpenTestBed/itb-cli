@@ -21,8 +21,17 @@ const PUB = process.env.ITB_ASSET_ROOT ? path.resolve(process.env.ITB_ASSET_ROOT
 // No globalThis patching: the source is injected, which is the whole point
 // of phase 02. If this still passes the pre-move snapshots, the refactor
 // changed nothing observable.
+// The language ships in the package; the corpus root freezes its own copy
+// under lang/ so a snapshot mismatch always means the compiler changed.
+const LANG = {};
+for (const f of ['en.yml', 'en-1.yml']) {
+  if (!fs.existsSync(path.join(PUB, 'lang', f))) {
+    LANG[`lang/${f}`] = fs.readFileSync(new URL(`../lang/${f}`, import.meta.url), 'utf8');
+  }
+}
 setCatalogSource(createNodeSource(PUB, {
   components: (process.env.ITB_COMPONENTS ?? '').split(',').map(x => x.trim()).filter(Boolean),
+  assets: LANG,
 }));
 
 /** Mirror of src/compile.mjs loadExternalScriptlets(). */
@@ -56,7 +65,9 @@ export async function compileFeature(featurePath) {
   const out = gen.generate(parsed);
   return {
     files: out.files,
-    issues: [...(parsed.issues ?? []), ...(out.issues ?? [])],
+    // parsed.errors, not parsed.issues — the old name read an absent field,
+    // so an unmapped step never failed the corpus.
+    issues: [...(parsed.errors ?? []), ...(out.issues ?? [])],
     testcaseName: out.testcaseName,
   };
 }

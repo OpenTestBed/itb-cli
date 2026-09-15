@@ -13,7 +13,7 @@
 # server and the MEOW package version are runtime dependencies that tags
 # do not cover, which is why the MEOW version is pinned inline in the IG
 # URL below rather than floated as `latest`.
-@lang:itb-core-en@^1.2 @dialect:fhir-validator@^1.0
+@lang:itb-core-en@^2 @dialect:fhir-validator@^2
 Feature: IHE MEOW Medication Overview Consumer — client-side conformance
   Tests a MEOW *client* (the Medication Overview Consumer actor), not a QR
   pipeline. The SUT initiates every exchange; ITB plays the Responder and
@@ -71,7 +71,7 @@ Feature: IHE MEOW Medication Overview Consumer — client-side conformance
     # GITB-compatible FHIR validator (validator_cli.jar) — exposes
     # /itb/{igManager,transform,loadResource,fhir,fhirPath}/process.
     # Same actor the RACSEL track features use.
-    And FHIRValidator is infrastructure at "http://fhir-validator:8080"
+    And FHIRValidator is a fhir-validator at "http://fhir-validator:8080"
 
   # ==================================================================
   # 1. QUERY — by patient, then by the optional parameters
@@ -91,16 +91,16 @@ Feature: IHE MEOW Medication Overview Consumer — client-side conformance
     When MedicationOverviewResponder waits for MedicationOverviewConsumer within 300 seconds
 
     # PHARM-11 is a FHIR search — GET, never POST.
-    Then "lastReceived{method}" should be "GET"
+    Then $received.method should be "GET"
     # Query Medication Resources targets MedicationStatement, profiled as
     # MedicationTreatmentLine.
-    And "lastReceived{path}" should contain "/MedicationStatement"
-    And "lastReceived{path}" should contain "patient="
+    And $received.path should contain "/MedicationStatement"
+    And $received.path should contain "patient="
     # The Consumer must ask for FHIR JSON. Some clients use the _format
     # query parameter instead of the Accept header — both are allowed by
     # the Consumer's OpenAPI. Swap this line for a {path} contains
     # "_format=" check if that is what your SUT does.
-    And "lastReceived{headers}{Accept}" should contain "fhir+json"
+    And $received.headers.Accept should contain "fhir+json"
 
     # ------------------------------------------------------------------
     # ROUND 2 — patient + status. Proves the Consumer can narrow a query
@@ -110,11 +110,11 @@ Feature: IHE MEOW Medication Overview Consumer — client-side conformance
     Given MedicationOverviewConsumer is informed "ROUND 2 of 3 — query the same patient again, this time ALSO filtering by status (for example status=active), then wait."
     When MedicationOverviewResponder waits for MedicationOverviewConsumer within 300 seconds
 
-    Then "lastReceived{method}" should be "GET"
-    And "lastReceived{path}" should contain "/MedicationStatement"
+    Then $received.method should be "GET"
+    And $received.path should contain "/MedicationStatement"
     # patient stays mandatory — a status filter never replaces it.
-    And "lastReceived{path}" should contain "patient="
-    And "lastReceived{path}" should contain "status="
+    And $received.path should contain "patient="
+    And $received.path should contain "status="
 
     # ------------------------------------------------------------------
     # ROUND 3 — patient + _lastUpdated, the incremental-sync parameter.
@@ -125,10 +125,10 @@ Feature: IHE MEOW Medication Overview Consumer — client-side conformance
     Given MedicationOverviewConsumer is informed "ROUND 3 of 3 — query the same patient again, this time ALSO filtering by _lastUpdated (an incremental sync since a given instant), then wait."
     When MedicationOverviewResponder waits for MedicationOverviewConsumer within 300 seconds
 
-    Then "lastReceived{method}" should be "GET"
-    And "lastReceived{path}" should contain "/MedicationStatement"
-    And "lastReceived{path}" should contain "patient="
-    And "lastReceived{path}" should contain "_lastUpdated="
+    Then $received.method should be "GET"
+    And $received.path should contain "/MedicationStatement"
+    And $received.path should contain "patient="
+    And $received.path should contain "_lastUpdated="
 
     And MedicationOverviewConsumer is informed "PHARM-11 query conformance passed: the Consumer builds well-formed queries by patient, by status, and by _lastUpdated."
 
@@ -143,17 +143,20 @@ Feature: IHE MEOW Medication Overview Consumer — client-side conformance
   Scenario: tc-meow-client-002 Submitted overview conforms to MedicationOverview
 
     # ------------------------------------------------------------------
-    # 1) Load IHE MEOW from the local package server.
-    #    1.0.0-preview2 — the FIXED Bundle.entry slicing. The official
-    #    1.0.0-preview mis-slices every entry into the Patient slice,
-    #    which is why RACSEL-track3 carries a 10-clause exact-error mask.
-    #    preview2 is why this scenario needs none of that.
-    #    URL form per the package-server resolution contract: the trailing
-    #    /package.tgz is required — format-sniffing loaders need the .tgz
-    #    extension.
+    # 1) Load IHE MEOW 1.0.0-preview, the official IHE publication — the
+    #    only version published. No local package server involved. The URL
+    #    must end in .tgz: the validator sniffs format from the extension,
+    #    and the extensionless packages.fhir.org form makes it parse gzip
+    #    bytes as XML ("Invalid byte 1 of 1-byte UTF-8 sequence").
+    #
+    #    KNOWN: this build mis-slices every Bundle.entry into the Patient
+    #    slice, which is why RACSEL-track3 carries a 10-clause exact-error
+    #    mask. The `conforms to` below is expected to report errors against
+    #    it, and is deliberately left unmasked — the errors come from the
+    #    real published profile, and masking them would hide genuine
+    #    findings alongside the known ones.
     # ------------------------------------------------------------------
-    When MedicationOverviewConsumer loads IG "http://package-server:8000/ihe.pharm.meow/1.0.0-preview2/package.tgz" on FHIRValidator
-    Then "response status" should be "200"
+    When MedicationOverviewConsumer loads IG "https://profiles.ihe.net/PHARM/MEOW/package.tgz" on FHIRValidator
 
     # ------------------------------------------------------------------
     # 2) Wait for the SUT to submit its Medication Overview.
@@ -164,9 +167,9 @@ Feature: IHE MEOW Medication Overview Consumer — client-side conformance
     # ------------------------------------------------------------------
     # 3) Transport-level shape. A submit is a POST carrying FHIR JSON.
     # ------------------------------------------------------------------
-    Then "lastReceived{method}" should be "POST"
-    And "lastReceived{headers}{Content-Type}" should contain "fhir+json"
-    And "lastReceived{body}" should not be empty
+    Then $received.method should be "POST"
+    And $received.headers.Content-Type should contain "fhir+json"
+    And $received.body should not be empty
 
     # ------------------------------------------------------------------
     # 4) Cheap structural gate before the expensive profile validation,
@@ -181,20 +184,20 @@ Feature: IHE MEOW Medication Overview Consumer — client-side conformance
     #    leaves an assertion reading an unassigned variable. FHIRPath's
     #    `on "<var>"` capture is unrestricted, so it does the gating.
     # ------------------------------------------------------------------
-    And evaluate FHIRPath "Bundle.type" on "lastReceived{body}" and expect "document"
+    And $received.body at "Bundle.type" should be "document"
 
     # ------------------------------------------------------------------
     # 5) The conformance assertion proper. Fails if the validator reports
     #    any error-level issue against the profile.
     # ------------------------------------------------------------------
-    And "lastReceived{body}" conforms to "https://profiles.ihe.net/PHARM/MEOW/StructureDefinition/MedicationOverview"
+    And $received.body should conform to "https://profiles.ihe.net/PHARM/MEOW/StructureDefinition/MedicationOverview"
 
     # ------------------------------------------------------------------
     # 6) Content checks the profile alone will not catch — a Bundle can
     #    be structurally valid and still be an empty overview.
     # ------------------------------------------------------------------
-    And evaluate FHIRPath "Bundle.entry.resource.ofType(Composition).count()" on "lastReceived{body}" and expect "1"
-    And evaluate FHIRPath "Bundle.entry.resource.ofType(Patient).exists()" on "lastReceived{body}" and expect "true"
-    And evaluate FHIRPath "Bundle.entry.resource.ofType(MedicationStatement).exists()" on "lastReceived{body}" and expect "true"
+    And $received.body at "Bundle.entry.resource.ofType(Composition).count()" should be 1
+    And $received.body at "Bundle.entry.resource.ofType(Patient).exists()" should be true
+    And $received.body at "Bundle.entry.resource.ofType(MedicationStatement).exists()" should be true
 
     And MedicationOverviewConsumer is informed "Submitted Medication Overview conforms to IHE MEOW MedicationOverview and carries at least one treatment line."

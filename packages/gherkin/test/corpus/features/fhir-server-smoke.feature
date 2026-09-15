@@ -9,7 +9,7 @@ Feature: FHIR server smoke test
 
   Background:
     Given FHIRServer is the system under test at "http://localhost:8080/fhir"
-    And FHIRValidator is infrastructure at "http://fhir-validator:8081"
+    And FHIRValidator is a fhir-validator at "http://fhir-validator:8081"
     And Client is infrastructure
 
   Scenario: server-smoke-001 CapabilityStatement, create, and read round-trip
@@ -17,9 +17,9 @@ Feature: FHIR server smoke test
     # ------------------------------------------------------------------
     # Step 1: Server publishes a CapabilityStatement at /metadata
     # ------------------------------------------------------------------
-    When Client gets "$FHIRServerBase/metadata" as "metadata"
-    Then "response status" should be "200"
-    And "metadata" matches pattern:
+    When Client gets "$FHIRServerBase/metadata" as $metadata
+    Then $response.status should be 200
+    And $metadata should match pattern:
       """
       {"resourceType": "CapabilityStatement"}
       """
@@ -27,14 +27,14 @@ Feature: FHIR server smoke test
     # ------------------------------------------------------------------
     # Step 2: Generate a minimal Patient (FHIRValidator builds it)
     # ------------------------------------------------------------------
-    Given generate required test data as "patient" from profile "http://hl7.org/fhir/StructureDefinition/Patient" with values:
+    Given FHIRServer generates required test data from "http://hl7.org/fhir/StructureDefinition/Patient" as $patient with values:
       | path       | value         |
       | Patient.id | smoke-pat-001 |
 
     # ------------------------------------------------------------------
     # Step 3: Validate the resource locally before sending it to the SUT
     # ------------------------------------------------------------------
-    Then "patient" should be a valid Patient resource
+    Then $patient should be a valid Patient resource
 
     # ------------------------------------------------------------------
     # Step 4: Create the Patient on the server
@@ -43,15 +43,15 @@ Feature: FHIR server smoke test
       """
       $patient
       """
-    Then "response status" should be "201"
+    Then $response.status should be 201
 
     # ------------------------------------------------------------------
     # Step 5: Read the Patient back and verify the shape
     # ------------------------------------------------------------------
-    When Client gets "$FHIRServerBase/Patient/smoke-pat-001" as "fetched"
-    Then "response status" should be "200"
-    And "fetched" matches pattern:
+    When Client gets "$FHIRServerBase/Patient/smoke-pat-001" as $fetched
+    Then $response.status should be 200
+    And $fetched should match pattern:
       """
       {"resourceType": "Patient", "id": "smoke-pat-001"}
       """
-    And assert FHIRPath "Patient.id = 'smoke-pat-001'" on "fetched"
+    And $fetched should satisfy "Patient.id = 'smoke-pat-001'"

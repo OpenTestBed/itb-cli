@@ -16,10 +16,15 @@
 
   <variables>
     <var name="fhirpathBody" type="string"/>
-    <var name="fhirpathResult" type="string"/>
+    <var name="pathValue" type="string"/>
     <var name="invStatus" type="string"/>
     <var name="invCountType" type="string"/>
     <var name="firstBinCode" type="string"/>
+    <var name="mappingsJson" type="string"/>
+    <var name="generateBody" type="string"/>
+    <var name="darkChocolateOrder" type="string"/>
+    <var name="validateBody" type="string"/>
+    <var name="validationErrors" type="string"/>
     <var name="lastRequest" type="map"/>
     <var name="SpenserBase" type="string"/>
     <var name="FHIRValidatorBase" type="string"/>
@@ -29,7 +34,10 @@
     <var name="fhirValidatorHeaders" type="map"/>
     <var name="fhirpathTplParams" type="map"/>
     <var name="inventory" type="string"/>
-    <var name="darkChocolateOrder" type="string"/>
+    <var name="entryTplParams" type="map"/>
+    <var name="closeTplParams" type="map"/>
+    <var name="generateTplParams" type="map"/>
+    <var name="validateTplParams" type="map"/>
   </variables>
 
   <steps stopOnError="true">
@@ -56,18 +64,18 @@
       <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$fhirpathTplParams</input>
     </process>
-    <send id="lastRequest" desc="Evaluate FHIRPath expression" handler="HttpMessagingV2" from="Spenser">
+    <send id="lastRequest" desc="FHIRPath CapabilityStatement.status" handler="HttpMessagingV2" from="Spenser" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPath/process&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
       <input name="body">$fhirpathBody</input>
     </send>
-    <process handler="JsonPointerProcessor" operation="process" output="fhirpathResult">
+    <process handler="JsonPointerProcessor" operation="process" output="pathValue">
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/output/0/value&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="FHIRPath result matches expected value">
-      <input name="actualstring">$fhirpathResult</input>
+    <verify handler="StringValidator" desc="$metadata at CapabilityStatement.status is active">
+      <input name="actualstring">$pathValue</input>
       <input name="expectedstring">&quot;active&quot;</input>
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
@@ -79,18 +87,18 @@
       <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$fhirpathTplParams</input>
     </process>
-    <send id="lastRequest" desc="Evaluate FHIRPath expression" handler="HttpMessagingV2" from="Spenser">
+    <send id="lastRequest" desc="FHIRPath CapabilityStatement.fhirVersion" handler="HttpMessagingV2" from="Spenser" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPath/process&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
       <input name="body">$fhirpathBody</input>
     </send>
-    <process handler="JsonPointerProcessor" operation="process" output="fhirpathResult">
+    <process handler="JsonPointerProcessor" operation="process" output="pathValue">
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/output/0/value&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="FHIRPath result matches expected value">
-      <input name="actualstring">$fhirpathResult</input>
+    <verify handler="StringValidator" desc="$metadata at CapabilityStatement.fhirVersion is 5.0.0">
+      <input name="actualstring">$pathValue</input>
       <input name="expectedstring">&quot;5.0.0&quot;</input>
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
@@ -102,18 +110,18 @@
       <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$fhirpathTplParams</input>
     </process>
-    <send id="lastRequest" desc="Evaluate FHIRPath expression" handler="HttpMessagingV2" from="Spenser">
+    <send id="lastRequest" desc="FHIRPath CapabilityStatement.publisher" handler="HttpMessagingV2" from="Spenser" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPath/process&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
       <input name="body">$fhirpathBody</input>
     </send>
-    <process handler="JsonPointerProcessor" operation="process" output="fhirpathResult">
+    <process handler="JsonPointerProcessor" operation="process" output="pathValue">
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/output/0/value&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="FHIRPath result matches expected value">
-      <input name="actualstring">$fhirpathResult</input>
+    <verify handler="StringValidator" desc="$metadata at CapabilityStatement.publisher is Spenser">
+      <input name="actualstring">$pathValue</input>
       <input name="expectedstring">&quot;Spenser&quot;</input>
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
@@ -125,18 +133,18 @@
       <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$fhirpathTplParams</input>
     </process>
-    <send id="lastRequest" desc="Evaluate FHIRPath expression" handler="HttpMessagingV2" from="Spenser">
+    <send id="lastRequest" desc="FHIRPath CapabilityStatement.rest.resource.where(type='MedicationRequest').exists()" handler="HttpMessagingV2" from="Spenser" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPath/process&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
       <input name="body">$fhirpathBody</input>
     </send>
-    <process handler="JsonPointerProcessor" operation="process" output="fhirpathResult">
+    <process handler="JsonPointerProcessor" operation="process" output="pathValue">
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/output/0/value&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="FHIRPath result matches expected value">
-      <input name="actualstring">$fhirpathResult</input>
+    <verify handler="StringValidator" desc="$metadata at CapabilityStatement.rest.resource.where(type='MedicationRequest').exists() is true">
+      <input name="actualstring">$pathValue</input>
       <input name="expectedstring">&quot;true&quot;</input>
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
@@ -148,18 +156,18 @@
       <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$fhirpathTplParams</input>
     </process>
-    <send id="lastRequest" desc="Evaluate FHIRPath expression" handler="HttpMessagingV2" from="Spenser">
+    <send id="lastRequest" desc="FHIRPath CapabilityStatement.rest.resource.where(type='InventoryReport').exists()" handler="HttpMessagingV2" from="Spenser" to="FHIRValidator">
       <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPath/process&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$fhirValidatorHeaders</input>
       <input name="body">$fhirpathBody</input>
     </send>
-    <process handler="JsonPointerProcessor" operation="process" output="fhirpathResult">
+    <process handler="JsonPointerProcessor" operation="process" output="pathValue">
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/output/0/value&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="FHIRPath result matches expected value">
-      <input name="actualstring">$fhirpathResult</input>
+    <verify handler="StringValidator" desc="$metadata at CapabilityStatement.rest.resource.where(type='InventoryReport').exists() is true">
+      <input name="actualstring">$pathValue</input>
       <input name="expectedstring">&quot;true&quot;</input>
     </verify>
     <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
@@ -178,7 +186,7 @@
       <input name="content">$inventory</input>
       <input name="pointer">&quot;/status&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="Equals">
+    <verify handler="StringValidator" desc="$invStatus is current">
       <input name="actualstring">$invStatus</input>
       <input name="expectedstring">&quot;current&quot;</input>
     </verify>
@@ -186,7 +194,7 @@
       <input name="content">$inventory</input>
       <input name="pointer">&quot;/countType&quot;</input>
     </process>
-    <verify handler="StringValidator" desc="Equals">
+    <verify handler="StringValidator" desc="$invCountType is snapshot">
       <input name="actualstring">$invCountType</input>
       <input name="expectedstring">&quot;snapshot&quot;</input>
     </verify>
@@ -194,21 +202,108 @@
       <input name="content">$inventory</input>
       <input name="pointer">&quot;/inventoryListing/0/item/0/item/coding/0/code&quot;</input>
     </process>
-    <verify handler="ExpressionValidator" desc="Not empty">
+    <verify handler="ExpressionValidator" desc="$firstBinCode is not empty">
       <input name="expression">string-length($firstBinCode) &gt; 0</input>
     </verify>
-    <assign to="darkChocolateOrder">'{
-      &quot;resourceType&quot;: &quot;MedicationRequest&quot;,
-      &quot;id&quot;: &quot;smoke-001&quot;,
-      &quot;status&quot;: &quot;active&quot;,
-      &quot;intent&quot;: &quot;instance-order&quot;,
-      &quot;medicationCodeableConcept&quot;: {
-        &quot;coding&quot;: [
-          { &quot;code&quot;: &quot;chocolate-dark&quot; }
-        ]
-      },
-      &quot;subject&quot;: { &quot;reference&quot;: &quot;Patient/smoke-001&quot; }
-    }'</assign>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="mappingsJson">&quot;[&quot;</assign>
+    <assign to="entryTplParams{path}">&quot;MedicationRequest.id&quot;</assign>
+    <assign to="entryTplParams{value}">&quot;smoke-001&quot;</assign>
+    <assign to="entryTplParams{system}">&quot;&quot;</assign>
+    <assign to="entryTplParams{code}">&quot;&quot;</assign>
+    <assign to="entryTplParams{accum}">$mappingsJson</assign>
+    <process handler="TemplateProcessor" operation="process" output="mappingsJson">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'${accum}&lt;#if accum?ends_with(&quot;[&quot;)&gt;&lt;#else&gt;,&lt;/#if&gt;{&quot;path&quot;:&quot;${path}&quot;,&lt;#if value?has_content&gt;&quot;value&quot;:&quot;${value}&quot;&lt;#else&gt;&quot;parts&quot;:[{&quot;name&quot;:&quot;system&quot;,&quot;value&quot;:&quot;${system}&quot;},{&quot;name&quot;:&quot;code&quot;,&quot;value&quot;:&quot;${code}&quot;}]&lt;/#if&gt;}'</input>
+      <input name="parameters">$entryTplParams</input>
+    </process>
+    <assign to="entryTplParams{path}">&quot;MedicationRequest.status&quot;</assign>
+    <assign to="entryTplParams{value}">&quot;active&quot;</assign>
+    <assign to="entryTplParams{system}">&quot;&quot;</assign>
+    <assign to="entryTplParams{code}">&quot;&quot;</assign>
+    <assign to="entryTplParams{accum}">$mappingsJson</assign>
+    <process handler="TemplateProcessor" operation="process" output="mappingsJson">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'${accum}&lt;#if accum?ends_with(&quot;[&quot;)&gt;&lt;#else&gt;,&lt;/#if&gt;{&quot;path&quot;:&quot;${path}&quot;,&lt;#if value?has_content&gt;&quot;value&quot;:&quot;${value}&quot;&lt;#else&gt;&quot;parts&quot;:[{&quot;name&quot;:&quot;system&quot;,&quot;value&quot;:&quot;${system}&quot;},{&quot;name&quot;:&quot;code&quot;,&quot;value&quot;:&quot;${code}&quot;}]&lt;/#if&gt;}'</input>
+      <input name="parameters">$entryTplParams</input>
+    </process>
+    <assign to="entryTplParams{path}">&quot;MedicationRequest.intent&quot;</assign>
+    <assign to="entryTplParams{value}">&quot;instance-order&quot;</assign>
+    <assign to="entryTplParams{system}">&quot;&quot;</assign>
+    <assign to="entryTplParams{code}">&quot;&quot;</assign>
+    <assign to="entryTplParams{accum}">$mappingsJson</assign>
+    <process handler="TemplateProcessor" operation="process" output="mappingsJson">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'${accum}&lt;#if accum?ends_with(&quot;[&quot;)&gt;&lt;#else&gt;,&lt;/#if&gt;{&quot;path&quot;:&quot;${path}&quot;,&lt;#if value?has_content&gt;&quot;value&quot;:&quot;${value}&quot;&lt;#else&gt;&quot;parts&quot;:[{&quot;name&quot;:&quot;system&quot;,&quot;value&quot;:&quot;${system}&quot;},{&quot;name&quot;:&quot;code&quot;,&quot;value&quot;:&quot;${code}&quot;}]&lt;/#if&gt;}'</input>
+      <input name="parameters">$entryTplParams</input>
+    </process>
+    <assign to="entryTplParams{path}">&quot;MedicationRequest.subject.reference&quot;</assign>
+    <assign to="entryTplParams{value}">&quot;Patient/smoke-001&quot;</assign>
+    <assign to="entryTplParams{system}">&quot;&quot;</assign>
+    <assign to="entryTplParams{code}">&quot;&quot;</assign>
+    <assign to="entryTplParams{accum}">$mappingsJson</assign>
+    <process handler="TemplateProcessor" operation="process" output="mappingsJson">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'${accum}&lt;#if accum?ends_with(&quot;[&quot;)&gt;&lt;#else&gt;,&lt;/#if&gt;{&quot;path&quot;:&quot;${path}&quot;,&lt;#if value?has_content&gt;&quot;value&quot;:&quot;${value}&quot;&lt;#else&gt;&quot;parts&quot;:[{&quot;name&quot;:&quot;system&quot;,&quot;value&quot;:&quot;${system}&quot;},{&quot;name&quot;:&quot;code&quot;,&quot;value&quot;:&quot;${code}&quot;}]&lt;/#if&gt;}'</input>
+      <input name="parameters">$entryTplParams</input>
+    </process>
+    <assign to="entryTplParams{path}">&quot;MedicationRequest.medication.concept.coding&quot;</assign>
+    <assign to="entryTplParams{value}">&quot;&quot;</assign>
+    <assign to="entryTplParams{system}">&quot;&quot;</assign>
+    <assign to="entryTplParams{code}">&quot;chocolate-dark&quot;</assign>
+    <assign to="entryTplParams{accum}">$mappingsJson</assign>
+    <process handler="TemplateProcessor" operation="process" output="mappingsJson">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'${accum}&lt;#if accum?ends_with(&quot;[&quot;)&gt;&lt;#else&gt;,&lt;/#if&gt;{&quot;path&quot;:&quot;${path}&quot;,&lt;#if value?has_content&gt;&quot;value&quot;:&quot;${value}&quot;&lt;#else&gt;&quot;parts&quot;:[{&quot;name&quot;:&quot;system&quot;,&quot;value&quot;:&quot;${system}&quot;},{&quot;name&quot;:&quot;code&quot;,&quot;value&quot;:&quot;${code}&quot;}]&lt;/#if&gt;}'</input>
+      <input name="parameters">$entryTplParams</input>
+    </process>
+    <assign to="closeTplParams{accum}">$mappingsJson</assign>
+    <process handler="TemplateProcessor" operation="process" output="mappingsJson">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'${accum}]'</input>
+      <input name="parameters">$closeTplParams</input>
+    </process>
+    <assign to="generateTplParams{profile}">&quot;http://hl7.org/fhir/StructureDefinition/MedicationRequest&quot;</assign>
+    <assign to="generateTplParams{mappings}">$mappingsJson</assign>
+    <process handler="TemplateProcessor" operation="process" output="generateBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;generate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;profile&quot;, &quot;value&quot;: &quot;${profile}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;requiredOnly&quot;, &quot;value&quot;: &quot;true&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;mappings&quot;, &quot;value&quot;: &quot;${mappings?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$generateTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Generate required-only test data with values" handler="HttpMessagingV2" from="Spenser" to="FHIRValidator">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/testdata/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$generateBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="darkChocolateOrder">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="validateTplParams{resource}">$darkChocolateOrder</assign>
+    <assign to="validateTplParams{resourceType}">&quot;MedicationRequest&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="validateBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;profiles&quot;, &quot;value&quot;: &quot;http://hl7.org/fhir/StructureDefinition/${resourceType}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$validateTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Validate against base FHIR profile for MedicationRequest" handler="HttpMessagingV2" from="Spenser" to="FHIRValidator">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhir/validate&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$validateBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="validationErrors">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/report/context/0/value&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="$darkChocolateOrder is a valid MedicationRequest resource">
+      <input name="actualstring">$validationErrors</input>
+      <input name="expectedstring">&quot;0&quot;</input>
+    </verify>
     <assign to="jsonHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
     <send id="lastRequest" desc="POST /MedicationRequest" handler="HttpMessagingV2" from="Client" to="Spenser">

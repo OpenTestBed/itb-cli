@@ -11,7 +11,7 @@
   <actors>
     <gitb:actor id="MedicationOverviewResponder">
       <gitb:name>MedicationOverviewResponder</gitb:name>
-      <gitb:desc>Endpoint: http://meow-responder:8080/fhir | Definition: https://profiles.ihe.net/PHARM/MEOW/CapabilityStatement/MedicationOverviewResponder</gitb:desc>
+      <gitb:desc>Endpoint: https://hapi.fhir.org/baseR4 | Definition: https://profiles.ihe.net/PHARM/MEOW/CapabilityStatement/MedicationOverviewResponder</gitb:desc>
     </gitb:actor>
     <gitb:actor id="MedicationOverviewConsumer">
       <gitb:name>MedicationOverviewConsumer</gitb:name>

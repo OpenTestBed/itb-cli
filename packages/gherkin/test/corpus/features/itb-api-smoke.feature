@@ -10,7 +10,7 @@ Feature: FHIR Validator ITB REST API smoke test
 
   Background:
     Given Client is the system under test
-    And FHIRValidator is infrastructure at "http://fhir-validator:8081"
+    And FHIRValidator is a fhir-validator at "http://fhir-validator:8081"
 
   Scenario: itb-smoke-001 Generate, validate, load IG, validate against IG, FHIRPath extract and assert
 
@@ -22,10 +22,10 @@ Feature: FHIR Validator ITB REST API smoke test
     # ------------------------------------------------------------------
     # Step 2: Generate resources with required elements only
     # ------------------------------------------------------------------
-    Given generate required test data as "patient" from profile "http://hl7.org/fhir/StructureDefinition/Patient" with values:
+    Given Client generates required test data from "http://hl7.org/fhir/StructureDefinition/Patient" as $patient with values:
       | path       | value          |
       | Patient.id | smoke-test-001 |
-    Given generate required test data as "allergy" from profile "https://www.ehealth.fgov.be/standards/fhir/allergy/StructureDefinition/be-allergyintolerance" with values:
+    Given Client generates required test data from "https://www.ehealth.fgov.be/standards/fhir/allergy/StructureDefinition/be-allergyintolerance" as $allergy with values:
       | path                                     | system                                                            | code    |
       | AllergyIntolerance.code.coding           | http://snomed.info/sct                                            | 1232123 |
       | AllergyIntolerance.clinicalStatus.coding | http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical | active  |
@@ -33,24 +33,24 @@ Feature: FHIR Validator ITB REST API smoke test
     # ------------------------------------------------------------------
     # Step 3: Validate Patient against base spec, allergy against Belgian profile
     # ------------------------------------------------------------------
-    Then "patient" should be a valid Patient resource
-    And validate "allergy" against "https://www.ehealth.fgov.be/standards/fhir/allergy/StructureDefinition/be-allergyintolerance"
-    And the validation should pass
+    Then $patient should be a valid Patient resource
+    And Client validates $allergy against "https://www.ehealth.fgov.be/standards/fhir/allergy/StructureDefinition/be-allergyintolerance"
+    And $validation.errors should be 0
 
     # ------------------------------------------------------------------
     # Step 4: Extract a value with FHIRPath (evaluate)
     # ------------------------------------------------------------------
-    And evaluate FHIRPath "Patient.id" on "patient" as "patientId"
+    And extract "Patient.id" from $patient as $patientId
 
     # ------------------------------------------------------------------
     # Step 5: Assert a FHIRPath expression (evaluate-and-expect)
     # ------------------------------------------------------------------
-    And evaluate FHIRPath "Patient.id.exists()" on "patient" and expect "true"
+    And $patient at "Patient.id.exists()" should be true
 
     # ------------------------------------------------------------------
     # Step 6: Pattern-match the patient against an expected shape (matchetype)
     # ------------------------------------------------------------------
-    And "patient" matches pattern:
+    And $patient should match pattern:
       """
       {"resourceType": "Patient", "id": "$string$"}
       """
@@ -58,9 +58,9 @@ Feature: FHIR Validator ITB REST API smoke test
     # ------------------------------------------------------------------
     # Step 7: Boolean assertion via FHIRPathAssertion (TAR pass/fail)
     # ------------------------------------------------------------------
-    And assert FHIRPath "Patient.id.exists()" on "patient"
+    And $patient should satisfy "Patient.id.exists()"
 
     # ------------------------------------------------------------------
     # Step 8: Summarize the validation outcome (validationResults)
     # ------------------------------------------------------------------
-    And summarize "validationOutcome" as "errCount" "warnCount" "infoCount"
+    And Client summarizes $validationOutcome as $summary

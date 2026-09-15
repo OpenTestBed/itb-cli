@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite id="mhd-stateful-peer-seed-act-verify-against-a-real-server"
+           xmlns="http://www.gitb.com/tdl/v1/"
+           xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>MHD stateful peer — seed, act, verify against a real server</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>Exercises the CH:MHD-1 shape (create a DocumentReference, update only its description, confirm the change landed) against a live FHIR server, to establish that the peer does not have to be purpose-built software.</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="DocumentResponder">
+      <gitb:name>DocumentResponder</gitb:name>
+      <gitb:desc>Endpoint: https://hapi.fhir.org/baseR4 | Definition: https://profiles.ihe.net/ITI/MHD/StructureDefinition/IHE.MHD.DocumentResponder</gitb:desc>
+    </gitb:actor>
+    <gitb:actor id="DocumentSource">
+      <gitb:name>DocumentSource</gitb:name>
+      <gitb:desc>Definition: https://profiles.ihe.net/ITI/MHD/StructureDefinition/IHE.MHD.DocumentSource</gitb:desc>
+    </gitb:actor>
+    <gitb:actor id="FHIRValidator">
+      <gitb:name>FHIRValidator</gitb:name>
+      <gitb:desc>Endpoint: http://fhir-validator:8081</gitb:desc>
+    </gitb:actor>
+  </actors>
+
+  <testcase id="mhd-peer-001-the-description-can-be-updated-and-nothing-else-moves"/>
+
+</testsuite>

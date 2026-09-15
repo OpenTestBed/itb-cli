@@ -1,0 +1,54 @@
+# Test Image Component: ArchiMate / EIRA architecture validation
+#
+# The first dialect written against the generation-2 language contract, and
+# its acceptance test: it adds actor kinds, a value type with its own path
+# language, a conformance handler and two verbs — and needs no change to the
+# core language to do so.
+#
+# SPEC FIRST. No service image exists yet. The HTTP contract below is the
+# GITB validator contract every other validator here already speaks
+# (POST /validate → TAR with hidden context items) plus two small endpoints
+# for models and queries. Build the service to this contract and the dialect
+# runs unchanged.
+#
+#   GET  /archimate/api/models/<name>            → the model (Open Exchange Format XML or JSON)
+#   POST /archimate/api/query   {content, query}  → {output:[{value}]}   an ArchiMate model query
+#   POST /eira/api/validate     GITB TAR          → /report/context/0/value = error count
+id: archimate
+name: ArchiMate / EIRA Validation
+version: "0.1"
+implementsDialect: "^1.0"
+description: >
+  Reads ArchiMate models from a repository, evaluates model queries, and
+  checks alignment with the European Interoperability Reference Architecture
+  (EIRA) through a GITB-contract validator.
+
+docker:
+  image: opentestbed/archimate-validator:local
+  ports:
+    - "8091:8080"
+  environment: []
+
+healthCheck:
+  method: GET
+  path: /healthz
+  expect:
+    status: 200
+
+actors:
+  - id: ModelRepo
+    description: Serves ArchiMate models by name
+  - id: EiraValidator
+    description: GITB validator checking EIRA alignment
+
+services:
+  - handler: EiraValidator
+    path: /eira/api
+  - handler: ArchiMateQuery
+    path: /archimate/api
+
+language:
+  steps: steps.yml
+  version: "1.0.0"
+  base: itb-core-en
+  baseVersion: ">=2 <3"

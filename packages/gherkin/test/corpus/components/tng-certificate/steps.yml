@@ -1,89 +1,54 @@
-# Language extension for the TNG Certificate Governance component
+# TNG Certificate Governance dialect — generation 2
 #
-# An EXTENSION on itb-core-en. It adds the 23 certificate-governance verbs
-# specified in tng-participant-DEV-XXR/tng_certificate_dialect.py and nothing
-# else — actor wiring, variable assignment and generic comparisons stay with
-# core.
+# The 23 certificate-governance checks specified in
+# tng-participant-DEV-XXR/tng_certificate_dialect.py, one to one. Facts come
+# from POST /tng/api/inspect (describe_cert, the module the rule engine also
+# uses), so a step and a rule cannot disagree about a certificate.
 #
-# The semantics are the Python dialect's, one definition to one definition. The
-# WORDING follows the ITB house conventions instead, so it reads like the other
-# dialects here:
+#   kind   tng-validator            "TNGValidator is a tng-validator at …"
+#   type   x509:Certificate         the inspect facts; read with "/…" pointers
 #
-#   action      <Actor> inspects group "TLS" file "TLS" on <Actor2> as "cert"
-#               (cf. `User decodes HC1 on HCertDecoder`), with the endpoint
-#               resolved through $$NBase from the actor named in the step
-#   assertion   "cert" keyUsage "cRLSign" should be "false"
-#               (cf. `"sigValid" should be "true"`)
+#   set $tngCountry to "XXR"                       the participant's ISO-3166 alpha-3
+#   Participant inspects the participant material on TNGValidator as $cert
+#   Participant inspects group "TLS" file "TLS" on TNGValidator as $cert
+#   Participant inspects group "SCA" on TNGValidator as $cert
+#   Participant inspects the TLS end-entity on TNGValidator as $tlsCert
+#   Participant inspects the CA beside it on TNGValidator as $caCert
+#   Participant inspects the DSC issued by $sca on TNGValidator as $dsc
+#   $cert keyUsage "digitalSignature" should be true
+#   $cert at "/keyUsage/digitalSignature" should be true      (same thing, core path form)
 #
-# The loader appends extension steps AFTER core and takes the first match, so
-# every pattern here is anchored and carries tokens between the quoted subject
-# and `should`. Otherwise core's `"x" should be "y"` would claim the line and
-# these steps would be dead code.
-#
-# Consequence: the canonical feature in tng-participant-DEV-XXR keeps the Python
-# dialect's wording; the copy here uses this one. The Python harness cannot run
-# the ITB copy, and vice versa. The scenarios and their meaning are identical.
-#
-# ---------------------------------------------------------------------------
-# HOW THE DIALECT'S SEMANTICS MAP ONTO TDL
-# ---------------------------------------------------------------------------
-# The dialect has four outcomes: PASSED, FAILED, SKIPPED, UNKNOWN. TDL has two
-# — a verify passes or it fails. SKIPPED has no TDL equivalent, and scoring it
-# as PASSED is the one mistake the dialect documentation calls out: it would
-# report that every UPLOAD certificate satisfies every TLS rule.
-#
-# So a guard is implemented as a SELECTOR, not a filter:
-#
-#   Python harness   iterate every certificate; a guard that does not match
-#                    yields SKIPPED for that certificate.
-#   ITB (here)       the guard step ASKS /inspect for the certificates it
-#                    describes. Nothing that fails the guard is ever bound, so
-#                    nothing needs skipping.
-#
-# Unguarded scenarios — the ones that apply to every certificate — iterate with
-# foreach over the certificates[] array instead.
-#
-# ---------------------------------------------------------------------------
-# STATE
-# ---------------------------------------------------------------------------
-#   $tngCountry     participant ISO-3166 alpha-3. Set it in the test case;
-#                   the subject-country step reads it.
-#   $certFacts      facts for the certificate the scenario is bound to
-#   $tngAll         every certificate in the material, for sibling lookups
-#   $caFacts        the sibling CA bound by the "caCert is the CA certificate
-#                   in the same TLS group" step
-#   $dscFacts       the DSC bound by the DSC step
-#
-# Facts come from describe_cert — the same module the rule engine uses — so a
-# step and a rule can never disagree about what a certificate contains.
+# A guard is a SELECTOR, not a filter: the binding step asks /inspect for the
+# certificates it describes, so nothing that fails the guard is ever bound and
+# nothing needs skipping. SKIPPED is never reported as PASSED.
 id: tng-certificate
 name: TNG Certificate Governance Steps
+language: 2
 description: >
-  WHO GDHCN certificate governance verbs. Binding and guard steps select
-  certificates via /tng/api/inspect; assertion steps read the resulting facts
-  with JsonPointerProcessor and verify them.
+  WHO GDHCN certificate governance verbs: key strength, keyUsage,
+  extendedKeyUsage, basicConstraints, chain, subject and validity.
 
-steps:
+kinds: [tng-validator]
+
+types:
+  x509:Certificate:
+    name: X.509 certificate
+
+x-json: &json
+  - assign: { to: 'tngHeaders{Content-Type}', value: '"application/json"' }
+  - assign: { to: 'tngHeaders{Accept}', value: '"application/json"' }
+
+verbs:
   # ==================================================================
   # BINDING AND GUARDS — these select the subject
   # ==================================================================
-
-  # Load every certificate in the participant material, and bind the first as
-  # the default subject. A scenario with a guard rebinds below.
-  - match: '^([A-Za-z][A-Za-z0-9_]*) inspects the participant material on ([A-Za-z][A-Za-z0-9_]*) as "([A-Za-z_][A-Za-z0-9_]*)"$'
+  - text: '{actor} inspects the participant material( on {actor:tng-validator})? as {var}'
+    doc: Inspect every certificate in the participant material; bind the first as the subject.
+    output: { type: 'x509:Certificate' }
     actions:
-      - declareVariable:
-          name: 'tngCountry'
-          varType: 'string'
-      - assign:
-          to: 'tngHeaders{Content-Type}'
-          value: '"application/json"'
-      - assign:
-          to: 'tngHeaders{Accept}'
-          value: '"application/json"'
-      - assign:
-          to: 'inspectTplParams{country}'
-          value: '$tngCountry'
+      - declareVariable: { name: 'tngCountry', varType: 'string' }
+      - *json
+      - assign: { to: 'inspectTplParams{country}', value: '$tngCountry' }
       - process:
           handler: 'TemplateProcessor'
           operation: 'process'
@@ -96,57 +61,29 @@ steps:
           id: 'lastRequest'
           desc: 'Inspect the participant material'
           handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
           inputs:
-            uri: 'concat($$2Base, "/tng/api/inspect")'
+            uri: 'concat($targetBase, "/tng/api/inspect")'
             method: '"POST"'
             headers: '$tngHeaders'
             body: '$inspectBody'
       - verify:
           handler: 'NumberValidator'
           desc: 'inspect returned HTTP 200'
-          inputs:
-            actualnumber: '$lastRequest{response}{status}'
-            expectednumber: '"200"'
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'tngAll'
-          inputs:
-            content: '$lastRequest{response}{body}'
-            pointer: '"/certificates"'
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'certFacts'
-          inputs:
-            content: '$lastRequest{response}{body}'
-            pointer: '"/certificates/0"'
+          inputs: { actualnumber: '$lastRequest{response}{status}', expectednumber: '"200"' }
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'tngAll', inputs: { content: '$lastRequest{response}{body}', pointer: '"/certificates"' } }
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: '$3',     inputs: { content: '$lastRequest{response}{body}', pointer: '"/certificates/0"' } }
 
-  # Every certificate must sit at <domain>/<group>/<file>. inspect_folder only
-  # returns certificates it could place, so a populated group and filename IS
-  # the assertion.
-  - match: '^"([A-Za-z_][A-Za-z0-9_]*)" should be placed at domain, group and filename$'
+  # inspect_folder only returns certificates it could place, so a populated
+  # group and filename IS the assertion.
+  - text: '{ref} should be placed at domain, group and filename'
+    doc: The certificate sits at <domain>/<group>/<file>.
     actions:
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'factGroup'
-          inputs:
-            content: '$certFacts'
-            pointer: '"/group"'
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'factFilename'
-          inputs:
-            content: '$certFacts'
-            pointer: '"/filename"'
-      - assign:
-          to: 'placedParams{group}'
-          value: '$factGroup'
-      - assign:
-          to: 'placedParams{filename}'
-          value: '$factFilename'
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'factGroup',    inputs: { content: '$1', pointer: '"/group"' } }
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'factFilename', inputs: { content: '$1', pointer: '"/filename"' } }
+      - assign: { to: 'placedParams{group}', value: '$factGroup' }
+      - assign: { to: 'placedParams{filename}', value: '$factFilename' }
       - process:
           handler: 'TemplateProcessor'
           operation: 'process'
@@ -157,24 +94,17 @@ steps:
             parameters: '$placedParams'
       - verify:
           handler: 'StringValidator'
-          desc: 'certificate sits at <domain>/<group>/<file> — group and filename are known'
-          inputs:
-            actualstring: '$isPlaced'
-            expectedstring: '"true"'
+          desc: '$$1 sits at <domain>/<group>/<file> — group and filename are known'
+          inputs: { actualstring: '$isPlaced', expectedstring: '"true"' }
 
-  # GUARD, as a selector: bind the certificate in <group> whose filename starts
-  # with <prefix>. Nothing that fails the guard is bound, so nothing is skipped.
-  - match: '^([A-Za-z][A-Za-z0-9_]*) inspects group "([A-Z]+)" file "([A-Za-z0-9_.-]+)" on ([A-Za-z][A-Za-z0-9_]*) as "([A-Za-z_][A-Za-z0-9_]*)"$'
+  - text: '{actor} inspects group {string} file {string}( on {actor:tng-validator})? as {var}'
+    doc: Bind the one certificate in a group whose filename starts with the prefix.
+    output: { type: 'x509:Certificate' }
     actions:
-      - assign:
-          to: 'selectTplParams{country}'
-          value: '$tngCountry'
-      - assign:
-          to: 'selectTplParams{group}'
-          value: '"$2"'
-      - assign:
-          to: 'selectTplParams{filename}'
-          value: '"$3"'
+      - *json
+      - assign: { to: 'selectTplParams{country}', value: '$tngCountry' }
+      - assign: { to: 'selectTplParams{group}', value: '"$2"' }
+      - assign: { to: 'selectTplParams{filename}', value: '"$3"' }
       - process:
           handler: 'TemplateProcessor'
           operation: 'process'
@@ -187,42 +117,28 @@ steps:
           id: 'lastRequest'
           desc: 'Select the certificate this scenario applies to'
           handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
           inputs:
-            uri: 'concat($$4Base, "/tng/api/inspect")'
+            uri: 'concat($targetBase, "/tng/api/inspect")'
             method: '"POST"'
             headers: '$tngHeaders'
             body: '$selectBody'
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'selectCount'
-          inputs:
-            content: '$lastRequest{response}{body}'
-            pointer: '"/count"'
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'selectCount', inputs: { content: '$lastRequest{response}{body}', pointer: '"/count"' } }
       - log: 'concat("guard $2/$3 selected ", $selectCount, " certificate(s)")'
       - verify:
           handler: 'NumberValidator'
           desc: 'exactly one certificate matches this role — the scenario is bound to it'
-          inputs:
-            actualnumber: '$selectCount'
-            expectednumber: '"1"'
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'certFacts'
-          inputs:
-            content: '$lastRequest{response}{body}'
-            pointer: '"/certificate"'
+          inputs: { actualnumber: '$selectCount', expectednumber: '"1"' }
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: '$5', inputs: { content: '$lastRequest{response}{body}', pointer: '"/certificate"' } }
 
-  # GUARD on group alone.
-  - match: '^([A-Za-z][A-Za-z0-9_]*) inspects group "([A-Z]+)" on ([A-Za-z][A-Za-z0-9_]*) as "([A-Za-z_][A-Za-z0-9_]*)"$'
+  - text: '{actor} inspects group {string}( on {actor:tng-validator})? as {var}'
+    doc: Bind the one certificate in a group.
+    output: { type: 'x509:Certificate' }
     actions:
-      - assign:
-          to: 'selectGroupParams{country}'
-          value: '$tngCountry'
-      - assign:
-          to: 'selectGroupParams{group}'
-          value: '"$2"'
+      - *json
+      - assign: { to: 'selectGroupParams{country}', value: '$tngCountry' }
+      - assign: { to: 'selectGroupParams{group}', value: '"$2"' }
       - process:
           handler: 'TemplateProcessor'
           operation: 'process'
@@ -235,38 +151,26 @@ steps:
           id: 'lastRequest'
           desc: 'Select the certificates in this group'
           handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
           inputs:
-            uri: 'concat($$3Base, "/tng/api/inspect")'
+            uri: 'concat($targetBase, "/tng/api/inspect")'
             method: '"POST"'
             headers: '$tngHeaders'
             body: '$selectGroupBody'
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'certFacts'
-          inputs:
-            content: '$lastRequest{response}{body}'
-            pointer: '"/certificate"'
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'factGroup'
-          inputs:
-            content: '$certFacts'
-            pointer: '"/group"'
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: '$4',        inputs: { content: '$lastRequest{response}{body}', pointer: '"/certificate"' } }
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'factGroup', inputs: { content: '$4', pointer: '"/group"' } }
       - verify:
           handler: 'StringValidator'
-          desc: 'the material contains exactly one certificate in this group'
-          inputs:
-            actualstring: '$factGroup'
-            expectedstring: '"$2"'
+          desc: 'the material contains exactly one certificate in group $2'
+          inputs: { actualstring: '$factGroup', expectedstring: '"$2"' }
 
-  # Bind the TLS end-entity: group TLS, filename TLS.pem.
-  - match: '^([A-Za-z][A-Za-z0-9_]*) inspects the TLS end-entity on ([A-Za-z][A-Za-z0-9_]*) as "([A-Za-z_][A-Za-z0-9_]*)"$'
+  - text: '{actor} inspects the TLS end-entity( on {actor:tng-validator})? as {var}'
+    doc: Bind the TLS end-entity (group TLS, file TLS.pem).
+    output: { type: 'x509:Certificate' }
     actions:
-      - assign:
-          to: 'tlsSelParams{country}'
-          value: '$tngCountry'
+      - *json
+      - assign: { to: 'tlsSelParams{country}', value: '$tngCountry' }
       - process:
           handler: 'TemplateProcessor'
           operation: 'process'
@@ -279,25 +183,21 @@ steps:
           id: 'lastRequest'
           desc: 'Bind the TLS end-entity certificate'
           handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
           inputs:
-            uri: 'concat($$2Base, "/tng/api/inspect")'
+            uri: 'concat($targetBase, "/tng/api/inspect")'
             method: '"POST"'
             headers: '$tngHeaders'
             body: '$tlsSelBody'
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'certFacts'
-          inputs:
-            content: '$lastRequest{response}{body}'
-            pointer: '"/certificate"'
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: '$3', inputs: { content: '$lastRequest{response}{body}', pointer: '"/certificate"' } }
 
-  # Bind the sibling CA in the same TLS group.
-  - match: '^([A-Za-z][A-Za-z0-9_]*) inspects the CA beside it on ([A-Za-z][A-Za-z0-9_]*) as "([A-Za-z_][A-Za-z0-9_]*)"$'
+  - text: '{actor} inspects the CA beside it( on {actor:tng-validator})? as {var}'
+    doc: Bind the CA in the same TLS group (file CA.pem).
+    output: { type: 'x509:Certificate' }
     actions:
-      - assign:
-          to: 'caSelParams{country}'
-          value: '$tngCountry'
+      - *json
+      - assign: { to: 'caSelParams{country}', value: '$tngCountry' }
       - process:
           handler: 'TemplateProcessor'
           operation: 'process'
@@ -310,45 +210,27 @@ steps:
           id: 'lastRequest'
           desc: 'Bind the CA certificate beside it'
           handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
           inputs:
-            uri: 'concat($$2Base, "/tng/api/inspect")'
+            uri: 'concat($targetBase, "/tng/api/inspect")'
             method: '"POST"'
             headers: '$tngHeaders'
             body: '$caSelBody'
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'caFacts'
-          inputs:
-            content: '$lastRequest{response}{body}'
-            pointer: '"/certificate"'
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'caSubject'
-          inputs:
-            content: '$caFacts'
-            pointer: '"/subject/rfc4514"'
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: '$3', inputs: { content: '$lastRequest{response}{body}', pointer: '"/certificate"' } }
 
-  # GUARD: applies only when nothing in the TLS group signs the bound leaf.
-  # Bound as a precondition on the issuer/subject comparison below.
-  - match: '^no CA in the TLS group verifies "([A-Za-z_][A-Za-z0-9_]*)"$'
+  - text: 'no CA in the TLS group verifies {ref}'
+    doc: Guard for the rejection case; records the issuer DN for the comparison that follows.
     actions:
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'leafIssuer'
-          inputs:
-            content: '$certFacts'
-            pointer: '"/issuer/rfc4514"'
-      - log: 'concat("leaf issuer DN = ", $leafIssuer, " ; sibling CA subject DN = ", $caSubject)'
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'leafIssuer', inputs: { content: '$1', pointer: '"/issuer/rfc4514"' } }
+      - log: 'concat("leaf issuer DN = ", $leafIssuer)'
 
-  # Bind a DSC issued by the named SCA.
-  - match: '^([A-Za-z][A-Za-z0-9_]*) inspects the DSC issued by "([A-Za-z_][A-Za-z0-9_]*)" on ([A-Za-z][A-Za-z0-9_]*) as "([A-Za-z_][A-Za-z0-9_]*)"$'
+  - text: '{actor} inspects the DSC issued by {ref}( on {actor:tng-validator})? as {var}'
+    doc: Bind a DSC issued by the named SCA.
+    output: { type: 'x509:Certificate' }
     actions:
-      - assign:
-          to: 'dscSelParams{country}'
-          value: '$tngCountry'
+      - *json
+      - assign: { to: 'dscSelParams{country}', value: '$tngCountry' }
       - process:
           handler: 'TemplateProcessor'
           operation: 'process'
@@ -361,55 +243,33 @@ steps:
           id: 'lastRequest'
           desc: 'Bind a DSC and its issuing SCA'
           handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
           inputs:
-            uri: 'concat($$3Base, "/tng/api/inspect")'
+            uri: 'concat($targetBase, "/tng/api/inspect")'
             method: '"POST"'
             headers: '$tngHeaders'
             body: '$dscSelBody'
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'dscFacts'
-          inputs:
-            content: '$lastRequest{response}{body}'
-            pointer: '"/certificate"'
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: '$4', inputs: { content: '$lastRequest{response}{body}', pointer: '"/certificate"' } }
 
   # ==================================================================
   # KEY STRENGTH
   # ==================================================================
-
-  # Table of | algorithm | minBits |. An algorithm absent from the table FAILS:
+  # | algorithm | minBits |. An algorithm absent from the table FAILS:
   # unlisted is unreviewed, not permitted.
-  - match: '^"([A-Za-z_][A-Za-z0-9_]*)" public key should satisfy the minimum size:$'
+  - text: '{ref} public key should satisfy the minimum size:'
+    doc: The key meets the minimum bit length for its algorithm (table | algorithm | minBits |).
     table:
       required: [algorithm, minBits]
     actions:
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'keyAlgorithm'
-          inputs:
-            content: '$certFacts'
-            pointer: '"/publicKey/algorithm"'
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'keyBits'
-          inputs:
-            content: '$certFacts'
-            pointer: '"/publicKey/bits"'
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'keyAlgorithm', inputs: { content: '$1', pointer: '"/publicKey/algorithm"' } }
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'keyBits',      inputs: { content: '$1', pointer: '"/publicKey/bits"' } }
       - foreach:
           from: '$tableRows'
           do:
-            - assign:
-                to: 'minBitsFor{$row.algorithm}'
-                value: '"$row.minBits"'
-      - assign:
-          to: 'requiredBits'
-          value: '$minBitsFor{$keyAlgorithm}'
-      - assign:
-          to: 'listedParams{minBits}'
-          value: '$requiredBits'
+            - assign: { to: 'minBitsFor{$row.algorithm}', value: '"$row.minBits"' }
+      - assign: { to: 'requiredBits', value: '$minBitsFor{$keyAlgorithm}' }
+      - assign: { to: 'listedParams{minBits}', value: '$requiredBits' }
       - process:
           handler: 'TemplateProcessor'
           operation: 'process'
@@ -421,15 +281,9 @@ steps:
       - verify:
           handler: 'StringValidator'
           desc: 'the key algorithm appears in the minimum-size table (absent = unreviewed = fail)'
-          inputs:
-            actualstring: '$algorithmIsListed'
-            expectedstring: '"true"'
-      - assign:
-          to: 'bitsParams{actual}'
-          value: '$keyBits'
-      - assign:
-          to: 'bitsParams{minimum}'
-          value: '$requiredBits'
+          inputs: { actualstring: '$algorithmIsListed', expectedstring: '"true"' }
+      - assign: { to: 'bitsParams{actual}', value: '$keyBits' }
+      - assign: { to: 'bitsParams{minimum}', value: '$requiredBits' }
       - process:
           handler: 'TemplateProcessor'
           operation: 'process'
@@ -442,34 +296,15 @@ steps:
       - verify:
           handler: 'StringValidator'
           desc: 'public key meets the minimum bit length for its algorithm'
-          inputs:
-            actualstring: '$bitsOk'
-            expectedstring: '"true"'
+          inputs: { actualstring: '$bitsOk', expectedstring: '"true"' }
 
-  - match: '^"([A-Za-z_][A-Za-z0-9_]*)" public key algorithm should be one of "([^"]+)"$'
+  - text: '{ref} public key algorithm should be one of {string}'
+    doc: The key algorithm is on the allow-list (entries may name a curve, "EC(P-256)").
     actions:
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'keyAlgorithm'
-          inputs:
-            content: '$certFacts'
-            pointer: '"/publicKey/algorithm"'
-      # The allow-list entry may constrain the curve — "EC(P-256)". Compare the
-      # algorithm against the leading token of each entry.
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'keyCurve'
-          inputs:
-            content: '$certFacts'
-            pointer: '"/publicKey/curve"'
-      - assign:
-          to: 'allowParams{allowed}'
-          value: '"$2"'
-      - assign:
-          to: 'allowParams{algorithm}'
-          value: '$keyAlgorithm'
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'keyAlgorithm', inputs: { content: '$1', pointer: '"/publicKey/algorithm"' } }
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'keyCurve',     inputs: { content: '$1', pointer: '"/publicKey/curve"' } }
+      - assign: { to: 'allowParams{allowed}', value: '"$2"' }
+      - assign: { to: 'allowParams{algorithm}', value: '$keyAlgorithm' }
       - process:
           handler: 'TemplateProcessor'
           operation: 'process'
@@ -485,190 +320,107 @@ steps:
       - verify:
           handler: 'StringValidator'
           desc: 'public key algorithm is on the allow-list "$2"'
-          inputs:
-            actualstring: '$algorithmAllowed'
-            expectedstring: '"true"'
+          inputs: { actualstring: '$algorithmAllowed', expectedstring: '"true"' }
 
   # ==================================================================
   # EXTENSIONS, KEY USAGE, EKU
   # ==================================================================
-
-  - match: '^"([A-Za-z_][A-Za-z0-9_]*)" extension "([0-9.]+)" should be present$'
+  - text: '{ref} extension {string} should be present'
+    doc: The extension with this OID is present.
     actions:
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'extPresent'
-          inputs:
-            content: '$certFacts'
-            pointer: '"/extensionsByOid/$2"'
-      # extensionsByOid maps OID -> boolean, so this is a direct comparison.
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'extPresent', inputs: { content: '$1', pointer: '"/extensionsByOid/$2"' } }
       - verify:
           handler: 'StringValidator'
           desc: 'extension $2 is present'
-          inputs:
-            actualstring: '$extPresent'
-            expectedstring: '"true"'
+          inputs: { actualstring: '$extPresent', expectedstring: '"true"' }
 
-  # keyUsage bit names are camelCase as in RFC 5280.
-  - match: '^"([A-Za-z_][A-Za-z0-9_]*)" keyUsage "([A-Za-z]+)" should be "(true|false)"$'
+  - text: '{ref} keyUsage {string} should be {value}'
+    doc: A keyUsage bit (RFC 5280 camelCase name) is true or false.
     actions:
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'keyUsageBit'
-          inputs:
-            content: '$certFacts'
-            pointer: '"/keyUsage/$2"'
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'keyUsageBit', inputs: { content: '$1', pointer: '"/keyUsage/$2"' } }
       - verify:
           handler: 'StringValidator'
-          desc: 'keyUsage $2 is $3'
-          inputs:
-            actualstring: '$keyUsageBit'
-            expectedstring: '"$3"'
+          desc: 'keyUsage $2 is $3.raw'
+          inputs: { actualstring: '$keyUsageBit', expectedstring: '$3' }
 
-  - match: '^"([A-Za-z_][A-Za-z0-9_]*)" EKU should include "([0-9.]+)"$'
+  - text: '{ref} EKU should include {string}'
+    doc: extendedKeyUsage includes this OID.
     actions:
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'ekuPresent'
-          inputs:
-            content: '$certFacts'
-            pointer: '"/extendedKeyUsageByOid/$2"'
-      # extendedKeyUsageByOid maps OID -> boolean.
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'ekuPresent', inputs: { content: '$1', pointer: '"/extendedKeyUsageByOid/$2"' } }
       - verify:
           handler: 'StringValidator'
           desc: 'extendedKeyUsage includes $2'
-          inputs:
-            actualstring: '$ekuPresent'
-            expectedstring: '"true"'
+          inputs: { actualstring: '$ekuPresent', expectedstring: '"true"' }
 
-  # Documentation-only waiver. In the Python dialect this PASSES for the waived
-  # groups and SKIPS otherwise. Here the scenario is only ever bound to a waived
-  # group, so the step records the waiver rather than asserting anything — it
-  # must never read as evidence that a TLS leaf's EKU was checked.
-  - match: '^"([A-Za-z_][A-Za-z0-9_]*)" EKU should not be required for groups "([^"]+)"$'
+  # Documentation-only waiver: the scenario is only ever bound to a waived
+  # group, so this records the waiver and asserts nothing.
+  - text: '{ref} EKU should not be required for groups {string}'
+    doc: Records that EKU is waived for these groups (asserts nothing).
     actions:
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'factGroup'
-          inputs:
-            content: '$certFacts'
-            pointer: '"/group"'
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'factGroup', inputs: { content: '$1', pointer: '"/group"' } }
       - log: 'concat("EKU requirement waived for groups $2 — bound group is ", $factGroup, " (documentation only; asserts nothing)")'
 
   # ==================================================================
   # BASIC CONSTRAINTS
   # ==================================================================
-
-  - match: '^"([A-Za-z_][A-Za-z0-9_]*)" basicConstraints CA should be "(true|false)"$'
-    actions:
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'bcCa'
-          inputs:
-            content: '$certFacts'
-            pointer: '"/basicConstraints/ca"'
-      - verify:
-          handler: 'StringValidator'
-          desc: 'basicConstraints CA is $2'
-          inputs:
-            actualstring: '$bcCa'
-            expectedstring: '"$2"'
-
-  # Table of | group |. Within TLS the CA file is excluded — it is a CA by
-  # definition — which the selector already guarantees here.
-  - match: '^"([A-Za-z_][A-Za-z0-9_]*)" basicConstraints CA should be "false" for groups:$'
+  - text: '{ref} basicConstraints CA should be {value} for groups:'
+    doc: CA flag for the certificate's group, from a | group | table (within TLS the CA file is excluded by the selector).
     table:
       required: [group]
     actions:
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'factGroup'
-          inputs:
-            content: '$certFacts'
-            pointer: '"/group"'
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'factGroup', inputs: { content: '$1', pointer: '"/group"' } }
       - foreach:
           from: '$tableRows'
           do:
-            - assign:
-                to: 'endEntityGroups{$row.group}'
-                value: '"yes"'
-      - assign:
-          to: 'groupIsEndEntity'
-          value: '$endEntityGroups{$factGroup}'
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'bcCa'
-          inputs:
-            content: '$certFacts'
-            pointer: '"/basicConstraints/ca"'
-      - log: 'concat("group ", $factGroup, " listed as end-entity: ", $groupIsEndEntity, " ; basicConstraints CA = ", $bcCa)'
+            - assign: { to: 'listedGroups{$row.group}', value: '"yes"' }
+      - assign: { to: 'groupIsListed', value: '$listedGroups{$factGroup}' }
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'bcCa', inputs: { content: '$1', pointer: '"/basicConstraints/ca"' } }
+      - log: 'concat("group ", $factGroup, " listed: ", $groupIsListed, " ; basicConstraints CA = ", $bcCa)'
       - verify:
           handler: 'StringValidator'
-          desc: 'an end-entity certificate is not a CA'
-          inputs:
-            actualstring: '$bcCa'
-            expectedstring: '"false"'
+          desc: 'basicConstraints CA is $2.raw for the listed groups'
+          inputs: { actualstring: '$bcCa', expectedstring: '$2' }
 
-  - match: '^"([A-Za-z_][A-Za-z0-9_]*)" basicConstraints pathLen should be "([^"]+)"$'
+  - text: '{ref} basicConstraints CA should be {value}'
+    doc: The CA flag of basicConstraints.
     actions:
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'bcPathLenOk'
-          inputs:
-            content: '$certFacts'
-            pointer: '"/basicConstraints/pathLengthOk"'
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'bcCa', inputs: { content: '$1', pointer: '"/basicConstraints/ca"' } }
+      - verify:
+          handler: 'StringValidator'
+          desc: 'basicConstraints CA is $2.raw'
+          inputs: { actualstring: '$bcCa', expectedstring: '$2' }
+
+  - text: '{ref} basicConstraints pathLen should be {string}'
+    doc: pathLen is within the rule ("0 or absent").
+    actions:
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'bcPathLenOk', inputs: { content: '$1', pointer: '"/basicConstraints/pathLengthOk"' } }
       - verify:
           handler: 'StringValidator'
           desc: 'basicConstraints pathLen is "$2"'
-          inputs:
-            actualstring: '$bcPathLenOk'
-            expectedstring: '"true"'
+          inputs: { actualstring: '$bcPathLenOk', expectedstring: '"true"' }
 
   # ==================================================================
   # CHAIN
   # ==================================================================
-
-  # Compares issuer DN against the CA's subject DN. The cryptographic check is
-  # tng.cert.chain in the rule engine; both read the same facts.
-  - match: '^"([A-Za-z_][A-Za-z0-9_]*)" should be signed by "([A-Za-z_][A-Za-z0-9_]*)"$'
+  # Compares issuer DN against the CA's subject DN; the cryptographic check is
+  # tng.cert.chain in the rule engine — both read the same facts.
+  - text: '{ref} should be signed by {ref}'
+    doc: The first certificate's issuer DN is the second's subject DN.
     actions:
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'leafIssuer'
-          inputs:
-            content: '$certFacts'
-            pointer: '"/issuer/rfc4514"'
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'leafIssuer', inputs: { content: '$1', pointer: '"/issuer/rfc4514"' } }
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'caSubject',  inputs: { content: '$2', pointer: '"/subject/rfc4514"' } }
       - verify:
           handler: 'StringValidator'
-          desc: 'issuer DN of $1 matches the subject DN of $2'
-          inputs:
-            actualstring: '$leafIssuer'
-            expectedstring: '$caSubject'
+          desc: 'issuer DN of $$1 matches the subject DN of $2.raw'
+          inputs: { actualstring: '$leafIssuer', expectedstring: '$caSubject' }
 
-  - match: '^"([A-Za-z_][A-Za-z0-9_]*)" should be rejected$'
+  - text: '{ref} should be rejected by {ref}'
+    doc: The first certificate is NOT issued by the second (issuer DN differs).
     actions:
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'leafIssuer'
-          inputs:
-            content: '$certFacts'
-            pointer: '"/issuer/rfc4514"'
-      - assign:
-          to: 'rejectParams{issuer}'
-          value: '$leafIssuer'
-      - assign:
-          to: 'rejectParams{caSubject}'
-          value: '$caSubject'
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'leafIssuer', inputs: { content: '$1', pointer: '"/issuer/rfc4514"' } }
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'caSubject',  inputs: { content: '$2', pointer: '"/subject/rfc4514"' } }
+      - assign: { to: 'rejectParams{issuer}', value: '$leafIssuer' }
+      - assign: { to: 'rejectParams{caSubject}', value: '$caSubject' }
       - process:
           handler: 'TemplateProcessor'
           operation: 'process'
@@ -680,94 +432,50 @@ steps:
       - verify:
           handler: 'StringValidator'
           desc: 'a TLS end-entity that no CA in its group verifies must be rejected'
-          inputs:
-            actualstring: '$nothingSignsIt'
-            expectedstring: '"true"'
+          inputs: { actualstring: '$nothingSignsIt', expectedstring: '"true"' }
 
   # ==================================================================
   # SUBJECT
   # ==================================================================
-
-  - match: '^"([A-Za-z_][A-Za-z0-9_]*)" subject CN should not be empty$'
+  - text: '{ref} subject CN should not be empty'
+    doc: The subject common name is populated.
     actions:
-      # describe_cert already exposes this as a boolean.
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'subjectCnPresent'
-          inputs:
-            content: '$certFacts'
-            pointer: '"/subject/commonNamePresent"'
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'subjectCnPresent', inputs: { content: '$1', pointer: '"/subject/commonNamePresent"' } }
       - verify:
           handler: 'StringValidator'
           desc: 'subject common name is populated'
-          inputs:
-            actualstring: '$subjectCnPresent'
-            expectedstring: '"true"'
+          inputs: { actualstring: '$subjectCnPresent', expectedstring: '"true"' }
 
-  # The service resolves the subject country to the participant's alpha-3 code,
+  # The service resolves the subject country to the participant's alpha-3,
   # so this compares against $tngCountry rather than the raw subject C.
-  - match: '^"([A-Za-z_][A-Za-z0-9_]*)" subject country should be the participant country$'
+  - text: '{ref} subject country should be the participant country'
+    doc: The subject country resolves to $tngCountry.
     actions:
-      - assign:
-          to: 'countryTplParams{country}'
-          value: '$tngCountry'
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'certCountry'
-          inputs:
-            content: '$certFacts'
-            pointer: '"/subject/resolvedCountry"'
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'certCountry', inputs: { content: '$1', pointer: '"/subject/resolvedCountry"' } }
       - log: 'concat("subject country resolves to ", $certCountry, " ; participant is ", $tngCountry)'
       - verify:
           handler: 'StringValidator'
           desc: 'subject country is the participant country'
-          inputs:
-            actualstring: '$certCountry'
-            expectedstring: '$tngCountry'
+          inputs: { actualstring: '$certCountry', expectedstring: '$tngCountry' }
 
   # ==================================================================
   # VALIDITY
   # ==================================================================
-
-  # Table of | group | maxYears |. A group absent from the table is not covered
-  # by a limit; the rule engine treats that as "no range applies".
-  - match: '^"([A-Za-z_][A-Za-z0-9_]*)" validity should not exceed the limit for its group:$'
+  # | group | maxYears |. Upstream's arithmetic: days < maxYears * 366.
+  - text: '{ref} validity should not exceed the limit for its group:'
+    doc: Validity in days is under the limit for the certificate's group (table | group | maxYears |).
     table:
       required: [group, maxYears]
     actions:
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'factGroup'
-          inputs:
-            content: '$certFacts'
-            pointer: '"/group"'
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'validityDays'
-          inputs:
-            content: '$certFacts'
-            pointer: '"/validity/days"'
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'factGroup',    inputs: { content: '$1', pointer: '"/group"' } }
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'validityDays', inputs: { content: '$1', pointer: '"/validity/days"' } }
       - foreach:
           from: '$tableRows'
           do:
-            - assign:
-                to: 'maxYearsFor{$row.group}'
-                value: '"$row.maxYears"'
-      - assign:
-          to: 'maxYearsHere'
-          value: '$maxYearsFor{$factGroup}'
-      # Upstream's exact arithmetic: the maximum is < max_years * 366 days, so
-      # an SCA may run to 1463 days but not 1464.
-      - assign:
-          to: 'validityParams{days}'
-          value: '$validityDays'
-      - assign:
-          to: 'validityParams{maxYears}'
-          value: '$maxYearsHere'
+            - assign: { to: 'maxYearsFor{$row.group}', value: '"$row.maxYears"' }
+      - assign: { to: 'maxYearsHere', value: '$maxYearsFor{$factGroup}' }
+      - assign: { to: 'validityParams{days}', value: '$validityDays' }
+      - assign: { to: 'validityParams{maxYears}', value: '$maxYearsHere' }
       - process:
           handler: 'TemplateProcessor'
           operation: 'process'
@@ -780,46 +488,26 @@ steps:
       - verify:
           handler: 'StringValidator'
           desc: 'validity is within the limit for the group'
-          inputs:
-            actualstring: '$validityOk'
-            expectedstring: '"true"'
+          inputs: { actualstring: '$validityOk', expectedstring: '"true"' }
 
-  - match: '^"([A-Za-z_][A-Za-z0-9_]*)" notAfter should not exceed "([A-Za-z_][A-Za-z0-9_]*)" notAfter$'
+  # ISO-8601 UTC timestamps sort lexicographically, so a string comparison is a date comparison.
+  - text: '{ref} notAfter should not exceed {ref} notAfter'
+    doc: An issued certificate does not outlive its issuer.
     actions:
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'dscNotAfter'
-          inputs:
-            content: '$dscFacts'
-            pointer: '"/validity/notAfter"'
-      - process:
-          handler: 'JsonPointerProcessor'
-          operation: 'process'
-          output: 'scaNotAfter'
-          inputs:
-            content: '$certFacts'
-            pointer: '"/validity/notAfter"'
-      - log: 'concat("DSC notAfter ", $dscNotAfter, " ; SCA notAfter ", $scaNotAfter)'
-      # ISO-8601 UTC timestamps sort lexicographically, so a string comparison
-      # is a date comparison here.
-      - assign:
-          to: 'nestParams{dsc}'
-          value: '$dscNotAfter'
-      - assign:
-          to: 'nestParams{sca}'
-          value: '$scaNotAfter'
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'issuedNotAfter', inputs: { content: '$1', pointer: '"/validity/notAfter"' } }
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'issuerNotAfter', inputs: { content: '$2', pointer: '"/validity/notAfter"' } }
+      - log: 'concat("$1.raw notAfter ", $issuedNotAfter, " ; $2.raw notAfter ", $issuerNotAfter)'
+      - assign: { to: 'nestParams{issued}', value: '$issuedNotAfter' }
+      - assign: { to: 'nestParams{issuer}', value: '$issuerNotAfter' }
       - process:
           handler: 'TemplateProcessor'
           operation: 'process'
           output: 'nestingOk'
           inputs:
             syntax: '"freemarker"'
-            template: "'${(dsc <= sca)?c}'"
+            template: "'${(issued <= issuer)?c}'"
             parameters: '$nestParams'
       - verify:
           handler: 'StringValidator'
           desc: 'an issued certificate does not outlive its issuer'
-          inputs:
-            actualstring: '$nestingOk'
-            expectedstring: '"true"'
+          inputs: { actualstring: '$nestingOk', expectedstring: '"true"' }
