@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testcase id="ips-creator-011-medicationstatement-ips-the-creator-populates-7-elements-when-known"
+          xmlns="http://www.gitb.com/tdl/v1/"
+          xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>ips-creator-011 MedicationStatement (IPS) — the Creator populates 7 elements when known</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>IPS Creator — obligations of hl7.fhir.uv.ips 2.0.1</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="Creator" role="SUT"/>
+    <gitb:actor id="FHIRValidator" role="SIMULATED"/>
+  </actors>
+
+  <variables>
+    <var name="ips" type="string"/>
+    <var name="loadIgBody" type="string"/>
+    <var name="fhirpathBody" type="string"/>
+    <var name="pathValue" type="string"/>
+    <var name="lastRequest" type="map"/>
+    <var name="FHIRValidatorBase" type="string"/>
+    <var name="fhirValidatorHeaders" type="map"/>
+    <var name="loadIgTplParams" type="map"/>
+    <var name="fhirpathTplParams" type="map"/>
+  </variables>
+
+  <steps stopOnError="true">
+    <assign to="FHIRValidatorBase">&quot;http://fhir-validator:8081&quot;</assign>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="loadIgTplParams{ig}">&quot;hl7.fhir.uv.ips#2.0.1&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="loadIgBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;loadIG&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;ig&quot;, &quot;value&quot;: &quot;${ig?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$loadIgTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Load IG hl7.fhir.uv.ips#2.0.1" handler="HttpMessagingV2" from="Creator" to="FHIRValidator">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/igManager/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$loadIgBody</input>
+    </send>
+    <verify handler="NumberValidator" desc="IG hl7.fhir.uv.ips#2.0.1 loaded (HTTP 200)">
+      <input name="actualnumber">$lastRequest{response}{status}</input>
+      <input name="expectednumber">&quot;200&quot;</input>
+    </verify>
+    <interact id="inform" desc="Instruction for Creator" with="Creator">
+      <instruct desc="Load the reference patient Patricia JORDANA (identifier ABC1234) into your system from https://hl7.org/fhir/uv/ips/Bundle-bundle-ips-all-sections.json, then export her International Patient Summary as a FHIR document Bundle." name="message"/>
+    </interact>
+    <interact id="ask" desc="Paste the exported IPS Bundle (JSON)" inputTitle="Paste the exported IPS Bundle (JSON)">
+      <request desc="Paste the exported IPS Bundle (JSON)" name="ips" inputType="TEXT" required="true">$ips</request>
+    </interact>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="fhirpathTplParams{resource}">$ips</assign>
+    <assign to="fhirpathTplParams{expression}">&quot;Bundle.entry.resource.ofType(MedicationStatement).all(medication.exists())&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="fhirpathBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$fhirpathTplParams</input>
+    </process>
+    <send id="lastRequest" desc="FHIRPath Bundle.entry.resource.ofType(MedicationStatement).all(medication.exists())" handler="HttpMessagingV2" from="Creator" to="FHIRValidator">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPath/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$fhirpathBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="pathValue">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="$ips at Bundle.entry.resource.ofType(MedicationStatement).all(medication.exists()) is true">
+      <input name="actualstring">$pathValue</input>
+      <input name="expectedstring">&quot;true&quot;</input>
+    </verify>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="fhirpathTplParams{resource}">$ips</assign>
+    <assign to="fhirpathTplParams{expression}">&quot;Bundle.entry.resource.ofType(MedicationStatement).all(subject.exists())&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="fhirpathBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$fhirpathTplParams</input>
+    </process>
+    <send id="lastRequest" desc="FHIRPath Bundle.entry.resource.ofType(MedicationStatement).all(subject.exists())" handler="HttpMessagingV2" from="Creator" to="FHIRValidator">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPath/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$fhirpathBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="pathValue">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="$ips at Bundle.entry.resource.ofType(MedicationStatement).all(subject.exists()) is true">
+      <input name="actualstring">$pathValue</input>
+      <input name="expectedstring">&quot;true&quot;</input>
+    </verify>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="fhirpathTplParams{resource}">$ips</assign>
+    <assign to="fhirpathTplParams{expression}">&quot;Bundle.entry.resource.ofType(MedicationStatement).subject.all(reference.exists())&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="fhirpathBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$fhirpathTplParams</input>
+    </process>
+    <send id="lastRequest" desc="FHIRPath Bundle.entry.resource.ofType(MedicationStatement).subject.all(reference.exists())" handler="HttpMessagingV2" from="Creator" to="FHIRValidator">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPath/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$fhirpathBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="pathValue">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="$ips at Bundle.entry.resource.ofType(MedicationStatement).subject.all(reference.exists()) is true">
+      <input name="actualstring">$pathValue</input>
+      <input name="expectedstring">&quot;true&quot;</input>
+    </verify>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="fhirpathTplParams{resource}">$ips</assign>
+    <assign to="fhirpathTplParams{expression}">&quot;Bundle.entry.resource.ofType(MedicationStatement).all(effective.exists())&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="fhirpathBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$fhirpathTplParams</input>
+    </process>
+    <send id="lastRequest" desc="FHIRPath Bundle.entry.resource.ofType(MedicationStatement).all(effective.exists())" handler="HttpMessagingV2" from="Creator" to="FHIRValidator">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPath/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$fhirpathBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="pathValue">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="$ips at Bundle.entry.resource.ofType(MedicationStatement).all(effective.exists()) is true">
+      <input name="actualstring">$pathValue</input>
+      <input name="expectedstring">&quot;true&quot;</input>
+    </verify>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="fhirpathTplParams{resource}">$ips</assign>
+    <assign to="fhirpathTplParams{expression}">&quot;Bundle.entry.resource.ofType(MedicationStatement).all(effective.ofType(dateTime).exists())&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="fhirpathBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$fhirpathTplParams</input>
+    </process>
+    <send id="lastRequest" desc="FHIRPath Bundle.entry.resource.ofType(MedicationStatement).all(effective.ofType(dateTime).exists())" handler="HttpMessagingV2" from="Creator" to="FHIRValidator">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPath/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$fhirpathBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="pathValue">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="$ips at Bundle.entry.resource.ofType(MedicationStatement).all(effective.ofType(dateTime).exists()) is true">
+      <input name="actualstring">$pathValue</input>
+      <input name="expectedstring">&quot;true&quot;</input>
+    </verify>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="fhirpathTplParams{resource}">$ips</assign>
+    <assign to="fhirpathTplParams{expression}">&quot;Bundle.entry.resource.ofType(MedicationStatement).all(dosage.exists())&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="fhirpathBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$fhirpathTplParams</input>
+    </process>
+    <send id="lastRequest" desc="FHIRPath Bundle.entry.resource.ofType(MedicationStatement).all(dosage.exists())" handler="HttpMessagingV2" from="Creator" to="FHIRValidator">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPath/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$fhirpathBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="pathValue">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="$ips at Bundle.entry.resource.ofType(MedicationStatement).all(dosage.exists()) is true">
+      <input name="actualstring">$pathValue</input>
+      <input name="expectedstring">&quot;true&quot;</input>
+    </verify>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="fhirpathTplParams{resource}">$ips</assign>
+    <assign to="fhirpathTplParams{expression}">&quot;Bundle.entry.resource.ofType(MedicationStatement).dosage.all(text.exists())&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="fhirpathBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$fhirpathTplParams</input>
+    </process>
+    <send id="lastRequest" desc="FHIRPath Bundle.entry.resource.ofType(MedicationStatement).dosage.all(text.exists())" handler="HttpMessagingV2" from="Creator" to="FHIRValidator">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPath/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$fhirpathBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="pathValue">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="$ips at Bundle.entry.resource.ofType(MedicationStatement).dosage.all(text.exists()) is true">
+      <input name="actualstring">$pathValue</input>
+      <input name="expectedstring">&quot;true&quot;</input>
+    </verify>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="fhirpathTplParams{resource}">$ips</assign>
+    <assign to="fhirpathTplParams{expression}">&quot;Bundle.entry.resource.ofType(MedicationStatement).dosage.where(timing.exists()).exists()&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="fhirpathBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$fhirpathTplParams</input>
+    </process>
+    <send id="lastRequest" desc="FHIRPath Bundle.entry.resource.ofType(MedicationStatement).dosage.where(timing.exists()).exists()" handler="HttpMessagingV2" from="Creator" to="FHIRValidator">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPath/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$fhirpathBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="pathValue">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="$ips at Bundle.entry.resource.ofType(MedicationStatement).dosage.where(timing.exists()).exists() is true">
+      <input name="actualstring">$pathValue</input>
+      <input name="expectedstring">&quot;true&quot;</input>
+    </verify>
+  </steps>
+
+  <output>
+    <success>
+      <default>"Test case completed successfully."</default>
+    </success>
+    <failure>
+      <default>"Test case failed. Check step reports and logs."</default>
+    </failure>
+  </output>
+</testcase>

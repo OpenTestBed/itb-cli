@@ -1,0 +1,374 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testcase id="ips-consumer-002-composition-ips-the-consumer-handles-81-elements-and-displays-77"
+          xmlns="http://www.gitb.com/tdl/v1/"
+          xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>ips-consumer-002 Composition (IPS) — the Consumer handles 81 elements and displays 77</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>IPS Consumer — obligations of hl7.fhir.uv.ips 2.0.1</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="Consumer" role="SUT"/>
+    <gitb:actor id="Tester" role="SIMULATED"/>
+    <gitb:actor id="FHIRValidator" role="SIMULATED"/>
+  </actors>
+
+  <variables>
+    <var name="handled" type="string"/>
+    <var name="notDisplayed" type="string"/>
+    <var name="loadIgBody" type="string"/>
+    <var name="conformBody" type="string"/>
+    <var name="validationErrors" type="string"/>
+    <var name="validationWarnings" type="string"/>
+    <var name="validationSeverity" type="string"/>
+    <var name="validationOutcome" type="string"/>
+    <var name="dgFpBody" type="string"/>
+    <var name="conformanceErrors" type="string"/>
+    <var name="lastRequest" type="map"/>
+    <var name="FHIRValidatorBase" type="string"/>
+    <var name="fhirValidatorHeaders" type="map"/>
+    <var name="loadIgTplParams" type="map"/>
+    <var name="jsonHeaders" type="map"/>
+    <var name="ips" type="string"/>
+    <var name="conformHeaders" type="map"/>
+    <var name="conformTplParams" type="map"/>
+    <var name="dgFpParams" type="map"/>
+  </variables>
+
+  <steps stopOnError="true">
+    <assign to="FHIRValidatorBase">&quot;http://fhir-validator:8081&quot;</assign>
+    <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="loadIgTplParams{ig}">&quot;hl7.fhir.uv.ips#2.0.1&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="loadIgBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;loadIG&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;ig&quot;, &quot;value&quot;: &quot;${ig?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$loadIgTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Load IG hl7.fhir.uv.ips#2.0.1" handler="HttpMessagingV2" from="Consumer" to="FHIRValidator">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/igManager/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$fhirValidatorHeaders</input>
+      <input name="body">$loadIgBody</input>
+    </send>
+    <verify handler="NumberValidator" desc="IG hl7.fhir.uv.ips#2.0.1 loaded (HTTP 200)">
+      <input name="actualnumber">$lastRequest{response}{status}</input>
+      <input name="expectednumber">&quot;200&quot;</input>
+    </verify>
+    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <send id="lastRequest" desc="GET https://hl7.org/fhir/uv/ips/Bundle-bundle-ips-all-sections.json" handler="HttpMessagingV2" from="Tester">
+      <input name="uri">&quot;https://hl7.org/fhir/uv/ips/Bundle-bundle-ips-all-sections.json&quot;</input>
+      <input name="method">&quot;GET&quot;</input>
+      <input name="headers">$jsonHeaders</input>
+    </send>
+    <assign to="ips">$lastRequest{response}{body}</assign>
+    <assign to="conformHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="conformHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="conformTplParams{resource}">$ips</assign>
+    <assign to="conformTplParams{profile}">&quot;http://hl7.org/fhir/uv/ips/StructureDefinition/Bundle-uv-ips&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="conformBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;profiles&quot;, &quot;value&quot;: &quot;${profile?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$conformTplParams</input>
+    </process>
+    <send id="lastRequest" desc="Validate $ips against http://hl7.org/fhir/uv/ips/StructureDefinition/Bundle-uv-ips" handler="HttpMessagingV2" from="Consumer" to="FHIRValidator">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhir/validate&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$conformHeaders</input>
+      <input name="body">$conformBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="validationErrors">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/report/context/0/value&quot;</input>
+    </process>
+    <process handler="JsonPointerProcessor" operation="process" output="validationWarnings">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/report/context/1/value&quot;</input>
+    </process>
+    <process handler="JsonPointerProcessor" operation="process" output="validationSeverity">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/report/context/3/value&quot;</input>
+    </process>
+    <process handler="JsonPointerProcessor" operation="process" output="validationOutcome">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/report/context/4/value&quot;</input>
+    </process>
+    <assign to="conformanceErrors">$validationErrors</assign>
+    <assign to="dgFpParams{resource}">$validationOutcome</assign>
+    <assign to="dgFpParams{expression}">&quot;issue.where(severity = 'error').count() - issue.where(severity = 'error' and details.text.contains('matching slice is required')).count()&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="dgFpBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;operation&quot;: &quot;evaluate&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;expression&quot;, &quot;value&quot;: &quot;${expression?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$dgFpParams</input>
+    </process>
+    <send id="lastRequest" desc="Count real errors, ignoring &quot;matching slice is required&quot;" handler="HttpMessagingV2" from="Consumer" to="FHIRValidator">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/fhirPath/process&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$conformHeaders</input>
+      <input name="body">$dgFpBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="conformanceErrors">
+      <input name="content">$lastRequest{response}{body}</input>
+      <input name="pointer">&quot;/output/0/value&quot;</input>
+    </process>
+    <log>concat(&quot;conforms: &quot;, $validationErrors, &quot; errors reported, &quot;, $conformanceErrors, &quot; counted after ignoring \&quot;matching slice is required\&quot;&quot;)</log>
+    <verify handler="StringValidator" desc="$ips conforms to http://hl7.org/fhir/uv/ips/StructureDefinition/Bundle-uv-ips (ignoring slicing errors)">
+      <input name="actualstring">$conformanceErrors</input>
+      <input name="expectedstring">&quot;0&quot;</input>
+    </verify>
+    <interact id="inform" desc="Instruction for Consumer" with="Consumer">
+      <instruct desc="Import this International Patient Summary for Patricia JORDANA into the system under test, then answer the questions that follow." name="message">$ips</instruct>
+    </interact>
+    <interact id="ask" desc="For the Composition resources: were these elements accepted and processed without error — [text] = (present), [identifier] = ac7a747c-a2c9-493c-ba39-4ac6997eed1e, [status] = final, [type] = Patient summary Document, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [subject.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [date] = 2024-09-13, [author] = Organization/7a17027f-acc0-4d77-bf84-…, [title] = International Patient Summary, [attester] = (present), [attester.mode] = professional, [attester.time] = 2024-09-13, [attester.party] = PractitionerRole/94d12c8d-a3df-47a7-a…, [custodian] = Organization/7a17027f-acc0-4d77-bf84-…, [event:careProvisioningEvent] = (present), [event:careProvisioningEvent.code] = PCPR, [event:careProvisioningEvent.period] = –2024-09-13, [section] = [object Object], [section.title] = Problem List, [section.code] = Problem list - Reported, [section.text] = (present), [section:sectionProblems] = [object Object], [section:sectionProblems.title] = Problem List, [section:sectionProblems.text] = (present), [section:sectionProblems.entry:problem] = Condition/8039e4a7-d459-454c-92a5-6c1…, [section:sectionProblems.emptyReason], [section:sectionAllergies] = [object Object], [section:sectionAllergies.title] = Allergies and Intolerances, [section:sectionAllergies.text] = (present), [section:sectionAllergies.entry:allergyOrIntolerance] = AllergyIntolerance/9838cf73-c30d-4aa5…, [section:sectionAllergies.emptyReason], [section:sectionMedications] = [object Object], [section:sectionMedications.title] = Medication Summary, [section:sectionMedications.text] = (present), [section:sectionMedications.entry:medicationStatementOrRequest] = MedicationStatement/c3d31980-2a88-45b…, [section:sectionMedications.emptyReason], [section:sectionImmunizations] = [object Object], [section:sectionImmunizations.title] = Immunizations, [section:sectionImmunizations.text] = (present), [section:sectionImmunizations.entry:immunization] = Immunization/17b5a6d7-307b-4726-8c8c-…, [section:sectionResults] = [object Object], [section:sectionResults.title] = Results, [section:sectionResults.text] = (present), [section:sectionResults.entry:results-observation-laboratory-pathology] = Observation/b0187efd-5f9b-474d-87bc-e…, [section:sectionResults.entry:results-observation-radiology] = Observation/b0187efd-5f9b-474d-87bc-e…, [section:sectionResults.entry:results-diagnosticReport] = Observation/b0187efd-5f9b-474d-87bc-e…, [section:sectionProceduresHx] = [object Object], [section:sectionProceduresHx.title] = History of Procedures, [section:sectionProceduresHx.text] = (present), [section:sectionProceduresHx.entry:procedure] = Procedure/39252, [section:sectionMedicalDevices] = [object Object], [section:sectionMedicalDevices.title] = Device Use, [section:sectionMedicalDevices.text] = (present), [section:sectionMedicalDevices.entry:deviceStatement] = DeviceUseStatement/eumfh-70-275-1, [section:sectionAdvanceDirectives] = [object Object], [section:sectionAdvanceDirectives.title] = Advance Directives, [section:sectionAdvanceDirectives.text] = (present), [section:sectionAlerts] = [object Object], [section:sectionAlerts.title] = Alerts, [section:sectionAlerts.text] = (present), [section:sectionFunctionalStatus] = [object Object], [section:sectionFunctionalStatus.title] = Functional Status, [section:sectionFunctionalStatus.text] = (present), [section:sectionPastProblems] = [object Object], [section:sectionPastProblems.title] = History of Past Problems, [section:sectionPastProblems.text] = (present), [section:sectionPregnancyHx] = [object Object], [section:sectionPregnancyHx.title] = History of Pregnancy, [section:sectionPregnancyHx.text] = (present), [section:sectionPatientStory] = [object Object], [section:sectionPatientStory.title] = Patient Story, [section:sectionPatientStory.text] = (present), [section:sectionPlanOfCare] = [object Object], [section:sectionPlanOfCare.title] = Plan of Care, [section:sectionPlanOfCare.text] = (present), [section:sectionSocialHistory] = [object Object], [section:sectionSocialHistory.title] = Social History, [section:sectionSocialHistory.text] = (present), [section:sectionVitalSigns] = [object Object], [section:sectionVitalSigns.title] = Vital Signs, [section:sectionVitalSigns.text] = (present)? Answer yes, or name the ones that caused an error." inputTitle="For the Composition resources: were these elements accepted and processed without error — [text] = (present), [identifier] = ac7a747c-a2c9-493c-ba39-4ac6997eed1e, [status] = final, [type] = Patient summary Document, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [subject.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [date] = 2024-09-13, [author] = Organization/7a17027f-acc0-4d77-bf84-…, [title] = International Patient Summary, [attester] = (present), [attester.mode] = professional, [attester.time] = 2024-09-13, [attester.party] = PractitionerRole/94d12c8d-a3df-47a7-a…, [custodian] = Organization/7a17027f-acc0-4d77-bf84-…, [event:careProvisioningEvent] = (present), [event:careProvisioningEvent.code] = PCPR, [event:careProvisioningEvent.period] = –2024-09-13, [section] = [object Object], [section.title] = Problem List, [section.code] = Problem list - Reported, [section.text] = (present), [section:sectionProblems] = [object Object], [section:sectionProblems.title] = Problem List, [section:sectionProblems.text] = (present), [section:sectionProblems.entry:problem] = Condition/8039e4a7-d459-454c-92a5-6c1…, [section:sectionProblems.emptyReason], [section:sectionAllergies] = [object Object], [section:sectionAllergies.title] = Allergies and Intolerances, [section:sectionAllergies.text] = (present), [section:sectionAllergies.entry:allergyOrIntolerance] = AllergyIntolerance/9838cf73-c30d-4aa5…, [section:sectionAllergies.emptyReason], [section:sectionMedications] = [object Object], [section:sectionMedications.title] = Medication Summary, [section:sectionMedications.text] = (present), [section:sectionMedications.entry:medicationStatementOrRequest] = MedicationStatement/c3d31980-2a88-45b…, [section:sectionMedications.emptyReason], [section:sectionImmunizations] = [object Object], [section:sectionImmunizations.title] = Immunizations, [section:sectionImmunizations.text] = (present), [section:sectionImmunizations.entry:immunization] = Immunization/17b5a6d7-307b-4726-8c8c-…, [section:sectionResults] = [object Object], [section:sectionResults.title] = Results, [section:sectionResults.text] = (present), [section:sectionResults.entry:results-observation-laboratory-pathology] = Observation/b0187efd-5f9b-474d-87bc-e…, [section:sectionResults.entry:results-observation-radiology] = Observation/b0187efd-5f9b-474d-87bc-e…, [section:sectionResults.entry:results-diagnosticReport] = Observation/b0187efd-5f9b-474d-87bc-e…, [section:sectionProceduresHx] = [object Object], [section:sectionProceduresHx.title] = History of Procedures, [section:sectionProceduresHx.text] = (present), [section:sectionProceduresHx.entry:procedure] = Procedure/39252, [section:sectionMedicalDevices] = [object Object], [section:sectionMedicalDevices.title] = Device Use, [section:sectionMedicalDevices.text] = (present), [section:sectionMedicalDevices.entry:deviceStatement] = DeviceUseStatement/eumfh-70-275-1, [section:sectionAdvanceDirectives] = [object Object], [section:sectionAdvanceDirectives.title] = Advance Directives, [section:sectionAdvanceDirectives.text] = (present), [section:sectionAlerts] = [object Object], [section:sectionAlerts.title] = Alerts, [section:sectionAlerts.text] = (present), [section:sectionFunctionalStatus] = [object Object], [section:sectionFunctionalStatus.title] = Functional Status, [section:sectionFunctionalStatus.text] = (present), [section:sectionPastProblems] = [object Object], [section:sectionPastProblems.title] = History of Past Problems, [section:sectionPastProblems.text] = (present), [section:sectionPregnancyHx] = [object Object], [section:sectionPregnancyHx.title] = History of Pregnancy, [section:sectionPregnancyHx.text] = (present), [section:sectionPatientStory] = [object Object], [section:sectionPatientStory.title] = Patient Story, [section:sectionPatientStory.text] = (present), [section:sectionPlanOfCare] = [object Object], [section:sectionPlanOfCare.title] = Plan of Care, [section:sectionPlanOfCare.text] = (present), [section:sectionSocialHistory] = [object Object], [section:sectionSocialHistory.title] = Social History, [section:sectionSocialHistory.text] = (present), [section:sectionVitalSigns] = [object Object], [section:sectionVitalSigns.title] = Vital Signs, [section:sectionVitalSigns.text] = (present)? Answer yes, or name the ones that caused an error.">
+      <request desc="For the Composition resources: were these elements accepted and processed without error — [text] = (present), [identifier] = ac7a747c-a2c9-493c-ba39-4ac6997eed1e, [status] = final, [type] = Patient summary Document, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [subject.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [date] = 2024-09-13, [author] = Organization/7a17027f-acc0-4d77-bf84-…, [title] = International Patient Summary, [attester] = (present), [attester.mode] = professional, [attester.time] = 2024-09-13, [attester.party] = PractitionerRole/94d12c8d-a3df-47a7-a…, [custodian] = Organization/7a17027f-acc0-4d77-bf84-…, [event:careProvisioningEvent] = (present), [event:careProvisioningEvent.code] = PCPR, [event:careProvisioningEvent.period] = –2024-09-13, [section] = [object Object], [section.title] = Problem List, [section.code] = Problem list - Reported, [section.text] = (present), [section:sectionProblems] = [object Object], [section:sectionProblems.title] = Problem List, [section:sectionProblems.text] = (present), [section:sectionProblems.entry:problem] = Condition/8039e4a7-d459-454c-92a5-6c1…, [section:sectionProblems.emptyReason], [section:sectionAllergies] = [object Object], [section:sectionAllergies.title] = Allergies and Intolerances, [section:sectionAllergies.text] = (present), [section:sectionAllergies.entry:allergyOrIntolerance] = AllergyIntolerance/9838cf73-c30d-4aa5…, [section:sectionAllergies.emptyReason], [section:sectionMedications] = [object Object], [section:sectionMedications.title] = Medication Summary, [section:sectionMedications.text] = (present), [section:sectionMedications.entry:medicationStatementOrRequest] = MedicationStatement/c3d31980-2a88-45b…, [section:sectionMedications.emptyReason], [section:sectionImmunizations] = [object Object], [section:sectionImmunizations.title] = Immunizations, [section:sectionImmunizations.text] = (present), [section:sectionImmunizations.entry:immunization] = Immunization/17b5a6d7-307b-4726-8c8c-…, [section:sectionResults] = [object Object], [section:sectionResults.title] = Results, [section:sectionResults.text] = (present), [section:sectionResults.entry:results-observation-laboratory-pathology] = Observation/b0187efd-5f9b-474d-87bc-e…, [section:sectionResults.entry:results-observation-radiology] = Observation/b0187efd-5f9b-474d-87bc-e…, [section:sectionResults.entry:results-diagnosticReport] = Observation/b0187efd-5f9b-474d-87bc-e…, [section:sectionProceduresHx] = [object Object], [section:sectionProceduresHx.title] = History of Procedures, [section:sectionProceduresHx.text] = (present), [section:sectionProceduresHx.entry:procedure] = Procedure/39252, [section:sectionMedicalDevices] = [object Object], [section:sectionMedicalDevices.title] = Device Use, [section:sectionMedicalDevices.text] = (present), [section:sectionMedicalDevices.entry:deviceStatement] = DeviceUseStatement/eumfh-70-275-1, [section:sectionAdvanceDirectives] = [object Object], [section:sectionAdvanceDirectives.title] = Advance Directives, [section:sectionAdvanceDirectives.text] = (present), [section:sectionAlerts] = [object Object], [section:sectionAlerts.title] = Alerts, [section:sectionAlerts.text] = (present), [section:sectionFunctionalStatus] = [object Object], [section:sectionFunctionalStatus.title] = Functional Status, [section:sectionFunctionalStatus.text] = (present), [section:sectionPastProblems] = [object Object], [section:sectionPastProblems.title] = History of Past Problems, [section:sectionPastProblems.text] = (present), [section:sectionPregnancyHx] = [object Object], [section:sectionPregnancyHx.title] = History of Pregnancy, [section:sectionPregnancyHx.text] = (present), [section:sectionPatientStory] = [object Object], [section:sectionPatientStory.title] = Patient Story, [section:sectionPatientStory.text] = (present), [section:sectionPlanOfCare] = [object Object], [section:sectionPlanOfCare.title] = Plan of Care, [section:sectionPlanOfCare.text] = (present), [section:sectionSocialHistory] = [object Object], [section:sectionSocialHistory.title] = Social History, [section:sectionSocialHistory.text] = (present), [section:sectionVitalSigns] = [object Object], [section:sectionVitalSigns.title] = Vital Signs, [section:sectionVitalSigns.text] = (present)? Answer yes, or name the ones that caused an error." name="handled" inputType="TEXT" required="true">$handled</request>
+    </interact>
+    <verify handler="StringValidator" desc="$handled is yes">
+      <input name="actualstring">$handled</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <interact id="ask" desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [text] = (present), [status] = final, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [date] = 2024-09-13, [author] = Organization/7a17027f-acc0-4d77-bf84-…, [title] = International Patient Summary, [attester] = (present), [attester.mode] = professional, [attester.time] = 2024-09-13, [attester.party] = PractitionerRole/94d12c8d-a3df-47a7-a…, [custodian] = Organization/7a17027f-acc0-4d77-bf84-…, [event:careProvisioningEvent] = (present), [event:careProvisioningEvent.code] = PCPR, [event:careProvisioningEvent.period] = –2024-09-13, [section] = [object Object], [section.title] = Problem List, [section.text] = (present), [section:sectionProblems] = [object Object], [section:sectionProblems.title] = Problem List, [section:sectionProblems.text] = (present), [section:sectionProblems.entry:problem] = Condition/8039e4a7-d459-454c-92a5-6c1…, [section:sectionProblems.emptyReason], [section:sectionAllergies] = [object Object], [section:sectionAllergies.title] = Allergies and Intolerances, [section:sectionAllergies.text] = (present), [section:sectionAllergies.entry:allergyOrIntolerance] = AllergyIntolerance/9838cf73-c30d-4aa5…, [section:sectionAllergies.emptyReason], [section:sectionMedications] = [object Object], [section:sectionMedications.title] = Medication Summary, [section:sectionMedications.text] = (present), [section:sectionMedications.entry:medicationStatementOrRequest] = MedicationStatement/c3d31980-2a88-45b…, [section:sectionMedications.emptyReason], [section:sectionImmunizations] = [object Object], [section:sectionImmunizations.title] = Immunizations, [section:sectionImmunizations.text] = (present), [section:sectionImmunizations.entry:immunization] = Immunization/17b5a6d7-307b-4726-8c8c-…, [section:sectionResults] = [object Object], [section:sectionResults.title] = Results, [section:sectionResults.text] = (present), [section:sectionResults.entry:results-observation-laboratory-pathology] = Observation/b0187efd-5f9b-474d-87bc-e…, [section:sectionResults.entry:results-observation-radiology] = Observation/b0187efd-5f9b-474d-87bc-e…, [section:sectionResults.entry:results-diagnosticReport] = Observation/b0187efd-5f9b-474d-87bc-e…, [section:sectionProceduresHx] = [object Object], [section:sectionProceduresHx.title] = History of Procedures, [section:sectionProceduresHx.text] = (present), [section:sectionProceduresHx.entry:procedure] = Procedure/39252, [section:sectionMedicalDevices] = [object Object], [section:sectionMedicalDevices.title] = Device Use, [section:sectionMedicalDevices.text] = (present), [section:sectionMedicalDevices.entry:deviceStatement] = DeviceUseStatement/eumfh-70-275-1, [section:sectionAdvanceDirectives] = [object Object], [section:sectionAdvanceDirectives.title] = Advance Directives, [section:sectionAdvanceDirectives.text] = (present), [section:sectionAlerts] = [object Object], [section:sectionAlerts.title] = Alerts, [section:sectionAlerts.text] = (present), [section:sectionFunctionalStatus] = [object Object], [section:sectionFunctionalStatus.title] = Functional Status, [section:sectionFunctionalStatus.text] = (present), [section:sectionPastProblems] = [object Object], [section:sectionPastProblems.title] = History of Past Problems, [section:sectionPastProblems.text] = (present), [section:sectionPregnancyHx] = [object Object], [section:sectionPregnancyHx.title] = History of Pregnancy, [section:sectionPregnancyHx.text] = (present), [section:sectionPatientStory] = [object Object], [section:sectionPatientStory.title] = Patient Story, [section:sectionPatientStory.text] = (present), [section:sectionPlanOfCare] = [object Object], [section:sectionPlanOfCare.title] = Plan of Care, [section:sectionPlanOfCare.text] = (present), [section:sectionSocialHistory] = [object Object], [section:sectionSocialHistory.title] = Social History, [section:sectionSocialHistory.text] = (present), [section:sectionVitalSigns] = [object Object], [section:sectionVitalSigns.title] = Vital Signs, [section:sectionVitalSigns.text] = (present)" inputTitle="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [text] = (present), [status] = final, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [date] = 2024-09-13, [author] = Organization/7a17027f-acc0-4d77-bf84-…, [title] = International Patient Summary, [attester] = (present), [attester.mode] = professional, [attester.time] = 2024-09-13, [attester.party] = PractitionerRole/94d12c8d-a3df-47a7-a…, [custodian] = Organization/7a17027f-acc0-4d77-bf84-…, [event:careProvisioningEvent] = (present), [event:careProvisioningEvent.code] = PCPR, [event:careProvisioningEvent.period] = –2024-09-13, [section] = [object Object], [section.title] = Problem List, [section.text] = (present), [section:sectionProblems] = [object Object], [section:sectionProblems.title] = Problem List, [section:sectionProblems.text] = (present), [section:sectionProblems.entry:problem] = Condition/8039e4a7-d459-454c-92a5-6c1…, [section:sectionProblems.emptyReason], [section:sectionAllergies] = [object Object], [section:sectionAllergies.title] = Allergies and Intolerances, [section:sectionAllergies.text] = (present), [section:sectionAllergies.entry:allergyOrIntolerance] = AllergyIntolerance/9838cf73-c30d-4aa5…, [section:sectionAllergies.emptyReason], [section:sectionMedications] = [object Object], [section:sectionMedications.title] = Medication Summary, [section:sectionMedications.text] = (present), [section:sectionMedications.entry:medicationStatementOrRequest] = MedicationStatement/c3d31980-2a88-45b…, [section:sectionMedications.emptyReason], [section:sectionImmunizations] = [object Object], [section:sectionImmunizations.title] = Immunizations, [section:sectionImmunizations.text] = (present), [section:sectionImmunizations.entry:immunization] = Immunization/17b5a6d7-307b-4726-8c8c-…, [section:sectionResults] = [object Object], [section:sectionResults.title] = Results, [section:sectionResults.text] = (present), [section:sectionResults.entry:results-observation-laboratory-pathology] = Observation/b0187efd-5f9b-474d-87bc-e…, [section:sectionResults.entry:results-observation-radiology] = Observation/b0187efd-5f9b-474d-87bc-e…, [section:sectionResults.entry:results-diagnosticReport] = Observation/b0187efd-5f9b-474d-87bc-e…, [section:sectionProceduresHx] = [object Object], [section:sectionProceduresHx.title] = History of Procedures, [section:sectionProceduresHx.text] = (present), [section:sectionProceduresHx.entry:procedure] = Procedure/39252, [section:sectionMedicalDevices] = [object Object], [section:sectionMedicalDevices.title] = Device Use, [section:sectionMedicalDevices.text] = (present), [section:sectionMedicalDevices.entry:deviceStatement] = DeviceUseStatement/eumfh-70-275-1, [section:sectionAdvanceDirectives] = [object Object], [section:sectionAdvanceDirectives.title] = Advance Directives, [section:sectionAdvanceDirectives.text] = (present), [section:sectionAlerts] = [object Object], [section:sectionAlerts.title] = Alerts, [section:sectionAlerts.text] = (present), [section:sectionFunctionalStatus] = [object Object], [section:sectionFunctionalStatus.title] = Functional Status, [section:sectionFunctionalStatus.text] = (present), [section:sectionPastProblems] = [object Object], [section:sectionPastProblems.title] = History of Past Problems, [section:sectionPastProblems.text] = (present), [section:sectionPregnancyHx] = [object Object], [section:sectionPregnancyHx.title] = History of Pregnancy, [section:sectionPregnancyHx.text] = (present), [section:sectionPatientStory] = [object Object], [section:sectionPatientStory.title] = Patient Story, [section:sectionPatientStory.text] = (present), [section:sectionPlanOfCare] = [object Object], [section:sectionPlanOfCare.title] = Plan of Care, [section:sectionPlanOfCare.text] = (present), [section:sectionSocialHistory] = [object Object], [section:sectionSocialHistory.title] = Social History, [section:sectionSocialHistory.text] = (present), [section:sectionVitalSigns] = [object Object], [section:sectionVitalSigns.title] = Vital Signs, [section:sectionVitalSigns.text] = (present)">
+      <request desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [text] = (present), [status] = final, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [date] = 2024-09-13, [author] = Organization/7a17027f-acc0-4d77-bf84-…, [title] = International Patient Summary, [attester] = (present), [attester.mode] = professional, [attester.time] = 2024-09-13, [attester.party] = PractitionerRole/94d12c8d-a3df-47a7-a…, [custodian] = Organization/7a17027f-acc0-4d77-bf84-…, [event:careProvisioningEvent] = (present), [event:careProvisioningEvent.code] = PCPR, [event:careProvisioningEvent.period] = –2024-09-13, [section] = [object Object], [section.title] = Problem List, [section.text] = (present), [section:sectionProblems] = [object Object], [section:sectionProblems.title] = Problem List, [section:sectionProblems.text] = (present), [section:sectionProblems.entry:problem] = Condition/8039e4a7-d459-454c-92a5-6c1…, [section:sectionProblems.emptyReason], [section:sectionAllergies] = [object Object], [section:sectionAllergies.title] = Allergies and Intolerances, [section:sectionAllergies.text] = (present), [section:sectionAllergies.entry:allergyOrIntolerance] = AllergyIntolerance/9838cf73-c30d-4aa5…, [section:sectionAllergies.emptyReason], [section:sectionMedications] = [object Object], [section:sectionMedications.title] = Medication Summary, [section:sectionMedications.text] = (present), [section:sectionMedications.entry:medicationStatementOrRequest] = MedicationStatement/c3d31980-2a88-45b…, [section:sectionMedications.emptyReason], [section:sectionImmunizations] = [object Object], [section:sectionImmunizations.title] = Immunizations, [section:sectionImmunizations.text] = (present), [section:sectionImmunizations.entry:immunization] = Immunization/17b5a6d7-307b-4726-8c8c-…, [section:sectionResults] = [object Object], [section:sectionResults.title] = Results, [section:sectionResults.text] = (present), [section:sectionResults.entry:results-observation-laboratory-pathology] = Observation/b0187efd-5f9b-474d-87bc-e…, [section:sectionResults.entry:results-observation-radiology] = Observation/b0187efd-5f9b-474d-87bc-e…, [section:sectionResults.entry:results-diagnosticReport] = Observation/b0187efd-5f9b-474d-87bc-e…, [section:sectionProceduresHx] = [object Object], [section:sectionProceduresHx.title] = History of Procedures, [section:sectionProceduresHx.text] = (present), [section:sectionProceduresHx.entry:procedure] = Procedure/39252, [section:sectionMedicalDevices] = [object Object], [section:sectionMedicalDevices.title] = Device Use, [section:sectionMedicalDevices.text] = (present), [section:sectionMedicalDevices.entry:deviceStatement] = DeviceUseStatement/eumfh-70-275-1, [section:sectionAdvanceDirectives] = [object Object], [section:sectionAdvanceDirectives.title] = Advance Directives, [section:sectionAdvanceDirectives.text] = (present), [section:sectionAlerts] = [object Object], [section:sectionAlerts.title] = Alerts, [section:sectionAlerts.text] = (present), [section:sectionFunctionalStatus] = [object Object], [section:sectionFunctionalStatus.title] = Functional Status, [section:sectionFunctionalStatus.text] = (present), [section:sectionPastProblems] = [object Object], [section:sectionPastProblems.title] = History of Past Problems, [section:sectionPastProblems.text] = (present), [section:sectionPregnancyHx] = [object Object], [section:sectionPregnancyHx.title] = History of Pregnancy, [section:sectionPregnancyHx.text] = (present), [section:sectionPatientStory] = [object Object], [section:sectionPatientStory.title] = Patient Story, [section:sectionPatientStory.text] = (present), [section:sectionPlanOfCare] = [object Object], [section:sectionPlanOfCare.title] = Plan of Care, [section:sectionPlanOfCare.text] = (present), [section:sectionSocialHistory] = [object Object], [section:sectionSocialHistory.title] = Social History, [section:sectionSocialHistory.text] = (present), [section:sectionVitalSigns] = [object Object], [section:sectionVitalSigns.title] = Vital Signs, [section:sectionVitalSigns.text] = (present)" name="notDisplayed" inputType="TEXT" required="true">$notDisplayed</request>
+    </interact>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [text]">
+      <input name="expression">not(contains($notDisplayed, &quot;[text]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [status]">
+      <input name="expression">not(contains($notDisplayed, &quot;[status]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [subject]">
+      <input name="expression">not(contains($notDisplayed, &quot;[subject]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [date]">
+      <input name="expression">not(contains($notDisplayed, &quot;[date]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [author]">
+      <input name="expression">not(contains($notDisplayed, &quot;[author]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [title]">
+      <input name="expression">not(contains($notDisplayed, &quot;[title]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [attester]">
+      <input name="expression">not(contains($notDisplayed, &quot;[attester]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [attester.mode]">
+      <input name="expression">not(contains($notDisplayed, &quot;[attester.mode]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [attester.time]">
+      <input name="expression">not(contains($notDisplayed, &quot;[attester.time]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [attester.party]">
+      <input name="expression">not(contains($notDisplayed, &quot;[attester.party]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [custodian]">
+      <input name="expression">not(contains($notDisplayed, &quot;[custodian]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [event:careProvisioningEvent]">
+      <input name="expression">not(contains($notDisplayed, &quot;[event:careProvisioningEvent]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [event:careProvisioningEvent.code]">
+      <input name="expression">not(contains($notDisplayed, &quot;[event:careProvisioningEvent.code]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [event:careProvisioningEvent.period]">
+      <input name="expression">not(contains($notDisplayed, &quot;[event:careProvisioningEvent.period]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section.title]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section.title]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section.text]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section.text]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionProblems]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionProblems]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionProblems.title]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionProblems.title]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionProblems.text]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionProblems.text]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionProblems.entry:problem]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionProblems.entry:problem]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionProblems.emptyReason]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionProblems.emptyReason]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionAllergies]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionAllergies]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionAllergies.title]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionAllergies.title]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionAllergies.text]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionAllergies.text]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionAllergies.entry:allergyOrIntolerance]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionAllergies.entry:allergyOrIntolerance]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionAllergies.emptyReason]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionAllergies.emptyReason]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionMedications]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionMedications]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionMedications.title]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionMedications.title]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionMedications.text]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionMedications.text]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionMedications.entry:medicationStatementOrRequest]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionMedications.entry:medicationStatementOrRequest]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionMedications.emptyReason]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionMedications.emptyReason]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionImmunizations]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionImmunizations]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionImmunizations.title]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionImmunizations.title]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionImmunizations.text]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionImmunizations.text]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionImmunizations.entry:immunization]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionImmunizations.entry:immunization]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionResults]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionResults]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionResults.title]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionResults.title]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionResults.text]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionResults.text]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionResults.entry:results-observation-laboratory-pathology]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionResults.entry:results-observation-laboratory-pathology]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionResults.entry:results-observation-radiology]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionResults.entry:results-observation-radiology]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionResults.entry:results-diagnosticReport]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionResults.entry:results-diagnosticReport]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionProceduresHx]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionProceduresHx]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionProceduresHx.title]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionProceduresHx.title]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionProceduresHx.text]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionProceduresHx.text]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionProceduresHx.entry:procedure]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionProceduresHx.entry:procedure]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionMedicalDevices]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionMedicalDevices]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionMedicalDevices.title]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionMedicalDevices.title]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionMedicalDevices.text]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionMedicalDevices.text]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionMedicalDevices.entry:deviceStatement]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionMedicalDevices.entry:deviceStatement]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionAdvanceDirectives]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionAdvanceDirectives]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionAdvanceDirectives.title]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionAdvanceDirectives.title]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionAdvanceDirectives.text]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionAdvanceDirectives.text]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionAlerts]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionAlerts]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionAlerts.title]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionAlerts.title]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionAlerts.text]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionAlerts.text]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionFunctionalStatus]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionFunctionalStatus]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionFunctionalStatus.title]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionFunctionalStatus.title]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionFunctionalStatus.text]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionFunctionalStatus.text]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionPastProblems]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionPastProblems]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionPastProblems.title]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionPastProblems.title]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionPastProblems.text]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionPastProblems.text]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionPregnancyHx]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionPregnancyHx]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionPregnancyHx.title]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionPregnancyHx.title]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionPregnancyHx.text]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionPregnancyHx.text]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionPatientStory]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionPatientStory]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionPatientStory.title]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionPatientStory.title]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionPatientStory.text]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionPatientStory.text]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionPlanOfCare]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionPlanOfCare]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionPlanOfCare.title]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionPlanOfCare.title]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionPlanOfCare.text]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionPlanOfCare.text]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionSocialHistory]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionSocialHistory]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionSocialHistory.title]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionSocialHistory.title]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionSocialHistory.text]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionSocialHistory.text]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionVitalSigns]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionVitalSigns]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionVitalSigns.title]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionVitalSigns.title]&quot;))</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [section:sectionVitalSigns.text]">
+      <input name="expression">not(contains($notDisplayed, &quot;[section:sectionVitalSigns.text]&quot;))</input>
+    </verify>
+  </steps>
+
+  <output>
+    <success>
+      <default>"Test case completed successfully."</default>
+    </success>
+    <failure>
+      <default>"Test case failed. Check step reports and logs."</default>
+    </failure>
+  </output>
+</testcase>

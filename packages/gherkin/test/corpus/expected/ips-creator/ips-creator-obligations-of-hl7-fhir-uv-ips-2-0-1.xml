@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite id="ips-creator-obligations-of-hl7-fhir-uv-ips-2-0-1"
+           xmlns="http://www.gitb.com/tdl/v1/"
+           xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>IPS Creator — obligations of hl7.fhir.uv.ips 2.0.1</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>An IPS Creator actor is a system which produces/assembles/creates an IPS document. The reference patient is the IG's own all-sections example, Patricia JORDANA (identifier ABC1234): every element with a Creator obligation that the example carries must appear in the document the system produces for her.</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="Creator">
+      <gitb:name>Creator</gitb:name>
+    </gitb:actor>
+    <gitb:actor id="FHIRValidator">
+      <gitb:name>FHIRValidator</gitb:name>
+      <gitb:desc>Endpoint: http://fhir-validator:8081</gitb:desc>
+    </gitb:actor>
+  </actors>
+
+  <testcase id="ips-creator-000-the-exported-document-is-a-valid-ips-bundle"/>
+  <testcase id="ips-creator-001-bundle-ips-the-creator-populates-identifier-timestamp-entry-composition"/>
+  <testcase id="ips-creator-002-composition-ips-the-creator-populates-status-type-subject-subject-reference-and-more-23-elements-when-known"/>
+  <testcase id="ips-creator-003-patient-ips-the-creator-populates-name-10-elements-when-known"/>
+  <testcase id="ips-creator-004-practitioner-ips-the-creator-populates-5-elements-when-known"/>
+  <testcase id="ips-creator-005-practitionerrole-ips-the-creator-populates-1-element-when-known"/>
+  <testcase id="ips-creator-006-organization-ips-the-creator-populates-3-elements-when-known"/>
+  <testcase id="ips-creator-007-allergyintolerance-ips-the-creator-populates-9-elements-when-known"/>
+  <testcase id="ips-creator-008-condition-ips-the-creator-populates-7-elements-when-known"/>
+  <testcase id="ips-creator-009-medication-ips-the-creator-populates-5-elements-when-known"/>
+  <testcase id="ips-creator-010-medicationrequest-ips-the-creator-populates-6-elements-when-known"/>
+  <testcase id="ips-creator-011-medicationstatement-ips-the-creator-populates-7-elements-when-known"/>
+  <testcase id="ips-creator-012-immunization-ips-the-creator-populates-5-elements-when-known"/>
+  <testcase id="ips-creator-013-observation-results-laboratory-pathology-ips-the-creator-populates-10-elements-when-known"/>
+  <testcase id="ips-creator-014-observation-results-radiology-ips-the-creator-populates-8-elements-when-known"/>
+  <testcase id="ips-creator-015-diagnosticreport-ips-the-creator-populates-6-elements-when-known"/>
+  <testcase id="ips-creator-016-specimen-ips-the-creator-populates-3-elements-when-known"/>
+  <testcase id="ips-creator-017-imagingstudy-ips-the-creator-populates-12-elements-when-known"/>
+  <testcase id="ips-creator-018-procedure-ips-the-creator-populates-4-elements-when-known"/>
+  <testcase id="ips-creator-019-device-performer-or-observer-ips-the-creator-populates-3-elements-when-known"/>
+  <testcase id="ips-creator-020-device-ips-the-creator-populates-1-element-when-known"/>
+  <testcase id="ips-creator-021-deviceusestatement-ips-the-creator-populates-4-elements-when-known"/>
+  <testcase id="ips-creator-022-flag-alert-ips-the-creator-populates-5-elements-when-known"/>
+  <testcase id="ips-creator-023-observation-pregnancy-expected-delivery-date-ips-the-creator-populates-5-elements-when-known"/>
+  <testcase id="ips-creator-024-observation-pregnancy-outcome-ips-the-creator-populates-5-elements-when-known"/>
+  <testcase id="ips-creator-025-observation-pregnancy-status-ips-the-creator-populates-7-elements-when-known"/>
+  <testcase id="ips-creator-026-observation-social-history-tobacco-use-ips-the-creator-populates-4-elements-when-known"/>
+  <testcase id="ips-creator-027-observation-social-history-alcohol-use-ips-the-creator-populates-4-elements-when-known"/>
+  <testcase id="ips-creator-028-codeable-concept-ips-the-creator-populates-2-elements-when-known"/>
+  <testcase id="ips-creator-029-coding-with-translations-the-creator-populates-2-elements-when-known"/>
+  <testcase id="ips-creator-900-required-sections-carry-an-explicit-no-information-statement"/>
+
+</testsuite>

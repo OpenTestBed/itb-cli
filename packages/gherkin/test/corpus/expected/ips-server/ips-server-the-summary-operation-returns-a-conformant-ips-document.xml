@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite id="ips-server-the-summary-operation-returns-a-conformant-ips-document"
+           xmlns="http://www.gitb.com/tdl/v1/"
+           xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>IPS Server — the $summary operation returns a conformant IPS document</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>An IPS Server is a FHIR server acting as an IPS Creator by providing conformant IPS documents in response to FHIR API requests (CapabilityStatement ips-server).</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="IPSServer">
+      <gitb:name>IPSServer</gitb:name>
+      <gitb:desc>Endpoint: http://ips-server:8080/fhir | Definition: http://hl7.org/fhir/uv/ips/CapabilityStatement/ips-server</gitb:desc>
+    </gitb:actor>
+    <gitb:actor id="Client">
+      <gitb:name>Client</gitb:name>
+    </gitb:actor>
+    <gitb:actor id="FHIRValidator">
+      <gitb:name>FHIRValidator</gitb:name>
+      <gitb:desc>Endpoint: http://fhir-validator:8081</gitb:desc>
+    </gitb:actor>
+  </actors>
+
+  <testcase id="ips-server-001-the-capabilitystatement-declares-the-summary-operation"/>
+  <testcase id="ips-server-002-summary-by-patient-identifier-returns-a-bundle-ips-with-identifier-timestamp-and-the-composition-first"/>
+  <testcase id="ips-server-003-the-returned-composition-is-complete-and-about-the-requested-patient"/>
+  <testcase id="ips-server-004-summary-honours-the-profile-parameter"/>
+  <testcase id="ips-server-005-an-unknown-patient-is-refused-not-answered-with-an-empty-document"/>
+  <testcase id="ips-server-006-the-returned-document-is-the-input-for-the-creator-test-cases"/>
+
+</testsuite>

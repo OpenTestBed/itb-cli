@@ -132,7 +132,7 @@ verbs:
   # thing under test. Assert it: `Then $response.status should be 201`.
   # Dialect verbs (loads IG, decodes, …) DO assert their own success.
   #
-  #   <Actor> posts/puts/patches to <Actor> at "/path" [with id $id] with: """…"""
+  #   <Actor> posts/puts/patches to <Actor> at "/path" [with id $id | "literal"] with: """…"""
   #   <Actor> posts/puts/patches to <Actor> at "/path" [with id $id] with body $var
   #   <Actor> gets from <Actor> at "/path" [with id $id] as $var
   #   <Actor> gets "https://…" as $var
@@ -154,7 +154,7 @@ verbs:
     actions:
       - assign: { to: 'jsonHeaders{Authorization}', value: 'concat("Bearer ", $1)' }
 
-  - text: '{actor} posts to/on {actor} at {string}( with id {ref})? with body {ref}'
+  - text: '{actor} posts to/on {actor} at {string}( with id {value})? with body {ref}'
     doc: POST a body held in a variable.
     actions:
       - assign: { to: 'jsonHeaders{Content-Type}', value: '"application/json"' }
@@ -171,7 +171,7 @@ verbs:
             headers: '$jsonHeaders'
             body: '$5'
 
-  - text: '{actor} posts to/on {actor} at {string}( with id {ref})? with:'
+  - text: '{actor} posts to/on {actor} at {string}( with id {value})? with:'
     doc: POST the doc string as the body.
     actions:
       - assign: { to: 'jsonHeaders{Content-Type}', value: '"application/json"' }
@@ -188,7 +188,7 @@ verbs:
             headers: '$jsonHeaders'
             body: '$docString'
 
-  - text: '{actor} puts to/on {actor} at {string}( with id {ref})? with body {ref}'
+  - text: '{actor} puts to/on {actor} at {string}( with id {value})? with body {ref}'
     doc: PUT a body held in a variable.
     actions:
       - assign: { to: 'jsonHeaders{Content-Type}', value: '"application/json"' }
@@ -205,7 +205,7 @@ verbs:
             headers: '$jsonHeaders'
             body: '$5'
 
-  - text: '{actor} puts to/on {actor} at {string}( with id {ref})? with:'
+  - text: '{actor} puts to/on {actor} at {string}( with id {value})? with:'
     doc: PUT the doc string as the body.
     actions:
       - assign: { to: 'jsonHeaders{Content-Type}', value: '"application/json"' }
@@ -222,7 +222,7 @@ verbs:
             headers: '$jsonHeaders'
             body: '$docString'
 
-  - text: '{actor} patches to/on {actor} at {string}( with id {ref})? with body {ref}'
+  - text: '{actor} patches to/on {actor} at {string}( with id {value})? with body {ref}'
     doc: PATCH (JSON Patch) with a body held in a variable.
     actions:
       - assign: { to: 'jsonHeaders{Content-Type}', value: '"application/json-patch+json"' }
@@ -239,7 +239,7 @@ verbs:
             headers: '$jsonHeaders'
             body: '$5'
 
-  - text: '{actor} patches to/on {actor} at {string}( with id {ref})? with:'
+  - text: '{actor} patches to/on {actor} at {string}( with id {value})? with:'
     doc: PATCH (JSON Patch) with the doc string as the body.
     actions:
       - assign: { to: 'jsonHeaders{Content-Type}', value: '"application/json-patch+json"' }
@@ -256,7 +256,7 @@ verbs:
             headers: '$jsonHeaders'
             body: '$docString'
 
-  - text: '{actor} deletes on/from {actor} at {string}( with id {ref})?'
+  - text: '{actor} deletes on/from {actor} at {string}( with id {value})?'
     doc: DELETE.
     actions:
       - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
@@ -271,7 +271,7 @@ verbs:
             method: '"DELETE"'
             headers: '$jsonHeaders'
 
-  - text: '{actor} gets from {actor} at {string}( with id {ref})? as {var}'
+  - text: '{actor} gets from {actor} at {string}( with id {value})? as {var}'
     doc: GET relative to an actor's endpoint and keep the body.
     actions:
       - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
