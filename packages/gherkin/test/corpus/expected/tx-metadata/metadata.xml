@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testcase id="metadata"
+          xmlns="http://www.gitb.com/tdl/v1/"
+          xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>metadata</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>Terminology server — metadata</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="TxServer" role="SUT"/>
+    <gitb:actor id="FHIRValidator" role="SIMULATED"/>
+    <gitb:actor id="Client" role="SIMULATED"/>
+  </actors>
+
+  <variables>
+    <var name="matchBody" type="string"/>
+    <var name="matchResult" type="string"/>
+    <var name="lastRequest" type="map"/>
+    <var name="txExpectedRequest" type="map"/>
+    <var name="matchRequest" type="map"/>
+    <var name="TxServerBase" type="string"/>
+    <var name="FHIRValidatorBase" type="string"/>
+    <var name="txTestsBase" type="string"/>
+    <var name="txResourceParams" type="string"/>
+    <var name="jsonHeaders" type="map"/>
+    <var name="capabilities" type="string"/>
+    <var name="sigStatus" type="string"/>
+    <var name="txFetchHeaders" type="map"/>
+    <var name="matchTplParams" type="map"/>
+    <var name="matchHeaders" type="map"/>
+  </variables>
+
+  <steps stopOnError="true">
+    <assign to="TxServerBase">&quot;https://178.104.103.200.sslip.io/tx/r4&quot;</assign>
+    <assign to="FHIRValidatorBase">&quot;http://fhir-validator:8080&quot;</assign>
+    <assign to="txTestsBase">&quot;https://raw.githubusercontent.com/HL7/fhir-tx-ecosystem-ig/5bf53a4adb4a522a34a037fc4f7e797eb2956830/tests/&quot;</assign>
+    <assign to="txResourceParams">&quot;&quot;</assign>
+    <assign to="jsonHeaders{Content-Type}">&quot;application/fhir+json&quot;</assign>
+    <assign to="jsonHeaders{Accept}">&quot;application/fhir+json&quot;</assign>
+    <send id="lastRequest" desc="GET /metadata" handler="HttpMessagingV2" from="Client" to="TxServer">
+      <input name="uri">concat($TxServerBase, &quot;/metadata&quot;)</input>
+      <input name="method">&quot;GET&quot;</input>
+      <input name="headers">$jsonHeaders</input>
+    </send>
+    <assign to="capabilities">$lastRequest{response}{body}</assign>
+    <assign to="sigStatus">if (empty($lastRequest{response}{status})) then &quot;0&quot; else $lastRequest{response}{status}</assign>
+    <verify handler="NumberValidator" desc="Response status is 200">
+      <input name="actualnumber">$sigStatus</input>
+      <input name="expectednumber">&quot;200&quot;</input>
+    </verify>
+    <assign to="txFetchHeaders{Accept}">&quot;application/json&quot;</assign>
+    <send id="txExpectedRequest" desc="Fetch expected capstmt.json" handler="HttpMessagingV2" from="TxServer">
+      <input name="uri">concat($txTestsBase, &quot;capstmt.json&quot;)</input>
+      <input name="method">&quot;GET&quot;</input>
+      <input name="headers">$txFetchHeaders</input>
+    </send>
+    <assign to="matchTplParams{resource}">$capabilities</assign>
+    <assign to="matchTplParams{matchetype}">$txExpectedRequest{response}{body}</assign>
+    <process handler="TemplateProcessor" operation="process" output="matchBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;matchetype&quot;, &quot;value&quot;: &quot;${matchetype?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$matchTplParams</input>
+    </process>
+    <assign to="matchHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="matchHeaders{Accept}">&quot;application/json&quot;</assign>
+    <send id="matchRequest" desc="Matchetype: capstmt.json" handler="HttpMessagingV2" from="TxServer" to="FHIRValidator">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/matchetype/validate&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$matchHeaders</input>
+      <input name="body">$matchBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="matchResult">
+      <input name="content">$matchRequest{response}{body}</input>
+      <input name="pointer">&quot;/report/result&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="$capabilities matches the expected response capstmt.json">
+      <input name="actualstring">$matchResult</input>
+      <input name="expectedstring">&quot;SUCCESS&quot;</input>
+    </verify>
+  </steps>
+
+  <output>
+    <success>
+      <default>"Test case completed successfully."</default>
+    </success>
+    <failure>
+      <default>"Test case failed. Check step reports and logs."</default>
+    </failure>
+  </output>
+</testcase>

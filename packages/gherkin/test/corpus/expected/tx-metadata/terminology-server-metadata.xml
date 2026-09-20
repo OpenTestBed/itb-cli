@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite id="terminology-server-metadata"
+           xmlns="http://www.gitb.com/tdl/v1/"
+           xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>Terminology server — metadata</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>tests for minimal requirements for metadata statements These tests apply to all servers</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="TxServer">
+      <gitb:name>TxServer</gitb:name>
+      <gitb:desc>Endpoint: https://178.104.103.200.sslip.io/tx/r4</gitb:desc>
+    </gitb:actor>
+    <gitb:actor id="FHIRValidator">
+      <gitb:name>FHIRValidator</gitb:name>
+      <gitb:desc>Endpoint: http://fhir-validator:8080</gitb:desc>
+    </gitb:actor>
+    <gitb:actor id="Client">
+      <gitb:name>Client</gitb:name>
+    </gitb:actor>
+  </actors>
+
+  <testcase id="metadata"/>
+  <testcase id="term-caps"/>
+
+</testsuite>

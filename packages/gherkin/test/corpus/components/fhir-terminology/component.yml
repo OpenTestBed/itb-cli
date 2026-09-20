@@ -1,0 +1,28 @@
+# Dialect: FHIR terminology server
+#
+# Verbs for the terminology operations a FHIR terminology server exposes, in
+# the shape the HL7 terminology-ecosystem tests use: a Parameters request,
+# the suite's CodeSystem/ValueSet resources travelling with every request as
+# tx-resource parameters, and an expected response compared as a matchetype.
+#
+# There is no service of its own: the terminology server IS the system under
+# test, and the comparison is done by the FHIR validator's matchetype
+# service. The dialect therefore declares a kind and verbs, and nothing to run.
+id: fhir-terminology
+name: FHIR Terminology Server
+version: "1.0"
+implementsDialect: "^1.0"
+description: >
+  $expand, $validate-code, $lookup, $subsumes, $translate and the capability
+  statements of a FHIR terminology server, tested the way the HL7 FHIR
+  terminology-ecosystem test set does.
+
+actors:
+  - id: TxServer
+    description: The terminology server under test
+
+language:
+  steps: steps.yml
+  version: "1.0.0"
+  base: itb-core-en
+  baseVersion: ">=2 <3"

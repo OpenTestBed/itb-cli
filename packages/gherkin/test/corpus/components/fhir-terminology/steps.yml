@@ -1,0 +1,312 @@
+# FHIR terminology server dialect — generation 2
+#
+#   kind   terminology-server      the server the operations go to
+#
+#   Client fetches the test material from "https://raw.githubusercontent.com/HL7/fhir-tx-ecosystem-ig/<commit>/tests/"
+#   TxServer is given the resources:          | resource | (paths under the material)
+#   Client expands on TxServer with:          """ Parameters """
+#   Client validates a code on TxServer with:
+#   Client validates a code against the code system on TxServer with:
+#   Client looks up a code on TxServer with:
+#   Client tests subsumption on TxServer with:
+#   Client translates on TxServer with:
+#   Client compares value sets on TxServer with:
+#   Client validates a batch on TxServer with:
+#   Client reads the capability statement of TxServer as $caps
+#   Client reads the terminology capabilities of TxServer as $caps
+#   $response should match the expected response "simple/simple-expand-all-response-valueSet.json"
+#
+# The server is named in every operation (`on TxServer`) because it is usually
+# the system under test, and "is the system under test" carries no kind.
+#
+# How a request is built — the way the HL7 runner (TxTester) builds it: the
+# Parameters in the step, plus one `tx-resource` parameter for each resource
+# the server was given. The runner also appends a profile (`uuid` and the
+# version parameters); the generator puts those in the step's Parameters so the
+# reader sees them. The operation verbs do NOT assert the HTTP status: for
+# these tests the status is an outcome — `$response.status should be 200`.
+#
+# How a response is judged: the upstream expected file is a matchetype ($id$,
+# $uuid$, $instant$, $choice:…$, $optional-properties$, $optional$) fetched
+# from the test material and handed as it is to the FHIR validator's
+# /itb/matchetype service. What that service does today (measured against the
+# 2026-09 build): placeholders and $choice$ work; arrays are compared in
+# order; $optional-properties$ and $optional$ are NOT honoured (an element
+# left out fails). The HL7 runner sorts the actual response (parameters by
+# name, expansion.contains by code, issues by severity/code) and strips
+# issue.diagnostics before comparing. Those normalisations belong in the
+# matchetype service, not here — until then a semantically right answer in a
+# different order fails.
+id: fhir-terminology
+name: FHIR Terminology Server Steps
+language: 2
+description: >
+  Terminology operations against a terminology server, with the request
+  composed the way the HL7 terminology-ecosystem test runner composes it.
+
+kinds: [terminology-server]
+
+# Requests to the server go with the core's header map, so `set header
+# "Accept-Language" to "en"` (a core step) applies to them.
+x-fhir-json: &fhirJson
+  - assign: { to: 'jsonHeaders{Content-Type}', value: '"application/fhir+json"' }
+  - assign: { to: 'jsonHeaders{Accept}', value: '"application/fhir+json"' }
+
+# Fetching test material uses its own headers, so the server's headers never
+# leak to the material host.
+x-fetch: &fetchHeaders
+  - assign: { to: 'txFetchHeaders{Accept}', value: '"application/json"' }
+
+# The request Parameters with the suite resources appended inside its
+# parameter array: `keep_before_last("]")` cuts the request just before the
+# closing bracket of `parameter`, the last `]` in a Parameters resource.
+x-compose: &compose
+  - assign: { to: 'txParams{request}', value: "'$docString'" }
+  - assign: { to: 'txParams{resources}', value: '$txResourceParams' }
+  - process:
+      handler: 'TemplateProcessor'
+      operation: 'process'
+      output: 'txBody'
+      inputs:
+        syntax: '"freemarker"'
+        template: "'${request?keep_before_last(\"]\")}${resources}]}'"
+        parameters: '$txParams'
+
+verbs:
+  - text: '{actor} fetches the test material from {string}'
+    doc: Where the test set's files are read from (the raw GitHub URL of the upstream tests folder, or any HTTP folder).
+    actions:
+      - assign: { to: 'txTestsBase', value: '"$2"' }
+      - assign: { to: 'txResourceParams', value: '""' }
+
+  - text: '{actor:terminology-server} is given the resources:'
+    doc: The CodeSystems and ValueSets a suite depends on (table | resource |, paths under the test material); they travel with every request as tx-resource parameters.
+    table:
+      required: [resource]
+    actions:
+      - *fetchHeaders
+      - foreach:
+          from: '$tableRows'
+          do:
+            - send:
+                id: 'txMaterialRequest'
+                desc: 'Fetch $row.resource'
+                handler: 'HttpMessagingV2'
+                inputs:
+                  uri: 'concat($txTestsBase, "$row.resource")'
+                  method: '"GET"'
+                  headers: '$txFetchHeaders'
+            - assign:
+                to: 'txResourceParams'
+                value: 'concat($txResourceParams, ",{\"name\":\"tx-resource\",\"resource\":", $txMaterialRequest{response}{body}, "}")'
+
+  - text: '{actor} expands on {actor:terminology-server} with:'
+    doc: ValueSet/$expand with the doc string as the request Parameters.
+    actions:
+      - *compose
+      - *fhirJson
+      - send:
+          id: 'lastRequest'
+          desc: 'POST /ValueSet/$expand'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
+          inputs:
+            uri: 'concat($targetBase, "/ValueSet/$expand")'
+            method: '"POST"'
+            headers: '$jsonHeaders'
+            body: '$txBody'
+
+  - text: '{actor} validates a code on {actor:terminology-server} with:'
+    doc: ValueSet/$validate-code.
+    actions:
+      - *compose
+      - *fhirJson
+      - send:
+          id: 'lastRequest'
+          desc: 'POST /ValueSet/$validate-code'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
+          inputs:
+            uri: 'concat($targetBase, "/ValueSet/$validate-code")'
+            method: '"POST"'
+            headers: '$jsonHeaders'
+            body: '$txBody'
+
+  - text: '{actor} validates a code against the code system on {actor:terminology-server} with:'
+    doc: CodeSystem/$validate-code.
+    actions:
+      - *compose
+      - *fhirJson
+      - send:
+          id: 'lastRequest'
+          desc: 'POST /CodeSystem/$validate-code'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
+          inputs:
+            uri: 'concat($targetBase, "/CodeSystem/$validate-code")'
+            method: '"POST"'
+            headers: '$jsonHeaders'
+            body: '$txBody'
+
+  - text: '{actor} looks up a code on {actor:terminology-server} with:'
+    doc: CodeSystem/$lookup.
+    actions:
+      - *compose
+      - *fhirJson
+      - send:
+          id: 'lastRequest'
+          desc: 'POST /CodeSystem/$lookup'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
+          inputs:
+            uri: 'concat($targetBase, "/CodeSystem/$lookup")'
+            method: '"POST"'
+            headers: '$jsonHeaders'
+            body: '$txBody'
+
+  - text: '{actor} tests subsumption on {actor:terminology-server} with:'
+    doc: CodeSystem/$subsumes.
+    actions:
+      - *compose
+      - *fhirJson
+      - send:
+          id: 'lastRequest'
+          desc: 'POST /CodeSystem/$subsumes'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
+          inputs:
+            uri: 'concat($targetBase, "/CodeSystem/$subsumes")'
+            method: '"POST"'
+            headers: '$jsonHeaders'
+            body: '$txBody'
+
+  - text: '{actor} translates on {actor:terminology-server} with:'
+    doc: ConceptMap/$translate.
+    actions:
+      - *compose
+      - *fhirJson
+      - send:
+          id: 'lastRequest'
+          desc: 'POST /ConceptMap/$translate'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
+          inputs:
+            uri: 'concat($targetBase, "/ConceptMap/$translate")'
+            method: '"POST"'
+            headers: '$jsonHeaders'
+            body: '$txBody'
+
+  - text: '{actor} compares value sets on {actor:terminology-server} with:'
+    doc: ValueSet/$compare (thisUrl / otherUrl), as tx.fhir.org serves it.
+    actions:
+      - *compose
+      - *fhirJson
+      - send:
+          id: 'lastRequest'
+          desc: 'POST /ValueSet/$compare'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
+          inputs:
+            uri: 'concat($targetBase, "/ValueSet/$compare")'
+            method: '"POST"'
+            headers: '$jsonHeaders'
+            body: '$txBody'
+
+  - text: '{actor} validates a batch on {actor:terminology-server} with:'
+    doc: ValueSet/$batch-validate-code — several codes in one request.
+    actions:
+      - *compose
+      - *fhirJson
+      - send:
+          id: 'lastRequest'
+          desc: 'POST /ValueSet/$batch-validate-code'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
+          inputs:
+            uri: 'concat($targetBase, "/ValueSet/$batch-validate-code")'
+            method: '"POST"'
+            headers: '$jsonHeaders'
+            body: '$txBody'
+
+  - text: '{actor} reads the capability statement of {actor:terminology-server} as {var}'
+    doc: GET /metadata.
+    actions:
+      - *fhirJson
+      - send:
+          id: 'lastRequest'
+          desc: 'GET /metadata'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
+          inputs:
+            uri: 'concat($targetBase, "/metadata")'
+            method: '"GET"'
+            headers: '$jsonHeaders'
+      - assign: { to: '$3', value: '$lastRequest{response}{body}' }
+
+  - text: '{actor} reads the terminology capabilities of {actor:terminology-server} as {var}'
+    doc: GET /metadata?mode=terminology.
+    actions:
+      - *fhirJson
+      - send:
+          id: 'lastRequest'
+          desc: 'GET /metadata?mode=terminology'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
+          inputs:
+            uri: 'concat($targetBase, "/metadata?mode=terminology")'
+            method: '"GET"'
+            headers: '$jsonHeaders'
+      - assign: { to: '$3', value: '$lastRequest{response}{body}' }
+
+  # The expected file is fetched from the test material and used as the
+  # matchetype, verbatim. The validator is the one declared as a fhir-validator
+  # unless named ("… on FHIRValidator").
+  - text: '{ref} should match the expected response {string}( on {actor:fhir-validator})?'
+    doc: Compare a response with an upstream expected file (a matchetype) through the FHIR validator.
+    actions:
+      - *fetchHeaders
+      - send:
+          id: 'txExpectedRequest'
+          desc: 'Fetch expected $2'
+          handler: 'HttpMessagingV2'
+          inputs:
+            uri: 'concat($txTestsBase, "$2")'
+            method: '"GET"'
+            headers: '$txFetchHeaders'
+      - assign: { to: 'matchTplParams{resource}', value: '$1' }
+      - assign: { to: 'matchTplParams{matchetype}', value: '$txExpectedRequest{response}{body}' }
+      - process:
+          handler: 'TemplateProcessor'
+          operation: 'process'
+          output: 'matchBody'
+          inputs:
+            syntax: '"freemarker"'
+            template: "'{ \"input\": [ { \"name\": \"contentToValidate\", \"value\": \"${resource?json_string}\", \"embeddingMethod\": \"STRING\" }, { \"name\": \"matchetype\", \"value\": \"${matchetype?json_string}\", \"embeddingMethod\": \"STRING\" } ] }'"
+            parameters: '$matchTplParams'
+      - assign: { to: 'matchHeaders{Content-Type}', value: '"application/json"' }
+      - assign: { to: 'matchHeaders{Accept}', value: '"application/json"' }
+      - send:
+          id: 'matchRequest'
+          desc: 'Matchetype: $2'
+          handler: 'HttpMessagingV2'
+          to: '$target'
+          inputs:
+            uri: 'concat($targetBase, "/itb/matchetype/validate")'
+            method: '"POST"'
+            headers: '$matchHeaders'
+            body: '$matchBody'
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'matchResult', inputs: { content: '$matchRequest{response}{body}', pointer: '"/report/result"' } }
+      - verify:
+          handler: 'StringValidator'
+          desc: '$$1 matches the expected response $2'
+          inputs: { actualstring: '$matchResult', expectedstring: '"SUCCESS"' }
