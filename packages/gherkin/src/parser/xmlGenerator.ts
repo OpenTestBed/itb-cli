@@ -281,18 +281,27 @@ function upgradeVarsForScriptletCalls(
  */
 function lintSteps(stepsXml: string, testcase: string): ParseIssue[] {
   const issues: ParseIssue[] = [];
-  // Only expression contexts: <log> bodies and ExpressionValidator inputs.
-  // FreeMarker templates (<input name="template">) legitimately hold backslashes.
-  const exprs: string[] = [];
-  for (const m of stepsXml.matchAll(/<log>([\s\S]*?)<\/log>/g)) exprs.push(m[1]);
-  for (const m of stepsXml.matchAll(/<input name="expression">([\s\S]*?)<\/input>/g)) exprs.push(m[1]);
-  for (const raw of exprs) {
+  // Every one of these is an expression to ITB: a <log> body, an <assign>
+  // value, and the value of any <input>. ITB rejects a backslash anywhere in
+  // one — there are no escapes, not even inside a string literal — and it only
+  // says so on deploy ("Invalid character '\\' (x5c) in expression"), which is
+  // late. A JSON payload written into a feature lands here, so a request with
+  // an apostrophe escaped as \\u0027, or any JSON escape such as \\n, fails.
+  const exprs: { text: string; what: string }[] = [];
+  for (const m of stepsXml.matchAll(/<log>([\s\S]*?)<\/log>/g)) exprs.push({ text: m[1], what: 'a log' });
+  for (const m of stepsXml.matchAll(/<assign[^>]*>([\s\S]*?)<\/assign>/g)) exprs.push({ text: m[1], what: 'an assign' });
+  for (const m of stepsXml.matchAll(/<input name="([^"]*)">([\s\S]*?)<\/input>/g)) exprs.push({ text: m[2], what: `the "${m[1]}" input` });
+  for (const { text: raw, what } of exprs) {
     const e = raw.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
-    if (/\\"/.test(e)) {
+    if (e.includes('\\')) {
+      const at = e.indexOf('\\');
       issues.push({
         severity: 'error', from: 'generator',
-        message: `${testcase}: a TDL expression contains a backslash-escaped quote — ITB has no escapes in expressions (TDL-042). Use single quotes inside a double-quoted literal: ${e.slice(0, 80)}`,
+        message: `${testcase}: ${what} contains a backslash, which ITB refuses anywhere in an expression (TDL-042). `
+          + `Write double quotes inside a single-quoted literal rather than escaping them, and keep JSON escapes out of an inlined payload: `
+          + `…${e.slice(Math.max(0, at - 30), at + 30)}…`,
       });
+      continue;
     }
     for (const t of e.matchAll(/\btranslate\(([^()]*)\)/g)) {
       const n = t[1].replace(/"[^"]*"|'[^']*'/g, 'x').split(',').length;

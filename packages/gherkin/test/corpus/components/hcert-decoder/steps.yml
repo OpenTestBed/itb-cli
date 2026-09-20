@@ -220,11 +220,10 @@ verbs:
       - assign: { to: 'authParams{pin}', value: '$4' }
       - assign:
           to: 'authTpl'
-          value: >-
-            '{"url":"${url?string?replace("\\","\\\\")
-            ?replace("\"","\\\"")}", "pin":"${pin?string?trim
-            ?replace("\\","\\\\")
-            ?replace("\"","\\\"")}"}'
+          # ?json_string does the escaping FreeMarker is for. A hand-rolled
+          # ?replace chain needs backslashes, and ITB refuses a backslash
+          # anywhere in an expression (TDL-042), so the suite would not deploy.
+          value: '''{"url":"${url?string?json_string}", "pin":"${pin?string?trim?json_string}"}'''
       - process:
           handler: 'TemplateProcessor'
           operation: 'process'
@@ -259,11 +258,10 @@ verbs:
       - assign: { to: 'authParams{pin}', value: '$4' }
       - assign:
           to: 'authTpl'
-          value: >-
-            '{"url":"${url?string?replace("\\","\\\\")
-            ?replace("\"","\\\"")}", "pin":"${pin?string
-            ?replace("\\","\\\\")
-            ?replace("\"","\\\"")}"}'
+          # ?json_string does the escaping FreeMarker is for. A hand-rolled
+          # ?replace chain needs backslashes, and ITB refuses a backslash
+          # anywhere in an expression (TDL-042), so the suite would not deploy.
+          value: '''{"url":"${url?string?json_string}", "pin":"${pin?string?json_string}"}'''
       - process:
           handler: 'TemplateProcessor'
           operation: 'process'

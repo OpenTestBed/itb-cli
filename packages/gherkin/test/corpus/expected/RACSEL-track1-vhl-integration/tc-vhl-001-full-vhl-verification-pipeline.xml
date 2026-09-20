@@ -233,7 +233,7 @@
     </process>
     <assign to="authParams{url}">$shlLink</assign>
     <assign to="authParams{pin}">$pin</assign>
-    <assign to="authTpl">'{&quot;url&quot;:&quot;${url?string?replace(&quot;\\&quot;,&quot;\\\\&quot;) ?replace(&quot;\&quot;&quot;,&quot;\\\&quot;&quot;)}&quot;, &quot;pin&quot;:&quot;${pin?string?trim ?replace(&quot;\\&quot;,&quot;\\\\&quot;) ?replace(&quot;\&quot;&quot;,&quot;\\\&quot;&quot;)}&quot;}'</assign>
+    <assign to="authTpl">'{&quot;url&quot;:&quot;${url?string?json_string}&quot;, &quot;pin&quot;:&quot;${pin?string?trim?json_string}&quot;}'</assign>
     <process handler="TemplateProcessor" operation="process" output="authBody">
       <input name="syntax">&quot;freemarker&quot;</input>
       <input name="template">$authTpl</input>

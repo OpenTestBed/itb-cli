@@ -61,6 +61,12 @@ x-fetch: &fetchHeaders
 # The request Parameters with the suite resources appended inside its
 # parameter array: `keep_before_last("]")` cuts the request just before the
 # closing bracket of `parameter`, the last `]` in a Parameters resource.
+#
+# Two ways in. `with:` inlines the Parameters, which reads best and is what an
+# author writes. `with the request in "file"` names a file of the test material
+# instead, for a payload a TDL expression cannot carry: ITB allows no backslash
+# in an expression (TDL-042), so a request holding an apostrophe or any JSON
+# escape has to travel as a fetched file rather than as text in the feature.
 x-compose: &compose
   - assign: { to: 'txParams{request}', value: "'$docString'" }
   - assign: { to: 'txParams{resources}', value: '$txResourceParams' }
@@ -71,6 +77,40 @@ x-compose: &compose
       inputs:
         syntax: '"freemarker"'
         template: "'${request?keep_before_last(\"]\")}${resources}]}'"
+        parameters: '$txParams'
+
+# The same composition, with the request and the runner's parameters fetched
+# from the test material: request + the parameter array of the profile + the
+# suite resources, all inside the request's own parameter array.
+x-compose-file: &composeFile
+  - *fetchHeaders
+  # Slots: $1 the client, $2 the server, $3 the request file, $4 the parameters.
+  - send:
+      id: 'txRequestFetch'
+      desc: 'Fetch request $3'
+      handler: 'HttpMessagingV2'
+      inputs:
+        uri: 'concat($txTestsBase, "$3")'
+        method: '"GET"'
+        headers: '$txFetchHeaders'
+  - send:
+      id: 'txProfileFetch'
+      desc: 'Fetch parameters $4'
+      handler: 'HttpMessagingV2'
+      inputs:
+        uri: 'concat($txTestsBase, "$4")'
+        method: '"GET"'
+        headers: '$txFetchHeaders'
+  - assign: { to: 'txParams{request}', value: '$txRequestFetch{response}{body}' }
+  - assign: { to: 'txParams{profile}', value: '$txProfileFetch{response}{body}' }
+  - assign: { to: 'txParams{resources}', value: '$txResourceParams' }
+  - process:
+      handler: 'TemplateProcessor'
+      operation: 'process'
+      output: 'txBody'
+      inputs:
+        syntax: '"freemarker"'
+        template: "'${request?keep_before_last(\"]\")},${profile?keep_after(\"[\")?keep_before_last(\"]\")}${resources}]}'"
         parameters: '$txParams'
 
 verbs:
@@ -99,7 +139,7 @@ verbs:
                   headers: '$txFetchHeaders'
             - assign:
                 to: 'txResourceParams'
-                value: 'concat($txResourceParams, ",{\"name\":\"tx-resource\",\"resource\":", $txMaterialRequest{response}{body}, "}")'
+                value: "concat($txResourceParams, ',{\"name\":\"tx-resource\",\"resource\":', $txMaterialRequest{response}{body}, '}')"
 
   - text: '{actor} expands on {actor:terminology-server} with:'
     doc: ValueSet/$expand with the doc string as the request Parameters.
@@ -224,6 +264,149 @@ verbs:
     doc: ValueSet/$batch-validate-code — several codes in one request.
     actions:
       - *compose
+      - *fhirJson
+      - send:
+          id: 'lastRequest'
+          desc: 'POST /ValueSet/$batch-validate-code'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
+          inputs:
+            uri: 'concat($targetBase, "/ValueSet/$batch-validate-code")'
+            method: '"POST"'
+            headers: '$jsonHeaders'
+            body: '$txBody'
+
+
+  # ── The same operations, with the request named rather than written out ──
+  # For a request whose JSON cannot live in a TDL expression, and for a
+  # generated suite that would rather name the upstream file than copy it.
+  # The second file is the runner profile whose parameters are merged in
+  # (upstream: parameters-default.json, or one of version/parameters-*.json).
+
+  - text: '{actor} expands on {actor:terminology-server} with the request in {string} and the parameters in {string}'
+    doc: ValueSet $expand, with the request Parameters fetched from the test material.
+    actions:
+      - *composeFile
+      - *fhirJson
+      - send:
+          id: 'lastRequest'
+          desc: 'POST /ValueSet/$expand'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
+          inputs:
+            uri: 'concat($targetBase, "/ValueSet/$expand")'
+            method: '"POST"'
+            headers: '$jsonHeaders'
+            body: '$txBody'
+
+  - text: '{actor} validates a code on {actor:terminology-server} with the request in {string} and the parameters in {string}'
+    doc: ValueSet $validate-code, with the request Parameters fetched from the test material.
+    actions:
+      - *composeFile
+      - *fhirJson
+      - send:
+          id: 'lastRequest'
+          desc: 'POST /ValueSet/$validate-code'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
+          inputs:
+            uri: 'concat($targetBase, "/ValueSet/$validate-code")'
+            method: '"POST"'
+            headers: '$jsonHeaders'
+            body: '$txBody'
+
+  - text: '{actor} validates a code against the code system on {actor:terminology-server} with the request in {string} and the parameters in {string}'
+    doc: CodeSystem $validate-code, with the request Parameters fetched from the test material.
+    actions:
+      - *composeFile
+      - *fhirJson
+      - send:
+          id: 'lastRequest'
+          desc: 'POST /CodeSystem/$validate-code'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
+          inputs:
+            uri: 'concat($targetBase, "/CodeSystem/$validate-code")'
+            method: '"POST"'
+            headers: '$jsonHeaders'
+            body: '$txBody'
+
+  - text: '{actor} looks up a code on {actor:terminology-server} with the request in {string} and the parameters in {string}'
+    doc: CodeSystem $lookup, with the request Parameters fetched from the test material.
+    actions:
+      - *composeFile
+      - *fhirJson
+      - send:
+          id: 'lastRequest'
+          desc: 'POST /CodeSystem/$lookup'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
+          inputs:
+            uri: 'concat($targetBase, "/CodeSystem/$lookup")'
+            method: '"POST"'
+            headers: '$jsonHeaders'
+            body: '$txBody'
+
+  - text: '{actor} tests subsumption on {actor:terminology-server} with the request in {string} and the parameters in {string}'
+    doc: CodeSystem $subsumes, with the request Parameters fetched from the test material.
+    actions:
+      - *composeFile
+      - *fhirJson
+      - send:
+          id: 'lastRequest'
+          desc: 'POST /CodeSystem/$subsumes'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
+          inputs:
+            uri: 'concat($targetBase, "/CodeSystem/$subsumes")'
+            method: '"POST"'
+            headers: '$jsonHeaders'
+            body: '$txBody'
+
+  - text: '{actor} translates on {actor:terminology-server} with the request in {string} and the parameters in {string}'
+    doc: ConceptMap $translate, with the request Parameters fetched from the test material.
+    actions:
+      - *composeFile
+      - *fhirJson
+      - send:
+          id: 'lastRequest'
+          desc: 'POST /ConceptMap/$translate'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
+          inputs:
+            uri: 'concat($targetBase, "/ConceptMap/$translate")'
+            method: '"POST"'
+            headers: '$jsonHeaders'
+            body: '$txBody'
+
+  - text: '{actor} compares value sets on {actor:terminology-server} with the request in {string} and the parameters in {string}'
+    doc: ValueSet $compare, with the request Parameters fetched from the test material.
+    actions:
+      - *composeFile
+      - *fhirJson
+      - send:
+          id: 'lastRequest'
+          desc: 'POST /ValueSet/$compare'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$target'
+          inputs:
+            uri: 'concat($targetBase, "/ValueSet/$compare")'
+            method: '"POST"'
+            headers: '$jsonHeaders'
+            body: '$txBody'
+
+  - text: '{actor} validates a batch on {actor:terminology-server} with the request in {string} and the parameters in {string}'
+    doc: ValueSet $batch-validate-code, with the request Parameters fetched from the test material.
+    actions:
+      - *composeFile
       - *fhirJson
       - send:
           id: 'lastRequest'

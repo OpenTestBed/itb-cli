@@ -47,25 +47,25 @@
       <input name="method">&quot;GET&quot;</input>
       <input name="headers">$txFetchHeaders</input>
     </send>
-    <assign to="txResourceParams">concat($txResourceParams, &quot;,{\&quot;name\&quot;:\&quot;tx-resource\&quot;,\&quot;resource\&quot;:&quot;, $txMaterialRequest{response}{body}, &quot;}&quot;)</assign>
+    <assign to="txResourceParams">concat($txResourceParams, ',{&quot;name&quot;:&quot;tx-resource&quot;,&quot;resource&quot;:', $txMaterialRequest{response}{body}, '}')</assign>
     <send id="txMaterialRequest" desc="Fetch regex-bad/valueset-regex-bad.json" handler="HttpMessagingV2" from="TxServer">
       <input name="uri">concat($txTestsBase, &quot;regex-bad/valueset-regex-bad.json&quot;)</input>
       <input name="method">&quot;GET&quot;</input>
       <input name="headers">$txFetchHeaders</input>
     </send>
-    <assign to="txResourceParams">concat($txResourceParams, &quot;,{\&quot;name\&quot;:\&quot;tx-resource\&quot;,\&quot;resource\&quot;:&quot;, $txMaterialRequest{response}{body}, &quot;}&quot;)</assign>
+    <assign to="txResourceParams">concat($txResourceParams, ',{&quot;name&quot;:&quot;tx-resource&quot;,&quot;resource&quot;:', $txMaterialRequest{response}{body}, '}')</assign>
     <send id="txMaterialRequest" desc="Fetch regex-bad/codesystem-bad-regex-2.json" handler="HttpMessagingV2" from="TxServer">
       <input name="uri">concat($txTestsBase, &quot;regex-bad/codesystem-bad-regex-2.json&quot;)</input>
       <input name="method">&quot;GET&quot;</input>
       <input name="headers">$txFetchHeaders</input>
     </send>
-    <assign to="txResourceParams">concat($txResourceParams, &quot;,{\&quot;name\&quot;:\&quot;tx-resource\&quot;,\&quot;resource\&quot;:&quot;, $txMaterialRequest{response}{body}, &quot;}&quot;)</assign>
+    <assign to="txResourceParams">concat($txResourceParams, ',{&quot;name&quot;:&quot;tx-resource&quot;,&quot;resource&quot;:', $txMaterialRequest{response}{body}, '}')</assign>
     <send id="txMaterialRequest" desc="Fetch regex-bad/valueset-regex-bad-2.json" handler="HttpMessagingV2" from="TxServer">
       <input name="uri">concat($txTestsBase, &quot;regex-bad/valueset-regex-bad-2.json&quot;)</input>
       <input name="method">&quot;GET&quot;</input>
       <input name="headers">$txFetchHeaders</input>
     </send>
-    <assign to="txResourceParams">concat($txResourceParams, &quot;,{\&quot;name\&quot;:\&quot;tx-resource\&quot;,\&quot;resource\&quot;:&quot;, $txMaterialRequest{response}{body}, &quot;}&quot;)</assign>
+    <assign to="txResourceParams">concat($txResourceParams, ',{&quot;name&quot;:&quot;tx-resource&quot;,&quot;resource&quot;:', $txMaterialRequest{response}{body}, '}')</assign>
     <assign to="txParams{request}">'{
       &quot;resourceType&quot;: &quot;Parameters&quot;,
       &quot;parameter&quot;: [

@@ -46,7 +46,7 @@
       <input name="method">&quot;GET&quot;</input>
       <input name="headers">$txFetchHeaders</input>
     </send>
-    <assign to="txResourceParams">concat($txResourceParams, &quot;,{\&quot;name\&quot;:\&quot;tx-resource\&quot;,\&quot;resource\&quot;:&quot;, $txMaterialRequest{response}{body}, &quot;}&quot;)</assign>
+    <assign to="txResourceParams">concat($txResourceParams, ',{&quot;name&quot;:&quot;tx-resource&quot;,&quot;resource&quot;:', $txMaterialRequest{response}{body}, '}')</assign>
     <assign to="txParams{request}">'{
       &quot;resourceType&quot;: &quot;Parameters&quot;,
       &quot;parameter&quot;: [
