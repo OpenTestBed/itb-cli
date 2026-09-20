@@ -400,7 +400,7 @@
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/output/0/value&quot;</input>
     </process>
-    <log>concat(&quot;conforms: &quot;, $validationErrors, &quot; errors reported, &quot;, $conformanceErrors, &quot; counted after ignoring \&quot;matching slice is required\&quot;&quot;)</log>
+    <log>concat(&quot;conforms: &quot;, $validationErrors, &quot; errors reported, &quot;, $conformanceErrors, &quot; counted after ignoring 'matching slice is required'&quot;)</log>
     <verify handler="StringValidator" desc="$bundleResult conforms to http://smart.who.int/icvp/StructureDefinition/Bundle-uv-ips-ICVP (ignoring slicing errors)">
       <input name="actualstring">$conformanceErrors</input>
       <input name="expectedstring">&quot;0&quot;</input>

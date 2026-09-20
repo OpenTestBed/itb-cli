@@ -40,10 +40,7 @@
     <var name="conformHeaders" type="map"/>
     <var name="conformTplParams" type="map"/>
     <var name="dgFpParams" type="map"/>
-    <var name="confirmed{1}" type="string"/>
-    <var name="confirmed{2}" type="string"/>
-    <var name="confirmed{3}" type="string"/>
-    <var name="confirmed" type="string"/>
+    <var name="confirmed" type="map"/>
   </variables>
 
   <steps stopOnError="true">
@@ -122,7 +119,7 @@
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/output/0/value&quot;</input>
     </process>
-    <log>concat(&quot;conforms: &quot;, $validationErrors, &quot; errors reported, &quot;, $conformanceErrors, &quot; counted after ignoring \&quot;matching slice is required\&quot;&quot;)</log>
+    <log>concat(&quot;conforms: &quot;, $validationErrors, &quot; errors reported, &quot;, $conformanceErrors, &quot; counted after ignoring 'matching slice is required'&quot;)</log>
     <verify handler="StringValidator" desc="$ips conforms to http://hl7.org/fhir/uv/ips/StructureDefinition/Bundle-uv-ips (ignoring slicing errors)">
       <input name="actualstring">$conformanceErrors</input>
       <input name="expectedstring">&quot;0&quot;</input>

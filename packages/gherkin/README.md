@@ -21,7 +21,7 @@ handlers for a domain. A feature reads like this:
 Feature: Patient summary conformance
   Background:
     Given Client is the system under test
-    And FHIRValidator is a fhir-validator at "http://fhir-validator:8081"
+    And FHIRValidator is a fhir-validator at "http://fhir-validator:8080"
   Scenario: tc-001 the bundle conforms
     When Client gets "https://example.org/ips.json" as $bundle
     Then $bundle should conform to "http://hl7.org/fhir/uv/ips/StructureDefinition/Bundle-uv-ips" ignoring slicing errors

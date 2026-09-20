@@ -45,7 +45,7 @@ export interface ParseIssue {
   line?: number;
   column?: number;
   /** Which check produced this. Defaults to the parser when unset. */
-  from?: 'parser' | 'scriptlet';
+  from?: 'parser' | 'scriptlet' | 'generator';
 }
 
 export type ParseError = ParseIssue;

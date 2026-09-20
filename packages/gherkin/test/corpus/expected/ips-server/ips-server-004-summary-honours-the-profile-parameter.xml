@@ -60,7 +60,7 @@
       <input name="expectednumber">&quot;200&quot;</input>
     </verify>
     <assign to="jsonHeaders{Accept}">&quot;application/fhir+json&quot;</assign>
-    <interact id="inform" desc="Instruction for Client" with="Client">
+    <interact id="inform" desc="Instruction for Client">
       <instruct desc="Load the reference patient Patricia JORDANA (identifier ABC1234) from https://hl7.org/fhir/uv/ips/Bundle-bundle-ips-all-sections.json into the server under test." name="message"/>
     </interact>
     <interact id="ask" desc="The identifier value of the reference patient on the server (e.g. ABC1234)" inputTitle="The identifier value of the reference patient on the server (e.g. ABC1234)">
@@ -127,7 +127,7 @@
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/output/0/value&quot;</input>
     </process>
-    <log>concat(&quot;conforms: &quot;, $validationErrors, &quot; errors reported, &quot;, $conformanceErrors, &quot; counted after ignoring \&quot;matching slice is required\&quot;&quot;)</log>
+    <log>concat(&quot;conforms: &quot;, $validationErrors, &quot; errors reported, &quot;, $conformanceErrors, &quot; counted after ignoring 'matching slice is required'&quot;)</log>
     <verify handler="StringValidator" desc="$ipsProfiled conforms to http://hl7.org/fhir/uv/ips/StructureDefinition/Bundle-uv-ips (ignoring slicing errors)">
       <input name="actualstring">$conformanceErrors</input>
       <input name="expectedstring">&quot;0&quot;</input>

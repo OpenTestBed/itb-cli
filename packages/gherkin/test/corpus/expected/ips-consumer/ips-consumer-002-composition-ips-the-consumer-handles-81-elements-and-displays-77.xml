@@ -40,88 +40,7 @@
     <var name="conformHeaders" type="map"/>
     <var name="conformTplParams" type="map"/>
     <var name="dgFpParams" type="map"/>
-    <var name="confirmed{1}" type="string"/>
-    <var name="confirmed{2}" type="string"/>
-    <var name="confirmed{3}" type="string"/>
-    <var name="confirmed{4}" type="string"/>
-    <var name="confirmed{5}" type="string"/>
-    <var name="confirmed{6}" type="string"/>
-    <var name="confirmed{7}" type="string"/>
-    <var name="confirmed{8}" type="string"/>
-    <var name="confirmed{9}" type="string"/>
-    <var name="confirmed{10}" type="string"/>
-    <var name="confirmed{11}" type="string"/>
-    <var name="confirmed{12}" type="string"/>
-    <var name="confirmed{13}" type="string"/>
-    <var name="confirmed{14}" type="string"/>
-    <var name="confirmed{15}" type="string"/>
-    <var name="confirmed{16}" type="string"/>
-    <var name="confirmed{17}" type="string"/>
-    <var name="confirmed{18}" type="string"/>
-    <var name="confirmed{19}" type="string"/>
-    <var name="confirmed{20}" type="string"/>
-    <var name="confirmed{21}" type="string"/>
-    <var name="confirmed{22}" type="string"/>
-    <var name="confirmed{23}" type="string"/>
-    <var name="confirmed{24}" type="string"/>
-    <var name="confirmed{25}" type="string"/>
-    <var name="confirmed{26}" type="string"/>
-    <var name="confirmed{27}" type="string"/>
-    <var name="confirmed{28}" type="string"/>
-    <var name="confirmed{29}" type="string"/>
-    <var name="confirmed{30}" type="string"/>
-    <var name="confirmed{31}" type="string"/>
-    <var name="confirmed{32}" type="string"/>
-    <var name="confirmed{33}" type="string"/>
-    <var name="confirmed{34}" type="string"/>
-    <var name="confirmed{35}" type="string"/>
-    <var name="confirmed{36}" type="string"/>
-    <var name="confirmed{37}" type="string"/>
-    <var name="confirmed{38}" type="string"/>
-    <var name="confirmed{39}" type="string"/>
-    <var name="confirmed{40}" type="string"/>
-    <var name="confirmed{41}" type="string"/>
-    <var name="confirmed{42}" type="string"/>
-    <var name="confirmed{43}" type="string"/>
-    <var name="confirmed{44}" type="string"/>
-    <var name="confirmed{45}" type="string"/>
-    <var name="confirmed{46}" type="string"/>
-    <var name="confirmed{47}" type="string"/>
-    <var name="confirmed{48}" type="string"/>
-    <var name="confirmed{49}" type="string"/>
-    <var name="confirmed{50}" type="string"/>
-    <var name="confirmed{51}" type="string"/>
-    <var name="confirmed{52}" type="string"/>
-    <var name="confirmed{53}" type="string"/>
-    <var name="confirmed{54}" type="string"/>
-    <var name="confirmed{55}" type="string"/>
-    <var name="confirmed{56}" type="string"/>
-    <var name="confirmed{57}" type="string"/>
-    <var name="confirmed{58}" type="string"/>
-    <var name="confirmed{59}" type="string"/>
-    <var name="confirmed{60}" type="string"/>
-    <var name="confirmed{61}" type="string"/>
-    <var name="confirmed{62}" type="string"/>
-    <var name="confirmed{63}" type="string"/>
-    <var name="confirmed{64}" type="string"/>
-    <var name="confirmed{65}" type="string"/>
-    <var name="confirmed{66}" type="string"/>
-    <var name="confirmed{67}" type="string"/>
-    <var name="confirmed{68}" type="string"/>
-    <var name="confirmed{69}" type="string"/>
-    <var name="confirmed{70}" type="string"/>
-    <var name="confirmed{71}" type="string"/>
-    <var name="confirmed{72}" type="string"/>
-    <var name="confirmed{73}" type="string"/>
-    <var name="confirmed{74}" type="string"/>
-    <var name="confirmed{75}" type="string"/>
-    <var name="confirmed{76}" type="string"/>
-    <var name="confirmed{77}" type="string"/>
-    <var name="confirmed{78}" type="string"/>
-    <var name="confirmed{79}" type="string"/>
-    <var name="confirmed{80}" type="string"/>
-    <var name="confirmed{81}" type="string"/>
-    <var name="confirmed" type="string"/>
+    <var name="confirmed" type="map"/>
   </variables>
 
   <steps stopOnError="true">
@@ -200,7 +119,7 @@
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/output/0/value&quot;</input>
     </process>
-    <log>concat(&quot;conforms: &quot;, $validationErrors, &quot; errors reported, &quot;, $conformanceErrors, &quot; counted after ignoring \&quot;matching slice is required\&quot;&quot;)</log>
+    <log>concat(&quot;conforms: &quot;, $validationErrors, &quot; errors reported, &quot;, $conformanceErrors, &quot; counted after ignoring 'matching slice is required'&quot;)</log>
     <verify handler="StringValidator" desc="$ips conforms to http://hl7.org/fhir/uv/ips/StructureDefinition/Bundle-uv-ips (ignoring slicing errors)">
       <input name="actualstring">$conformanceErrors</input>
       <input name="expectedstring">&quot;0&quot;</input>

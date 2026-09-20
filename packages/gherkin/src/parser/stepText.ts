@@ -196,6 +196,8 @@ export interface SlotValue {
   raw: string;
   /** For {ref}/{value}-as-ref: the dotted name; for {var}: the name. */
   name?: string;
+  /** True when the optional group was absent and `expr` is the stand-in `""`. */
+  omitted?: boolean;
 }
 
 /** Turn one regex capture into its typed slot value. */
@@ -204,7 +206,7 @@ export function slotValue(spec: ParamSpec, captured: string | undefined, refs: R
     // Absent optional group. Expression contexts get an empty string
     // literal so a concat() or comparison still parses.
     const empty = spec.type === 'value' || spec.type === 'ref' ? '""' : '';
-    return { expr: empty, raw: '' };
+    return { expr: empty, raw: '', omitted: true };
   }
   switch (spec.type) {
     case 'actor': case 'int': case 'word': case 'kind': case 'type':

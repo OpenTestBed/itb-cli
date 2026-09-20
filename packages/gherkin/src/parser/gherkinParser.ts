@@ -92,7 +92,7 @@ export type IRAction =
    *  only be set at compile time — which is fine, because the step names the
    *  actor. `instructions` emit <instruct> (display-only) alongside <request>
    *  (input); the schema allows either, in any mix. */
-  | { type: 'interact', id?: string, desc?: string, title?: string, inputTitle?: string, with?: string, instructions?: { desc: string, name?: string, value?: string }[], requests: { desc: string, name?: string, inputType?: string, required?: boolean, variable: string, options?: string, optionLabels?: string }[] }
+  | { type: 'interact', id?: string, desc?: string, title?: string, inputTitle?: string, with?: string, instructions?: { desc: string, name?: string, value?: string, forceDisplay?: boolean, level?: string, mimeType?: string }[], requests: { desc: string, name?: string, inputType?: string, required?: boolean, variable: string, options?: string, optionLabels?: string }[] }
   | { type: 'receive', id?: string, desc?: string, handler: string, from?: string, to?: string, txnId?: string, inputs?: Record<string,string> };
 
 
@@ -395,6 +395,7 @@ export class GherkinParser {
         const ctx: MaterializeCtx = { groups: m.slice(1), tableRows: step.table || [], docString: step.docString || '' };
         const actions = materialize(entry.actions, ctx);
         this.noteDeclarations(actions, state);
+        this.checkInteractions(actions, state, step, issues);
         return { actions, mappingLabel: label, issues };
       }
 
@@ -405,6 +406,7 @@ export class GherkinParser {
       if (result === null) return { actions: [], issues };
       if (!Array.isArray(result)) { skipped = skipped ?? result.skip; continue; }
       this.noteDeclarations(result, state);
+      this.checkInteractions(result, state, step, issues);
       return { actions: result, mappingLabel: label, issues };
     }
 
@@ -419,6 +421,26 @@ export class GherkinParser {
         const prev = state.actors.get(a.id) ?? {};
         state.actors.set(a.id, { role: a.role || prev.role, kind: a.kind || prev.kind });
       }
+    }
+  }
+
+  /**
+   * An <interact with="X"> may only name a SUT actor (ITB TDL-034). When a
+   * step addresses a simulated actor ("Client is informed …" while Client is
+   * infrastructure), say so and route the interaction to whoever runs the
+   * session instead of shipping a suite ITB will refuse.
+   */
+  private checkInteractions(actions: IRAction[], state: ScenarioState, step: Step, issues: ParseIssue[]): void {
+    for (const a of actions) {
+      if (a.type !== 'interact' || !a.with) continue;
+      // No declarations at all: the generator's default makes Client the SUT.
+      const role = state.actors.size === 0 && a.with === 'Client' ? 'SUT' : state.actors.get(a.with)?.role;
+      if (role === 'SUT') continue;
+      issues.push({
+        line: step.line, severity: 'warning',
+        message: `${a.with} is not the system under test, so this interaction is shown to whoever runs the session. ITB only routes an interaction to a SUT actor — address the SUT, or accept the default`,
+      });
+      a.with = '';
     }
   }
 
@@ -648,6 +670,7 @@ export class GherkinParser {
           allIssues.push(...issues);
           scIr.push(...actions);
         }
+        allIssues.push(...checkActors(sc.steps, state));
         scenarioIRs.push({ name: sc.name, ir: scIr });
       }
     } else {
@@ -659,17 +682,51 @@ export class GherkinParser {
         allIssues.push(...issues);
         ir.push(...actions);
       }
+      allIssues.push(...checkActors(parsed.scenario.steps, state));
       scenarioIRs.push({ name: parsed.scenario.name || 'Test Case', ir });
     }
 
     (parsed as any).__scenarioIRs = scenarioIRs;
     (parsed as any).__ir = scenarioIRs[0]?.ir ?? []; // backwards compat
-    parsed.errors = [...(parsed.errors || []), ...allIssues];
+    // Background steps are expanded once per scenario, so an issue on a
+    // Background line would repeat once per scenario. Report each once.
+    const seen = new Set<string>();
+    const unique = [...(parsed.errors || []), ...allIssues].filter(i => {
+      const key = `${i.line ?? ''}|${i.severity}|${i.message}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    parsed.errors = unique;
     return parsed;
   }
 }
 
 /** Helpers */
+
+/**
+ * Rules about actors that ITB enforces on deploy and the generator cannot
+ * bend: a test case needs a system under test (a suite without one cannot be
+ * bound to a conformance statement, and TDL-034 rejects any <interact> that
+ * names something else). Said here, at compile time and with a line.
+ */
+function checkActors(steps: Step[], state: ScenarioState): ParseIssue[] {
+  const issues: ParseIssue[] = [];
+  const line = steps[0]?.line ?? 1;
+  if (state.actors.size === 0) {
+    issues.push({
+      line, severity: 'warning',
+      message: 'No actors declared — "Client" is assumed to be the system under test. Declare one: <Actor> is the system under test',
+    });
+  } else if (![...state.actors.values()].some(a => a.role === 'SUT')) {
+    const ids = [...state.actors.keys()].join(', ');
+    issues.push({
+      line, severity: 'error',
+      message: `No system under test among the declared actors (${ids}) — one of them must be declared with "<Actor> is the system under test"`,
+    });
+  }
+  return issues;
+}
 
 function splitRow(line: string): string[] {
   // split | a | b | c |  -> ["a","b","c"] (trimmed)
@@ -804,6 +861,9 @@ export interface MaterializeCtx {
  * `$$N` = "$" + text, `$opt.x` = an option-table value, and any name the
  * parser bound for the step ($subject, $path, $pathValue, $target ...).
  */
+/** Stand-in for an omitted optional slot while a template is substituted. */
+const OMITTED = '__OMITTED_SLOT__';
+
 function substitute(v: string, ctx: MaterializeCtx): string {
   let result = v.replace(/\$docString/g, () => ctx.docString ?? '');
   if (ctx.slots) {
@@ -811,7 +871,13 @@ function substitute(v: string, ctx: MaterializeCtx): string {
     result = result
       .replace(/\$\$([0-9]+)/g, (_: any, i: string) => '$' + (slots[Number(i) - 1]?.raw ?? ''))
       .replace(/\$([0-9]+)\.raw\b/g, (_: any, i: string) => slots[Number(i) - 1]?.raw ?? '')
-      .replace(/\$([0-9]+)/g, (_: any, i: string) => slots[Number(i) - 1]?.expr ?? '')
+      .replace(/\$([0-9]+)/g, (_: any, i: string) => {
+        const slot = slots[Number(i) - 1];
+        // An omitted {value}/{ref} slot (stand-in "") is marked so that ONLY it can be dropped
+        // below — a literal "" written in a template (translate(x, " ", ""))
+        // is a real argument and must survive.
+        return slot?.omitted && slot.expr === '""' ? OMITTED : (slot?.expr ?? '');
+      })
       .replace(/\$opt\.([A-Za-z0-9_-]+)/g, (_: any, k: string) => ctx.options?.[k] ?? '');
     const extra = ctx.extra ?? {};
     // Longest names first so $pathValue is not eaten by $path.
@@ -820,7 +886,9 @@ function substitute(v: string, ctx: MaterializeCtx): string {
     }
     // An omitted optional slot substitutes to "" — drop it as a trailing
     // concat() argument so `concat($Base, "/path", "")` reads as it should.
-    result = result.replace(/(,\s*"")+\)/g, ')');
+    // Any other omitted slot becomes the empty string literal it stood for.
+    result = result.replace(new RegExp('(,\\s*' + OMITTED + ')+\\)', 'g'), ')');
+    result = result.split(OMITTED).join('""');
   } else {
     result = result.replace(/\$([0-9]+)/g, (_: any, i: string) => ctx.groups[Number(i) - 1] ?? '');
   }
@@ -1014,6 +1082,11 @@ function materialize(actions: CatalogAction[], ctx: MaterializeCtx): IRAction[] 
         desc: subst(i.desc ?? ''),
         name: subst(i.name ?? ''),
         value: subst(i.value ?? ''),
+        // Display hints (gitb_tdl: forceDisplay shows the value inline rather
+        // than in an editor; level stylises it; mimeType highlights it).
+        forceDisplay: i.forceDisplay,
+        level: i.level,
+        mimeType: i.mimeType,
       }));
       // Both title spellings are carried through unchanged — see the note in
       // xmlGenerator: this XSD lags the running ITB, so `inputTitle` being

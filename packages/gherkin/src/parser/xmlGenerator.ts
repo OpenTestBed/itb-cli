@@ -77,12 +77,16 @@ export class XMLGenerator {
     // string→map (and similar) at scriptlet call boundaries.
     const scriptletParamTypes = parseScriptletParamTypes(this.getComponentScriptlets());
 
+    // Problems found in the emitted TDL — see lintSteps.
+    const lintIssues: ParseIssue[] = [];
+
     // Generate individual test case XMLs
     for (const sc of scenarios) {
       const testcaseId = toId(sc.name);
       const actors = collectActors(sc.ir);
       const variables = collectVariables(sc.ir, scriptletParamTypes);
       const stepsXml = emitIR(sc.ir);
+      lintIssues.push(...lintSteps(stepsXml, sc.name));
       const actorsXml = emitActors(actors);
       const variablesXml = emitVariables(variables);
       const testcaseXml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -184,7 +188,7 @@ ${testcaseRefs}
       xml: combinedXml,
       files,
       scriptletCount: scriptletFiles.length,
-      issues: scriptletIssues,
+      issues: [...lintIssues, ...scriptletIssues],
     };
   }
 }
@@ -267,6 +271,42 @@ function upgradeVarsForScriptletCalls(
   walk(ir);
 }
 
+/**
+ * Rules of ITB's TDL expression language that a dialect template can break
+ * without the compiler noticing, and that ITB only reports on deploy. Checked
+ * on the emitted step XML so they surface as compile issues instead.
+ *
+ *   TDL-042  no backslash escapes: "…\"x\"…" does not parse — use '…' inside "…"
+ *   TDL-042  translate() is XPath's 3-argument form: translate(s, from, to)
+ */
+function lintSteps(stepsXml: string, testcase: string): ParseIssue[] {
+  const issues: ParseIssue[] = [];
+  // Only expression contexts: <log> bodies and ExpressionValidator inputs.
+  // FreeMarker templates (<input name="template">) legitimately hold backslashes.
+  const exprs: string[] = [];
+  for (const m of stepsXml.matchAll(/<log>([\s\S]*?)<\/log>/g)) exprs.push(m[1]);
+  for (const m of stepsXml.matchAll(/<input name="expression">([\s\S]*?)<\/input>/g)) exprs.push(m[1]);
+  for (const raw of exprs) {
+    const e = raw.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+    if (/\\"/.test(e)) {
+      issues.push({
+        severity: 'error', from: 'generator',
+        message: `${testcase}: a TDL expression contains a backslash-escaped quote — ITB has no escapes in expressions (TDL-042). Use single quotes inside a double-quoted literal: ${e.slice(0, 80)}`,
+      });
+    }
+    for (const t of e.matchAll(/\btranslate\(([^()]*)\)/g)) {
+      const n = t[1].replace(/"[^"]*"|'[^']*'/g, 'x').split(',').length;
+      if (n !== 3) {
+        issues.push({
+          severity: 'error', from: 'generator',
+          message: `${testcase}: translate() takes 3 arguments (string, from, to), found ${n} in ${t[0]} (TDL-042)`,
+        });
+      }
+    }
+  }
+  return issues;
+}
+
 function collectVariables(
   ir: IRAction[],
   scriptletParamTypes?: Map<string, Map<string, string>>
@@ -345,9 +385,19 @@ function collectVariables(
   for (const a of ir) {
     if (a.type === 'interact' && a.requests) {
       for (const req of a.requests) {
-        // Variable may be "$rawQRData" or "rawQRData" — normalise to bare name
+        // Variable may be "$rawQRData" or "rawQRData" — normalise to bare name.
+        // A keyed target ("$confirmed{3}", one entry per checklist row) is a
+        // map: declare the base name as such, or ITB rejects the suite with
+        // TDL-041 "refers to a simple variable as if it was a container type".
         const varName = req.variable?.replace(/^\$/, '');
-        if (varName && !seen.has(varName)) {
+        if (!varName) continue;
+        if (varName.includes('{')) {
+          const baseName = varName.split('{')[0];
+          if (baseName && !seen.has(baseName)) {
+            seen.add(baseName);
+            vars.push({ name: baseName, varType: 'map' });
+          }
+        } else if (!seen.has(varName)) {
           seen.add(varName);
           vars.push({ name: varName, varType: 'string' });
         }
@@ -506,6 +556,14 @@ function emitIR(ir: IRAction[]): string {
   // set its own `from` explicitly. We just need a sensible default.
   const sutDecl = ir.find(a => a.type === 'declareActor' && a.role === 'SUT') as { type: 'declareActor'; id: string } | undefined;
   const sutActor = sutDecl?.id || 'Client';
+  // Every SUT actor: <interact with="..."> may only name one of these (ITB
+  // TDL-034 rejects a SIMULATED actor there), so a `with` aimed at a
+  // simulated actor is dropped and the interaction goes to whoever drives
+  // the session.
+  const sutActors = new Set(
+    (ir.filter(a => a.type === 'declareActor' && a.role === 'SUT') as { type: 'declareActor'; id: string }[]).map(a => a.id)
+  );
+  if (sutActors.size === 0) sutActors.add(sutActor);
 
   const out: string[] = [];
   for (const a of ir) {
@@ -603,12 +661,15 @@ function emitIR(ir: IRAction[]): string {
       // `with` routes the interaction to one actor's tester rather than
       // whoever happens to be driving the session. Actor IDs are literal by
       // nature, which is why this is a compile-time attribute.
-      const withAttr = a.with ? ` with="${escapeAttr(a.with)}"` : '';
+      const withAttr = a.with && sutActors.has(a.with) ? ` with="${escapeAttr(a.with)}"` : '';
       out.push(`<interact${idAttr}${descAttr}${titleAttr}${inputTitleAttr}${withAttr}>`);
       // Display-only instructions come first: a tester reads the message,
       // then fills in whatever the requests ask for.
       for (const ins of a.instructions ?? []) {
-        const nameAttr = ins.name ? ` name="${escapeAttr(ins.name)}"` : '';
+        const nameAttr = (ins.name ? ` name="${escapeAttr(ins.name)}"` : '')
+          + (ins.forceDisplay ? ` forceDisplay="true"` : '')
+          + (ins.level ? ` level="${escapeAttr(ins.level)}"` : '')
+          + (ins.mimeType ? ` mimeType="${escapeAttr(ins.mimeType)}"` : '');
         // The instruction text is `desc`; the body is optional content shown
         // beneath it. A plain message has no content, and emitting an empty
         // string literal there renders as a stray blank block — so close the

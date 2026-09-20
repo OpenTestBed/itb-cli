@@ -141,7 +141,7 @@ conforms:
       when: '$ignore'
     - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'conformanceErrors', inputs: { content: '$lastRequest{response}{body}', pointer: '"/output/0/value"' } }
       when: '$ignore'
-    - log: 'concat("conforms: ", $validationErrors, " errors reported, ", $conformanceErrors, " counted after ignoring \"$ignore\"")'
+    - log: 'concat("conforms: ", $validationErrors, " errors reported, ", $conformanceErrors, " counted after ignoring ''$ignore''")'
       when: '$ignore'
 
 verbs:

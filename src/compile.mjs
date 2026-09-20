@@ -159,7 +159,9 @@ export async function compileFeature(featurePath) {
   // referencing a scriptlet file it never emitted.
   return {
     files: out.files,
-    issues: [...(parsed.issues ?? []), ...(out.issues ?? [])],
+    // Parser issues live on parsed.errors (parse + expansion); parsed.issues
+    // was never populated, so unknown steps used to compile "successfully".
+    issues: [...(parsed.errors ?? []), ...(out.issues ?? [])],
     testcaseName: out.testcaseName,
   };
 }

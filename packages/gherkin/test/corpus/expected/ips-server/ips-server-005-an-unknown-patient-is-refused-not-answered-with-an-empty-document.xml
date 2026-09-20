@@ -52,7 +52,7 @@
       <input name="expectednumber">&quot;200&quot;</input>
     </verify>
     <assign to="jsonHeaders{Accept}">&quot;application/fhir+json&quot;</assign>
-    <interact id="inform" desc="Instruction for Client" with="Client">
+    <interact id="inform" desc="Instruction for Client">
       <instruct desc="Load the reference patient Patricia JORDANA (identifier ABC1234) from https://hl7.org/fhir/uv/ips/Bundle-bundle-ips-all-sections.json into the server under test." name="message"/>
     </interact>
     <interact id="ask" desc="The identifier value of the reference patient on the server (e.g. ABC1234)" inputTitle="The identifier value of the reference patient on the server (e.g. ABC1234)">
@@ -66,7 +66,7 @@
     </send>
     <assign to="missing">$lastRequest{response}{body}</assign>
     <verify handler="ExpressionValidator" desc="$response.status is one of 404, 400, 422">
-      <input name="expression">contains(concat(&quot;,&quot;, translate(&quot;404, 400, 422&quot;, &quot; &quot;), &quot;,&quot;), concat(&quot;,&quot;, $lastRequest{response}{status}, &quot;,&quot;))</input>
+      <input name="expression">contains(concat(&quot;,&quot;, translate(&quot;404, 400, 422&quot;, &quot; &quot;, &quot;&quot;), &quot;,&quot;), concat(&quot;,&quot;, $lastRequest{response}{status}, &quot;,&quot;))</input>
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
