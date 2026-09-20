@@ -1,7 +1,13 @@
-// Syncs plugin-provided dialects into the test-workbench component folder, so
-// the (unchanged) language parser can load them.
+// Syncs plugin-provided dialects into the apps that compile features, so the
+// (unchanged) language parser can load them.
 //
 // Direction of truth: <plugin-repo>/dialect/  ==canonical==>  test-workbench/public/components/<id>/
+//
+// The workbench's components/ is then the assembled set — plugin dialects plus
+// the ones that have no plugin of their own (fhir-terminology, archimate) — and
+// it is mirrored into every other app that compiles: the ITB manager has its own
+// public/components, and a dialect missing there fails as "No mapping for step"
+// in that app alone, which is a confusing way to find out.
 //
 // Each plugin's itb-plugin.yaml declares `dialect: { path, namespace }`; the
 // dialect folder holds the parser-format files (component.yml, steps.yml,
@@ -60,7 +66,33 @@ for (const dir of pluginDirs) {
 
 // refresh index.json (keep components that exist but weren't synced this run)
 const existing = fs.readdirSync(componentsDir, { withFileTypes: true })
-  .filter(e => e.isDirectory()).map(e => e.name);
+  .filter(e => e.isDirectory()).map(e => e.name).sort();
 fs.writeFileSync(path.join(componentsDir, 'index.json'),
-  JSON.stringify({ components: existing.sort() }, null, 2) + '\n');
-console.log(`index.json: [${existing.sort().join(', ')}]`);
+  JSON.stringify({ components: existing }, null, 2) + '\n');
+console.log(`index.json: [${existing.join(', ')}]`);
+
+/**
+ * Mirror the assembled set into the other apps that compile features. Each one
+ * is a checkout beside this repo with its own public/components; an app that
+ * is not checked out is skipped, not an error.
+ */
+const mirrors = (process.env.ITB_DIALECT_MIRRORS
+  ? process.env.ITB_DIALECT_MIRRORS.split(path.delimiter)
+  : [path.resolve(ROOT, '..', 'itb-manager')])
+  .map(p => path.resolve(p))
+  .filter(p => p !== WB && fs.existsSync(path.join(p, 'public', 'components')));
+
+for (const app of mirrors) {
+  const dest = path.join(app, 'public', 'components');
+  for (const name of existing) {
+    const to = path.join(dest, name);
+    fs.rmSync(to, { recursive: true, force: true });
+    fs.cpSync(path.join(componentsDir, name), to, { recursive: true });
+  }
+  // Components the mirror holds and the workbench does not are left in place,
+  // but they still belong in its index.
+  const all = fs.readdirSync(dest, { withFileTypes: true })
+    .filter(e => e.isDirectory()).map(e => e.name).sort();
+  fs.writeFileSync(path.join(dest, 'index.json'), JSON.stringify({ components: all }, null, 2) + '\n');
+  console.log(`mirrored ${existing.length} dialect(s) -> ${path.relative(path.resolve(ROOT, '..'), dest)} [${all.join(', ')}]`);
+}
