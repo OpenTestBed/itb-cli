@@ -16,6 +16,14 @@
 
   <variables>
     <var name="handled" type="string"/>
+    <var name="handledObservationpregnancystatusEvidence" type="binary"/>
+    <var name="handledObservationpregnancystatusEvidence_note" type="string">
+      <value>&quot;&quot;</value>
+    </var>
+    <var name="displayedObservationpregnancystatusEvidence" type="binary"/>
+    <var name="displayedObservationpregnancystatusEvidence_note" type="string">
+      <value>&quot;&quot;</value>
+    </var>
     <var name="notDisplayed" type="string"/>
     <var name="loadIgBody" type="string"/>
     <var name="conformBody" type="string"/>
@@ -123,10 +131,25 @@
     <interact id="ask" desc="For the Observation resources of this kind: were these elements accepted and processed without error — [code] = Pregnancy status, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [subject.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [effective[x]] = 2020-01-10, [value[x]:valueCodeableConcept] = Not Pregnant, [hasMember], [hasMember.reference]? Answer yes, or name the ones that caused an error." inputTitle="For the Observation resources of this kind: were these elements accepted and processed without error — [code] = Pregnancy status, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [subject.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [effective[x]] = 2020-01-10, [value[x]:valueCodeableConcept] = Not Pregnant, [hasMember], [hasMember.reference]? Answer yes, or name the ones that caused an error.">
       <request desc="For the Observation resources of this kind: were these elements accepted and processed without error — [code] = Pregnancy status, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [subject.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [effective[x]] = 2020-01-10, [value[x]:valueCodeableConcept] = Not Pregnant, [hasMember], [hasMember.reference]? Answer yes, or name the ones that caused an error." name="handled" inputType="TEXT" required="true">$handled</request>
     </interact>
+    <interact id="evidence" desc="Evidence: the import of the Observation resources of this kind completing without error (import log or screenshot)" inputTitle="Evidence: the import of the Observation resources of this kind completing without error (import log or screenshot)" with="Consumer">
+      <instruct desc="Demonstrate on the system under test: the import of the Observation resources of this kind completing without error (import log or screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
+      <request desc="Evidence file (screenshot, export or log) for: the import of the Observation resources of this kind completing without error (import log or screenshot)" name="handledObservationpregnancystatusEvidence" inputType="UPLOAD" required="true">$handledObservationpregnancystatusEvidence</request>
+      <request desc="Note (optional): where it is shown, or why it cannot be" name="handledObservationpregnancystatusEvidence_note" inputType="TEXT" required="false">$handledObservationpregnancystatusEvidence_note</request>
+    </interact>
+    <log>concat(&quot;Evidence submitted for: the import of the Observation resources of this kind completing without error (import log or screenshot) — note: &quot;, $handledObservationpregnancystatusEvidence_note)</log>
     <verify handler="StringValidator" desc="$handled is yes">
       <input name="actualstring">$handled</input>
       <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
+    <interact id="inform" desc="Instruction for Consumer" with="Consumer">
+      <instruct desc="Open Patricia JORDANA's summary in the system under test and display the Observation resources of this kind, showing: [code] = Pregnancy status, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [effective[x]] = 2020-01-10, [value[x]:valueCodeableConcept] = Not Pregnant, [hasMember], [hasMember.reference]" name="message"/>
+    </interact>
+    <interact id="evidence" desc="Evidence: the Observation resources of this kind displayed with [code], [subject], [effective[x]], [value[x]:valueCodeableConcept], [hasMember], [hasMember.reference] (screenshot)" inputTitle="Evidence: the Observation resources of this kind displayed with [code], [subject], [effective[x]], [value[x]:valueCodeableConcept], [hasMember], [hasMember.reference] (screenshot)" with="Consumer">
+      <instruct desc="Demonstrate on the system under test: the Observation resources of this kind displayed with [code], [subject], [effective[x]], [value[x]:valueCodeableConcept], [hasMember], [hasMember.reference] (screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
+      <request desc="Evidence file (screenshot, export or log) for: the Observation resources of this kind displayed with [code], [subject], [effective[x]], [value[x]:valueCodeableConcept], [hasMember], [hasMember.reference] (screenshot)" name="displayedObservationpregnancystatusEvidence" inputType="UPLOAD" required="true">$displayedObservationpregnancystatusEvidence</request>
+      <request desc="Note (optional): where it is shown, or why it cannot be" name="displayedObservationpregnancystatusEvidence_note" inputType="TEXT" required="false">$displayedObservationpregnancystatusEvidence_note</request>
+    </interact>
+    <log>concat(&quot;Evidence submitted for: the Observation resources of this kind displayed with [code], [subject], [effective[x]], [value[x]:valueCodeableConcept], [hasMember], [hasMember.reference] (screenshot) — note: &quot;, $displayedObservationpregnancystatusEvidence_note)</log>
     <interact id="ask" desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [code] = Pregnancy status, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [effective[x]] = 2020-01-10, [value[x]:valueCodeableConcept] = Not Pregnant, [hasMember], [hasMember.reference]" inputTitle="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [code] = Pregnancy status, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [effective[x]] = 2020-01-10, [value[x]:valueCodeableConcept] = Not Pregnant, [hasMember], [hasMember.reference]">
       <request desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [code] = Pregnancy status, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [effective[x]] = 2020-01-10, [value[x]:valueCodeableConcept] = Not Pregnant, [hasMember], [hasMember.reference]" name="notDisplayed" inputType="TEXT" required="true">$notDisplayed</request>
     </interact>

@@ -16,6 +16,14 @@
 
   <variables>
     <var name="handled" type="string"/>
+    <var name="handledBundleEvidence" type="binary"/>
+    <var name="handledBundleEvidence_note" type="string">
+      <value>&quot;&quot;</value>
+    </var>
+    <var name="displayedBundleEvidence" type="binary"/>
+    <var name="displayedBundleEvidence_note" type="string">
+      <value>&quot;&quot;</value>
+    </var>
     <var name="notDisplayed" type="string"/>
     <var name="loadIgBody" type="string"/>
     <var name="conformBody" type="string"/>
@@ -123,10 +131,25 @@
     <interact id="ask" desc="For the document: were these elements accepted and processed without error — [identifier], [timestamp], [entry:composition]? Answer yes, or name the ones that caused an error." inputTitle="For the document: were these elements accepted and processed without error — [identifier], [timestamp], [entry:composition]? Answer yes, or name the ones that caused an error.">
       <request desc="For the document: were these elements accepted and processed without error — [identifier], [timestamp], [entry:composition]? Answer yes, or name the ones that caused an error." name="handled" inputType="TEXT" required="true">$handled</request>
     </interact>
+    <interact id="evidence" desc="Evidence: the import of the document completing without error (import log or screenshot)" inputTitle="Evidence: the import of the document completing without error (import log or screenshot)" with="Consumer">
+      <instruct desc="Demonstrate on the system under test: the import of the document completing without error (import log or screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
+      <request desc="Evidence file (screenshot, export or log) for: the import of the document completing without error (import log or screenshot)" name="handledBundleEvidence" inputType="UPLOAD" required="true">$handledBundleEvidence</request>
+      <request desc="Note (optional): where it is shown, or why it cannot be" name="handledBundleEvidence_note" inputType="TEXT" required="false">$handledBundleEvidence_note</request>
+    </interact>
+    <log>concat(&quot;Evidence submitted for: the import of the document completing without error (import log or screenshot) — note: &quot;, $handledBundleEvidence_note)</log>
     <verify handler="StringValidator" desc="$handled is yes">
       <input name="actualstring">$handled</input>
       <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
+    <interact id="inform" desc="Instruction for Consumer" with="Consumer">
+      <instruct desc="Open Patricia JORDANA's summary in the system under test and display the document, showing: [entry:composition]" name="message"/>
+    </interact>
+    <interact id="evidence" desc="Evidence: the document displayed with [entry:composition] (screenshot)" inputTitle="Evidence: the document displayed with [entry:composition] (screenshot)" with="Consumer">
+      <instruct desc="Demonstrate on the system under test: the document displayed with [entry:composition] (screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
+      <request desc="Evidence file (screenshot, export or log) for: the document displayed with [entry:composition] (screenshot)" name="displayedBundleEvidence" inputType="UPLOAD" required="true">$displayedBundleEvidence</request>
+      <request desc="Note (optional): where it is shown, or why it cannot be" name="displayedBundleEvidence_note" inputType="TEXT" required="false">$displayedBundleEvidence_note</request>
+    </interact>
+    <log>concat(&quot;Evidence submitted for: the document displayed with [entry:composition] (screenshot) — note: &quot;, $displayedBundleEvidence_note)</log>
     <interact id="ask" desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [entry:composition]" inputTitle="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [entry:composition]">
       <request desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [entry:composition]" name="notDisplayed" inputType="TEXT" required="true">$notDisplayed</request>
     </interact>

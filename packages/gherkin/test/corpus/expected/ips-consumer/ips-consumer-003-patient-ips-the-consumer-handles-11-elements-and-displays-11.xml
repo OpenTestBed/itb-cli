@@ -16,6 +16,14 @@
 
   <variables>
     <var name="handled" type="string"/>
+    <var name="handledPatientEvidence" type="binary"/>
+    <var name="handledPatientEvidence_note" type="string">
+      <value>&quot;&quot;</value>
+    </var>
+    <var name="displayedPatientEvidence" type="binary"/>
+    <var name="displayedPatientEvidence_note" type="string">
+      <value>&quot;&quot;</value>
+    </var>
     <var name="notDisplayed" type="string"/>
     <var name="loadIgBody" type="string"/>
     <var name="conformBody" type="string"/>
@@ -123,10 +131,25 @@
     <interact id="ask" desc="For the Patient resources: were these elements accepted and processed without error — [identifier] = ABC1234, [name] = Patricia JORDANA, [name.use] = usual, [name.text], [name.family] = JORDANA, [name.given] = Patricia, [telecom] = +1234567890, [gender] = female, [birthDate] = 1956-09-30, [address] = (present), [generalPractitioner]? Answer yes, or name the ones that caused an error." inputTitle="For the Patient resources: were these elements accepted and processed without error — [identifier] = ABC1234, [name] = Patricia JORDANA, [name.use] = usual, [name.text], [name.family] = JORDANA, [name.given] = Patricia, [telecom] = +1234567890, [gender] = female, [birthDate] = 1956-09-30, [address] = (present), [generalPractitioner]? Answer yes, or name the ones that caused an error.">
       <request desc="For the Patient resources: were these elements accepted and processed without error — [identifier] = ABC1234, [name] = Patricia JORDANA, [name.use] = usual, [name.text], [name.family] = JORDANA, [name.given] = Patricia, [telecom] = +1234567890, [gender] = female, [birthDate] = 1956-09-30, [address] = (present), [generalPractitioner]? Answer yes, or name the ones that caused an error." name="handled" inputType="TEXT" required="true">$handled</request>
     </interact>
+    <interact id="evidence" desc="Evidence: the import of the Patient resources completing without error (import log or screenshot)" inputTitle="Evidence: the import of the Patient resources completing without error (import log or screenshot)" with="Consumer">
+      <instruct desc="Demonstrate on the system under test: the import of the Patient resources completing without error (import log or screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
+      <request desc="Evidence file (screenshot, export or log) for: the import of the Patient resources completing without error (import log or screenshot)" name="handledPatientEvidence" inputType="UPLOAD" required="true">$handledPatientEvidence</request>
+      <request desc="Note (optional): where it is shown, or why it cannot be" name="handledPatientEvidence_note" inputType="TEXT" required="false">$handledPatientEvidence_note</request>
+    </interact>
+    <log>concat(&quot;Evidence submitted for: the import of the Patient resources completing without error (import log or screenshot) — note: &quot;, $handledPatientEvidence_note)</log>
     <verify handler="StringValidator" desc="$handled is yes">
       <input name="actualstring">$handled</input>
       <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
+    <interact id="inform" desc="Instruction for Consumer" with="Consumer">
+      <instruct desc="Open Patricia JORDANA's summary in the system under test and display the Patient resources, showing: [identifier] = ABC1234, [name] = Patricia JORDANA, [name.use] = usual, [name.text], [name.family] = JORDANA, [name.given] = Patricia, [telecom] = +1234567890, [gender] = female, [birthDate] = 1956-09-30, [address] = (present), [generalPractitioner]" name="message"/>
+    </interact>
+    <interact id="evidence" desc="Evidence: the Patient resources displayed with [identifier], [name], [name.use], [name.text], [name.family], [name.given], [telecom], [gender], [birthDate], [address], [generalPractitioner] (screenshot)" inputTitle="Evidence: the Patient resources displayed with [identifier], [name], [name.use], [name.text], [name.family], [name.given], [telecom], [gender], [birthDate], [address], [generalPractitioner] (screenshot)" with="Consumer">
+      <instruct desc="Demonstrate on the system under test: the Patient resources displayed with [identifier], [name], [name.use], [name.text], [name.family], [name.given], [telecom], [gender], [birthDate], [address], [generalPractitioner] (screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
+      <request desc="Evidence file (screenshot, export or log) for: the Patient resources displayed with [identifier], [name], [name.use], [name.text], [name.family], [name.given], [telecom], [gender], [birthDate], [address], [generalPractitioner] (screenshot)" name="displayedPatientEvidence" inputType="UPLOAD" required="true">$displayedPatientEvidence</request>
+      <request desc="Note (optional): where it is shown, or why it cannot be" name="displayedPatientEvidence_note" inputType="TEXT" required="false">$displayedPatientEvidence_note</request>
+    </interact>
+    <log>concat(&quot;Evidence submitted for: the Patient resources displayed with [identifier], [name], [name.use], [name.text], [name.family], [name.given], [telecom], [gender], [birthDate], [address], [generalPractitioner] (screenshot) — note: &quot;, $displayedPatientEvidence_note)</log>
     <interact id="ask" desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [identifier] = ABC1234, [name] = Patricia JORDANA, [name.use] = usual, [name.text], [name.family] = JORDANA, [name.given] = Patricia, [telecom] = +1234567890, [gender] = female, [birthDate] = 1956-09-30, [address] = (present), [generalPractitioner]" inputTitle="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [identifier] = ABC1234, [name] = Patricia JORDANA, [name.use] = usual, [name.text], [name.family] = JORDANA, [name.given] = Patricia, [telecom] = +1234567890, [gender] = female, [birthDate] = 1956-09-30, [address] = (present), [generalPractitioner]">
       <request desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [identifier] = ABC1234, [name] = Patricia JORDANA, [name.use] = usual, [name.text], [name.family] = JORDANA, [name.given] = Patricia, [telecom] = +1234567890, [gender] = female, [birthDate] = 1956-09-30, [address] = (present), [generalPractitioner]" name="notDisplayed" inputType="TEXT" required="true">$notDisplayed</request>
     </interact>

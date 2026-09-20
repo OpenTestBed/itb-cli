@@ -16,6 +16,14 @@
 
   <variables>
     <var name="handled" type="string"/>
+    <var name="handledOrganizationEvidence" type="binary"/>
+    <var name="handledOrganizationEvidence_note" type="string">
+      <value>&quot;&quot;</value>
+    </var>
+    <var name="displayedOrganizationEvidence" type="binary"/>
+    <var name="displayedOrganizationEvidence_note" type="string">
+      <value>&quot;&quot;</value>
+    </var>
     <var name="notDisplayed" type="string"/>
     <var name="loadIgBody" type="string"/>
     <var name="conformBody" type="string"/>
@@ -123,10 +131,25 @@
     <interact id="ask" desc="For the Organization resources: were these elements accepted and processed without error — [name] = NorthCare Pukete Road-Thomas Road, [telecom], [address]? Answer yes, or name the ones that caused an error." inputTitle="For the Organization resources: were these elements accepted and processed without error — [name] = NorthCare Pukete Road-Thomas Road, [telecom], [address]? Answer yes, or name the ones that caused an error.">
       <request desc="For the Organization resources: were these elements accepted and processed without error — [name] = NorthCare Pukete Road-Thomas Road, [telecom], [address]? Answer yes, or name the ones that caused an error." name="handled" inputType="TEXT" required="true">$handled</request>
     </interact>
+    <interact id="evidence" desc="Evidence: the import of the Organization resources completing without error (import log or screenshot)" inputTitle="Evidence: the import of the Organization resources completing without error (import log or screenshot)" with="Consumer">
+      <instruct desc="Demonstrate on the system under test: the import of the Organization resources completing without error (import log or screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
+      <request desc="Evidence file (screenshot, export or log) for: the import of the Organization resources completing without error (import log or screenshot)" name="handledOrganizationEvidence" inputType="UPLOAD" required="true">$handledOrganizationEvidence</request>
+      <request desc="Note (optional): where it is shown, or why it cannot be" name="handledOrganizationEvidence_note" inputType="TEXT" required="false">$handledOrganizationEvidence_note</request>
+    </interact>
+    <log>concat(&quot;Evidence submitted for: the import of the Organization resources completing without error (import log or screenshot) — note: &quot;, $handledOrganizationEvidence_note)</log>
     <verify handler="StringValidator" desc="$handled is yes">
       <input name="actualstring">$handled</input>
       <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
+    <interact id="inform" desc="Instruction for Consumer" with="Consumer">
+      <instruct desc="Open Patricia JORDANA's summary in the system under test and display the Organization resources, showing: [name] = NorthCare Pukete Road-Thomas Road, [telecom], [address]" name="message"/>
+    </interact>
+    <interact id="evidence" desc="Evidence: the Organization resources displayed with [name], [telecom], [address] (screenshot)" inputTitle="Evidence: the Organization resources displayed with [name], [telecom], [address] (screenshot)" with="Consumer">
+      <instruct desc="Demonstrate on the system under test: the Organization resources displayed with [name], [telecom], [address] (screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
+      <request desc="Evidence file (screenshot, export or log) for: the Organization resources displayed with [name], [telecom], [address] (screenshot)" name="displayedOrganizationEvidence" inputType="UPLOAD" required="true">$displayedOrganizationEvidence</request>
+      <request desc="Note (optional): where it is shown, or why it cannot be" name="displayedOrganizationEvidence_note" inputType="TEXT" required="false">$displayedOrganizationEvidence_note</request>
+    </interact>
+    <log>concat(&quot;Evidence submitted for: the Organization resources displayed with [name], [telecom], [address] (screenshot) — note: &quot;, $displayedOrganizationEvidence_note)</log>
     <interact id="ask" desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [name] = NorthCare Pukete Road-Thomas Road, [telecom], [address]" inputTitle="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [name] = NorthCare Pukete Road-Thomas Road, [telecom], [address]">
       <request desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [name] = NorthCare Pukete Road-Thomas Road, [telecom], [address]" name="notDisplayed" inputType="TEXT" required="true">$notDisplayed</request>
     </interact>

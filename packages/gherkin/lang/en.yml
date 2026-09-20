@@ -767,7 +767,7 @@ verbs:
           requests:
             - { desc: 'Provide input:', name: '$2', inputType: 'TEXT', required: true, variable: '$$2' }
 
-  - text: '{actor} uploads a file as {var}'
+  - text: '{actor} uploads a file as {var}( with {string})?'
     doc: Prompt the tester to upload a file; the bytes are bound to the variable.
     actions:
       - declareVariable: { name: '$2', varType: 'binary' }
@@ -777,6 +777,35 @@ verbs:
           with: '$1'
           requests:
             - { desc: 'Upload a file:', name: '$2', inputType: 'UPLOAD', required: true, variable: '$$2' }
+        unless: '$3'
+      - interact:
+          id: 'upload'
+          desc: '$3'
+          with: '$1'
+          requests:
+            - { desc: '$3', name: '$2', inputType: 'UPLOAD', required: true, variable: '$$2' }
+        when: '$3'
+
+  # Evidence. When an obligation is about what a system SHOWS or DOES (display,
+  # handle), the operator demonstrates it and attaches proof — a screenshot, an
+  # export, a log — which the test bed keeps in the session report next to the
+  # step. One dialog: the instruction, a required file, an optional note.
+  - text: '{actor} submits evidence of {string} as {var}'
+    doc: One dialog asking the tester to demonstrate something and attach a file as evidence (plus an optional note, in $x_note).
+    actions:
+      - declareVariable: { name: '$3', varType: 'binary' }
+      - declareVariable: { name: '$3_note', varType: 'string', value: '""' }
+      - interact:
+          id: 'evidence'
+          desc: 'Evidence: $2'
+          inputTitle: 'Evidence: $2'
+          with: '$1'
+          instructions:
+            - { desc: 'Demonstrate on the system under test: $2. Then attach a screenshot, export or log that shows it.', name: 'instruction', value: '""' }
+          requests:
+            - { desc: 'Evidence file (screenshot, export or log) for: $2', name: '$3', inputType: 'UPLOAD', required: true, variable: '$$3' }
+            - { desc: 'Note (optional): where it is shown, or why it cannot be', name: '$3_note', inputType: 'TEXT', required: false, variable: '$$3_note' }
+      - log: 'concat("Evidence submitted for: $2 — note: ", $$3_note)'
 
   # ==================================================================
   # 8. LOGGING

@@ -16,6 +16,14 @@
 
   <variables>
     <var name="handled" type="string"/>
+    <var name="handledPractitionerRoleEvidence" type="binary"/>
+    <var name="handledPractitionerRoleEvidence_note" type="string">
+      <value>&quot;&quot;</value>
+    </var>
+    <var name="displayedPractitionerRoleEvidence" type="binary"/>
+    <var name="displayedPractitionerRoleEvidence_note" type="string">
+      <value>&quot;&quot;</value>
+    </var>
     <var name="notDisplayed" type="string"/>
     <var name="loadIgBody" type="string"/>
     <var name="conformBody" type="string"/>
@@ -123,10 +131,25 @@
     <interact id="ask" desc="For the PractitionerRole resources: were these elements accepted and processed without error — [organization]? Answer yes, or name the ones that caused an error." inputTitle="For the PractitionerRole resources: were these elements accepted and processed without error — [organization]? Answer yes, or name the ones that caused an error.">
       <request desc="For the PractitionerRole resources: were these elements accepted and processed without error — [organization]? Answer yes, or name the ones that caused an error." name="handled" inputType="TEXT" required="true">$handled</request>
     </interact>
+    <interact id="evidence" desc="Evidence: the import of the PractitionerRole resources completing without error (import log or screenshot)" inputTitle="Evidence: the import of the PractitionerRole resources completing without error (import log or screenshot)" with="Consumer">
+      <instruct desc="Demonstrate on the system under test: the import of the PractitionerRole resources completing without error (import log or screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
+      <request desc="Evidence file (screenshot, export or log) for: the import of the PractitionerRole resources completing without error (import log or screenshot)" name="handledPractitionerRoleEvidence" inputType="UPLOAD" required="true">$handledPractitionerRoleEvidence</request>
+      <request desc="Note (optional): where it is shown, or why it cannot be" name="handledPractitionerRoleEvidence_note" inputType="TEXT" required="false">$handledPractitionerRoleEvidence_note</request>
+    </interact>
+    <log>concat(&quot;Evidence submitted for: the import of the PractitionerRole resources completing without error (import log or screenshot) — note: &quot;, $handledPractitionerRoleEvidence_note)</log>
     <verify handler="StringValidator" desc="$handled is yes">
       <input name="actualstring">$handled</input>
       <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
+    <interact id="inform" desc="Instruction for Consumer" with="Consumer">
+      <instruct desc="Open Patricia JORDANA's summary in the system under test and display the PractitionerRole resources, showing: [organization]" name="message"/>
+    </interact>
+    <interact id="evidence" desc="Evidence: the PractitionerRole resources displayed with [organization] (screenshot)" inputTitle="Evidence: the PractitionerRole resources displayed with [organization] (screenshot)" with="Consumer">
+      <instruct desc="Demonstrate on the system under test: the PractitionerRole resources displayed with [organization] (screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
+      <request desc="Evidence file (screenshot, export or log) for: the PractitionerRole resources displayed with [organization] (screenshot)" name="displayedPractitionerRoleEvidence" inputType="UPLOAD" required="true">$displayedPractitionerRoleEvidence</request>
+      <request desc="Note (optional): where it is shown, or why it cannot be" name="displayedPractitionerRoleEvidence_note" inputType="TEXT" required="false">$displayedPractitionerRoleEvidence_note</request>
+    </interact>
+    <log>concat(&quot;Evidence submitted for: the PractitionerRole resources displayed with [organization] (screenshot) — note: &quot;, $displayedPractitionerRoleEvidence_note)</log>
     <interact id="ask" desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [organization]" inputTitle="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [organization]">
       <request desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [organization]" name="notDisplayed" inputType="TEXT" required="true">$notDisplayed</request>
     </interact>

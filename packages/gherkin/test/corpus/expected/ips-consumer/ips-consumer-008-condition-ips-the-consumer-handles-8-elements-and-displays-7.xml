@@ -16,6 +16,14 @@
 
   <variables>
     <var name="handled" type="string"/>
+    <var name="handledConditionEvidence" type="binary"/>
+    <var name="handledConditionEvidence_note" type="string">
+      <value>&quot;&quot;</value>
+    </var>
+    <var name="displayedConditionEvidence" type="binary"/>
+    <var name="displayedConditionEvidence_note" type="string">
+      <value>&quot;&quot;</value>
+    </var>
     <var name="notDisplayed" type="string"/>
     <var name="loadIgBody" type="string"/>
     <var name="conformBody" type="string"/>
@@ -123,10 +131,25 @@
     <interact id="ask" desc="For the Condition resources: were these elements accepted and processed without error — [clinicalStatus] = active, [category], [severity], [code] = Essential hypertension, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [subject.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [onset[x]] = 2016-05-25, [onset[x]:onsetDateTime] = 2016-05-25? Answer yes, or name the ones that caused an error." inputTitle="For the Condition resources: were these elements accepted and processed without error — [clinicalStatus] = active, [category], [severity], [code] = Essential hypertension, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [subject.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [onset[x]] = 2016-05-25, [onset[x]:onsetDateTime] = 2016-05-25? Answer yes, or name the ones that caused an error.">
       <request desc="For the Condition resources: were these elements accepted and processed without error — [clinicalStatus] = active, [category], [severity], [code] = Essential hypertension, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [subject.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [onset[x]] = 2016-05-25, [onset[x]:onsetDateTime] = 2016-05-25? Answer yes, or name the ones that caused an error." name="handled" inputType="TEXT" required="true">$handled</request>
     </interact>
+    <interact id="evidence" desc="Evidence: the import of the Condition resources completing without error (import log or screenshot)" inputTitle="Evidence: the import of the Condition resources completing without error (import log or screenshot)" with="Consumer">
+      <instruct desc="Demonstrate on the system under test: the import of the Condition resources completing without error (import log or screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
+      <request desc="Evidence file (screenshot, export or log) for: the import of the Condition resources completing without error (import log or screenshot)" name="handledConditionEvidence" inputType="UPLOAD" required="true">$handledConditionEvidence</request>
+      <request desc="Note (optional): where it is shown, or why it cannot be" name="handledConditionEvidence_note" inputType="TEXT" required="false">$handledConditionEvidence_note</request>
+    </interact>
+    <log>concat(&quot;Evidence submitted for: the import of the Condition resources completing without error (import log or screenshot) — note: &quot;, $handledConditionEvidence_note)</log>
     <verify handler="StringValidator" desc="$handled is yes">
       <input name="actualstring">$handled</input>
       <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
+    <interact id="inform" desc="Instruction for Consumer" with="Consumer">
+      <instruct desc="Open Patricia JORDANA's summary in the system under test and display the Condition resources, showing: [clinicalStatus] = active, [category], [severity], [code] = Essential hypertension, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [onset[x]] = 2016-05-25, [onset[x]:onsetDateTime] = 2016-05-25" name="message"/>
+    </interact>
+    <interact id="evidence" desc="Evidence: the Condition resources displayed with [clinicalStatus], [category], [severity], [code], [subject], [onset[x]], [onset[x]:onsetDateTime] (screenshot)" inputTitle="Evidence: the Condition resources displayed with [clinicalStatus], [category], [severity], [code], [subject], [onset[x]], [onset[x]:onsetDateTime] (screenshot)" with="Consumer">
+      <instruct desc="Demonstrate on the system under test: the Condition resources displayed with [clinicalStatus], [category], [severity], [code], [subject], [onset[x]], [onset[x]:onsetDateTime] (screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
+      <request desc="Evidence file (screenshot, export or log) for: the Condition resources displayed with [clinicalStatus], [category], [severity], [code], [subject], [onset[x]], [onset[x]:onsetDateTime] (screenshot)" name="displayedConditionEvidence" inputType="UPLOAD" required="true">$displayedConditionEvidence</request>
+      <request desc="Note (optional): where it is shown, or why it cannot be" name="displayedConditionEvidence_note" inputType="TEXT" required="false">$displayedConditionEvidence_note</request>
+    </interact>
+    <log>concat(&quot;Evidence submitted for: the Condition resources displayed with [clinicalStatus], [category], [severity], [code], [subject], [onset[x]], [onset[x]:onsetDateTime] (screenshot) — note: &quot;, $displayedConditionEvidence_note)</log>
     <interact id="ask" desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [clinicalStatus] = active, [category], [severity], [code] = Essential hypertension, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [onset[x]] = 2016-05-25, [onset[x]:onsetDateTime] = 2016-05-25" inputTitle="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [clinicalStatus] = active, [category], [severity], [code] = Essential hypertension, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [onset[x]] = 2016-05-25, [onset[x]:onsetDateTime] = 2016-05-25">
       <request desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [clinicalStatus] = active, [category], [severity], [code] = Essential hypertension, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [onset[x]] = 2016-05-25, [onset[x]:onsetDateTime] = 2016-05-25" name="notDisplayed" inputType="TEXT" required="true">$notDisplayed</request>
     </interact>

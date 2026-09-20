@@ -16,6 +16,10 @@
   <variables>
     <var name="ips" type="string"/>
     <var name="canPopulate" type="string"/>
+    <var name="canPopulateEvidence" type="binary"/>
+    <var name="canPopulateEvidence_note" type="string">
+      <value>&quot;&quot;</value>
+    </var>
     <var name="loadIgBody" type="string"/>
     <var name="lastRequest" type="map"/>
     <var name="FHIRValidatorBase" type="string"/>
@@ -52,6 +56,12 @@
     <interact id="ask" desc="The reference patient has no data for these DiagnosticReport elements. Can your system populate each of them when the information is known: [code], [subject], [subject.reference], [effective[x]], [effective[x]:effectiveDateTime], [performer], [result:observation-results]? Answer yes, or list the ones it cannot." inputTitle="The reference patient has no data for these DiagnosticReport elements. Can your system populate each of them when the information is known: [code], [subject], [subject.reference], [effective[x]], [effective[x]:effectiveDateTime], [performer], [result:observation-results]? Answer yes, or list the ones it cannot.">
       <request desc="The reference patient has no data for these DiagnosticReport elements. Can your system populate each of them when the information is known: [code], [subject], [subject.reference], [effective[x]], [effective[x]:effectiveDateTime], [performer], [result:observation-results]? Answer yes, or list the ones it cannot." name="canPopulate" inputType="TEXT" required="true">$canPopulate</request>
     </interact>
+    <interact id="evidence" desc="Evidence: DiagnosticReport [code], [subject], [subject.reference], [effective[x]], [effective[x]:effectiveDateTime], [performer], [result:observation-results] being entered or exported (screenshot or a document carrying them)" inputTitle="Evidence: DiagnosticReport [code], [subject], [subject.reference], [effective[x]], [effective[x]:effectiveDateTime], [performer], [result:observation-results] being entered or exported (screenshot or a document carrying them)" with="Creator">
+      <instruct desc="Demonstrate on the system under test: DiagnosticReport [code], [subject], [subject.reference], [effective[x]], [effective[x]:effectiveDateTime], [performer], [result:observation-results] being entered or exported (screenshot or a document carrying them). Then attach a screenshot, export or log that shows it." name="instruction"/>
+      <request desc="Evidence file (screenshot, export or log) for: DiagnosticReport [code], [subject], [subject.reference], [effective[x]], [effective[x]:effectiveDateTime], [performer], [result:observation-results] being entered or exported (screenshot or a document carrying them)" name="canPopulateEvidence" inputType="UPLOAD" required="true">$canPopulateEvidence</request>
+      <request desc="Note (optional): where it is shown, or why it cannot be" name="canPopulateEvidence_note" inputType="TEXT" required="false">$canPopulateEvidence_note</request>
+    </interact>
+    <log>concat(&quot;Evidence submitted for: DiagnosticReport [code], [subject], [subject.reference], [effective[x]], [effective[x]:effectiveDateTime], [performer], [result:observation-results] being entered or exported (screenshot or a document carrying them) — note: &quot;, $canPopulateEvidence_note)</log>
     <verify handler="StringValidator" desc="$canPopulate is yes">
       <input name="actualstring">$canPopulate</input>
       <input name="expectedstring">&quot;yes&quot;</input>

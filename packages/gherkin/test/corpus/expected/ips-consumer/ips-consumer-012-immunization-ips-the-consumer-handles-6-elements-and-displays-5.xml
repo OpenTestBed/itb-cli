@@ -16,6 +16,14 @@
 
   <variables>
     <var name="handled" type="string"/>
+    <var name="handledImmunizationEvidence" type="binary"/>
+    <var name="handledImmunizationEvidence_note" type="string">
+      <value>&quot;&quot;</value>
+    </var>
+    <var name="displayedImmunizationEvidence" type="binary"/>
+    <var name="displayedImmunizationEvidence_note" type="string">
+      <value>&quot;&quot;</value>
+    </var>
     <var name="notDisplayed" type="string"/>
     <var name="loadIgBody" type="string"/>
     <var name="conformBody" type="string"/>
@@ -123,10 +131,25 @@
     <interact id="ask" desc="For the Immunization resources: were these elements accepted and processed without error — [status] = completed, [vaccineCode] = Influenza, split virus, trivalent, pr…, [patient] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [patient.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [occurrence[x]] = 2024-04-10, [occurrence[x]:occurrenceDateTime] = 2024-04-10? Answer yes, or name the ones that caused an error." inputTitle="For the Immunization resources: were these elements accepted and processed without error — [status] = completed, [vaccineCode] = Influenza, split virus, trivalent, pr…, [patient] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [patient.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [occurrence[x]] = 2024-04-10, [occurrence[x]:occurrenceDateTime] = 2024-04-10? Answer yes, or name the ones that caused an error.">
       <request desc="For the Immunization resources: were these elements accepted and processed without error — [status] = completed, [vaccineCode] = Influenza, split virus, trivalent, pr…, [patient] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [patient.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [occurrence[x]] = 2024-04-10, [occurrence[x]:occurrenceDateTime] = 2024-04-10? Answer yes, or name the ones that caused an error." name="handled" inputType="TEXT" required="true">$handled</request>
     </interact>
+    <interact id="evidence" desc="Evidence: the import of the Immunization resources completing without error (import log or screenshot)" inputTitle="Evidence: the import of the Immunization resources completing without error (import log or screenshot)" with="Consumer">
+      <instruct desc="Demonstrate on the system under test: the import of the Immunization resources completing without error (import log or screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
+      <request desc="Evidence file (screenshot, export or log) for: the import of the Immunization resources completing without error (import log or screenshot)" name="handledImmunizationEvidence" inputType="UPLOAD" required="true">$handledImmunizationEvidence</request>
+      <request desc="Note (optional): where it is shown, or why it cannot be" name="handledImmunizationEvidence_note" inputType="TEXT" required="false">$handledImmunizationEvidence_note</request>
+    </interact>
+    <log>concat(&quot;Evidence submitted for: the import of the Immunization resources completing without error (import log or screenshot) — note: &quot;, $handledImmunizationEvidence_note)</log>
     <verify handler="StringValidator" desc="$handled is yes">
       <input name="actualstring">$handled</input>
       <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
+    <interact id="inform" desc="Instruction for Consumer" with="Consumer">
+      <instruct desc="Open Patricia JORDANA's summary in the system under test and display the Immunization resources, showing: [status] = completed, [vaccineCode] = Influenza, split virus, trivalent, pr…, [patient] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [occurrence[x]] = 2024-04-10, [occurrence[x]:occurrenceDateTime] = 2024-04-10" name="message"/>
+    </interact>
+    <interact id="evidence" desc="Evidence: the Immunization resources displayed with [status], [vaccineCode], [patient], [occurrence[x]], [occurrence[x]:occurrenceDateTime] (screenshot)" inputTitle="Evidence: the Immunization resources displayed with [status], [vaccineCode], [patient], [occurrence[x]], [occurrence[x]:occurrenceDateTime] (screenshot)" with="Consumer">
+      <instruct desc="Demonstrate on the system under test: the Immunization resources displayed with [status], [vaccineCode], [patient], [occurrence[x]], [occurrence[x]:occurrenceDateTime] (screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
+      <request desc="Evidence file (screenshot, export or log) for: the Immunization resources displayed with [status], [vaccineCode], [patient], [occurrence[x]], [occurrence[x]:occurrenceDateTime] (screenshot)" name="displayedImmunizationEvidence" inputType="UPLOAD" required="true">$displayedImmunizationEvidence</request>
+      <request desc="Note (optional): where it is shown, or why it cannot be" name="displayedImmunizationEvidence_note" inputType="TEXT" required="false">$displayedImmunizationEvidence_note</request>
+    </interact>
+    <log>concat(&quot;Evidence submitted for: the Immunization resources displayed with [status], [vaccineCode], [patient], [occurrence[x]], [occurrence[x]:occurrenceDateTime] (screenshot) — note: &quot;, $displayedImmunizationEvidence_note)</log>
     <interact id="ask" desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [status] = completed, [vaccineCode] = Influenza, split virus, trivalent, pr…, [patient] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [occurrence[x]] = 2024-04-10, [occurrence[x]:occurrenceDateTime] = 2024-04-10" inputTitle="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [status] = completed, [vaccineCode] = Influenza, split virus, trivalent, pr…, [patient] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [occurrence[x]] = 2024-04-10, [occurrence[x]:occurrenceDateTime] = 2024-04-10">
       <request desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [status] = completed, [vaccineCode] = Influenza, split virus, trivalent, pr…, [patient] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [occurrence[x]] = 2024-04-10, [occurrence[x]:occurrenceDateTime] = 2024-04-10" name="notDisplayed" inputType="TEXT" required="true">$notDisplayed</request>
     </interact>

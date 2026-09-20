@@ -16,6 +16,14 @@
 
   <variables>
     <var name="handled" type="string"/>
+    <var name="handledPractitionerEvidence" type="binary"/>
+    <var name="handledPractitionerEvidence_note" type="string">
+      <value>&quot;&quot;</value>
+    </var>
+    <var name="displayedPractitionerEvidence" type="binary"/>
+    <var name="displayedPractitionerEvidence_note" type="string">
+      <value>&quot;&quot;</value>
+    </var>
     <var name="notDisplayed" type="string"/>
     <var name="loadIgBody" type="string"/>
     <var name="conformBody" type="string"/>
@@ -123,10 +131,25 @@
     <interact id="ask" desc="For the Practitioner resources: were these elements accepted and processed without error — [name] = HASHIRA COORAY COORAY, [name.family] = COORAY, [name.given] = HASHIRA, [telecom] = 07 850 9900, [address]? Answer yes, or name the ones that caused an error." inputTitle="For the Practitioner resources: were these elements accepted and processed without error — [name] = HASHIRA COORAY COORAY, [name.family] = COORAY, [name.given] = HASHIRA, [telecom] = 07 850 9900, [address]? Answer yes, or name the ones that caused an error.">
       <request desc="For the Practitioner resources: were these elements accepted and processed without error — [name] = HASHIRA COORAY COORAY, [name.family] = COORAY, [name.given] = HASHIRA, [telecom] = 07 850 9900, [address]? Answer yes, or name the ones that caused an error." name="handled" inputType="TEXT" required="true">$handled</request>
     </interact>
+    <interact id="evidence" desc="Evidence: the import of the Practitioner resources completing without error (import log or screenshot)" inputTitle="Evidence: the import of the Practitioner resources completing without error (import log or screenshot)" with="Consumer">
+      <instruct desc="Demonstrate on the system under test: the import of the Practitioner resources completing without error (import log or screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
+      <request desc="Evidence file (screenshot, export or log) for: the import of the Practitioner resources completing without error (import log or screenshot)" name="handledPractitionerEvidence" inputType="UPLOAD" required="true">$handledPractitionerEvidence</request>
+      <request desc="Note (optional): where it is shown, or why it cannot be" name="handledPractitionerEvidence_note" inputType="TEXT" required="false">$handledPractitionerEvidence_note</request>
+    </interact>
+    <log>concat(&quot;Evidence submitted for: the import of the Practitioner resources completing without error (import log or screenshot) — note: &quot;, $handledPractitionerEvidence_note)</log>
     <verify handler="StringValidator" desc="$handled is yes">
       <input name="actualstring">$handled</input>
       <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
+    <interact id="inform" desc="Instruction for Consumer" with="Consumer">
+      <instruct desc="Open Patricia JORDANA's summary in the system under test and display the Practitioner resources, showing: [name] = HASHIRA COORAY COORAY, [name.family] = COORAY, [name.given] = HASHIRA, [telecom] = 07 850 9900, [address]" name="message"/>
+    </interact>
+    <interact id="evidence" desc="Evidence: the Practitioner resources displayed with [name], [name.family], [name.given], [telecom], [address] (screenshot)" inputTitle="Evidence: the Practitioner resources displayed with [name], [name.family], [name.given], [telecom], [address] (screenshot)" with="Consumer">
+      <instruct desc="Demonstrate on the system under test: the Practitioner resources displayed with [name], [name.family], [name.given], [telecom], [address] (screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
+      <request desc="Evidence file (screenshot, export or log) for: the Practitioner resources displayed with [name], [name.family], [name.given], [telecom], [address] (screenshot)" name="displayedPractitionerEvidence" inputType="UPLOAD" required="true">$displayedPractitionerEvidence</request>
+      <request desc="Note (optional): where it is shown, or why it cannot be" name="displayedPractitionerEvidence_note" inputType="TEXT" required="false">$displayedPractitionerEvidence_note</request>
+    </interact>
+    <log>concat(&quot;Evidence submitted for: the Practitioner resources displayed with [name], [name.family], [name.given], [telecom], [address] (screenshot) — note: &quot;, $displayedPractitionerEvidence_note)</log>
     <interact id="ask" desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [name] = HASHIRA COORAY COORAY, [name.family] = COORAY, [name.given] = HASHIRA, [telecom] = 07 850 9900, [address]" inputTitle="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [name] = HASHIRA COORAY COORAY, [name.family] = COORAY, [name.given] = HASHIRA, [telecom] = 07 850 9900, [address]">
       <request desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [name] = HASHIRA COORAY COORAY, [name.family] = COORAY, [name.given] = HASHIRA, [telecom] = 07 850 9900, [address]" name="notDisplayed" inputType="TEXT" required="true">$notDisplayed</request>
     </interact>

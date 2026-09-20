@@ -16,6 +16,10 @@
 
   <variables>
     <var name="handled" type="string"/>
+    <var name="handledCodingEvidence" type="binary"/>
+    <var name="handledCodingEvidence_note" type="string">
+      <value>&quot;&quot;</value>
+    </var>
     <var name="loadIgBody" type="string"/>
     <var name="conformBody" type="string"/>
     <var name="validationErrors" type="string"/>
@@ -122,6 +126,12 @@
     <interact id="ask" desc="For every Coding in the document: were these elements accepted and processed without error — [system], [code]? Answer yes, or name the ones that caused an error." inputTitle="For every Coding in the document: were these elements accepted and processed without error — [system], [code]? Answer yes, or name the ones that caused an error.">
       <request desc="For every Coding in the document: were these elements accepted and processed without error — [system], [code]? Answer yes, or name the ones that caused an error." name="handled" inputType="TEXT" required="true">$handled</request>
     </interact>
+    <interact id="evidence" desc="Evidence: the import of every Coding in the document completing without error (import log or screenshot)" inputTitle="Evidence: the import of every Coding in the document completing without error (import log or screenshot)" with="Consumer">
+      <instruct desc="Demonstrate on the system under test: the import of every Coding in the document completing without error (import log or screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
+      <request desc="Evidence file (screenshot, export or log) for: the import of every Coding in the document completing without error (import log or screenshot)" name="handledCodingEvidence" inputType="UPLOAD" required="true">$handledCodingEvidence</request>
+      <request desc="Note (optional): where it is shown, or why it cannot be" name="handledCodingEvidence_note" inputType="TEXT" required="false">$handledCodingEvidence_note</request>
+    </interact>
+    <log>concat(&quot;Evidence submitted for: the import of every Coding in the document completing without error (import log or screenshot) — note: &quot;, $handledCodingEvidence_note)</log>
     <verify handler="StringValidator" desc="$handled is yes">
       <input name="actualstring">$handled</input>
       <input name="expectedstring">&quot;yes&quot;</input>

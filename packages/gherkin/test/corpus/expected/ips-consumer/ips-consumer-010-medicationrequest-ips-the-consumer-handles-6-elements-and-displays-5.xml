@@ -16,6 +16,14 @@
 
   <variables>
     <var name="handled" type="string"/>
+    <var name="handledMedicationRequestEvidence" type="binary"/>
+    <var name="handledMedicationRequestEvidence_note" type="string">
+      <value>&quot;&quot;</value>
+    </var>
+    <var name="displayedMedicationRequestEvidence" type="binary"/>
+    <var name="displayedMedicationRequestEvidence_note" type="string">
+      <value>&quot;&quot;</value>
+    </var>
     <var name="notDisplayed" type="string"/>
     <var name="loadIgBody" type="string"/>
     <var name="conformBody" type="string"/>
@@ -123,10 +131,25 @@
     <interact id="ask" desc="For the MedicationRequest resources: were these elements accepted and processed without error — [medication[x]], [subject], [subject.reference], [dosageInstruction], [dosageInstruction.text], [dosageInstruction.timing]? Answer yes, or name the ones that caused an error." inputTitle="For the MedicationRequest resources: were these elements accepted and processed without error — [medication[x]], [subject], [subject.reference], [dosageInstruction], [dosageInstruction.text], [dosageInstruction.timing]? Answer yes, or name the ones that caused an error.">
       <request desc="For the MedicationRequest resources: were these elements accepted and processed without error — [medication[x]], [subject], [subject.reference], [dosageInstruction], [dosageInstruction.text], [dosageInstruction.timing]? Answer yes, or name the ones that caused an error." name="handled" inputType="TEXT" required="true">$handled</request>
     </interact>
+    <interact id="evidence" desc="Evidence: the import of the MedicationRequest resources completing without error (import log or screenshot)" inputTitle="Evidence: the import of the MedicationRequest resources completing without error (import log or screenshot)" with="Consumer">
+      <instruct desc="Demonstrate on the system under test: the import of the MedicationRequest resources completing without error (import log or screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
+      <request desc="Evidence file (screenshot, export or log) for: the import of the MedicationRequest resources completing without error (import log or screenshot)" name="handledMedicationRequestEvidence" inputType="UPLOAD" required="true">$handledMedicationRequestEvidence</request>
+      <request desc="Note (optional): where it is shown, or why it cannot be" name="handledMedicationRequestEvidence_note" inputType="TEXT" required="false">$handledMedicationRequestEvidence_note</request>
+    </interact>
+    <log>concat(&quot;Evidence submitted for: the import of the MedicationRequest resources completing without error (import log or screenshot) — note: &quot;, $handledMedicationRequestEvidence_note)</log>
     <verify handler="StringValidator" desc="$handled is yes">
       <input name="actualstring">$handled</input>
       <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
+    <interact id="inform" desc="Instruction for Consumer" with="Consumer">
+      <instruct desc="Open Patricia JORDANA's summary in the system under test and display the MedicationRequest resources, showing: [medication[x]], [subject], [dosageInstruction], [dosageInstruction.text], [dosageInstruction.timing]" name="message"/>
+    </interact>
+    <interact id="evidence" desc="Evidence: the MedicationRequest resources displayed with [medication[x]], [subject], [dosageInstruction], [dosageInstruction.text], [dosageInstruction.timing] (screenshot)" inputTitle="Evidence: the MedicationRequest resources displayed with [medication[x]], [subject], [dosageInstruction], [dosageInstruction.text], [dosageInstruction.timing] (screenshot)" with="Consumer">
+      <instruct desc="Demonstrate on the system under test: the MedicationRequest resources displayed with [medication[x]], [subject], [dosageInstruction], [dosageInstruction.text], [dosageInstruction.timing] (screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
+      <request desc="Evidence file (screenshot, export or log) for: the MedicationRequest resources displayed with [medication[x]], [subject], [dosageInstruction], [dosageInstruction.text], [dosageInstruction.timing] (screenshot)" name="displayedMedicationRequestEvidence" inputType="UPLOAD" required="true">$displayedMedicationRequestEvidence</request>
+      <request desc="Note (optional): where it is shown, or why it cannot be" name="displayedMedicationRequestEvidence_note" inputType="TEXT" required="false">$displayedMedicationRequestEvidence_note</request>
+    </interact>
+    <log>concat(&quot;Evidence submitted for: the MedicationRequest resources displayed with [medication[x]], [subject], [dosageInstruction], [dosageInstruction.text], [dosageInstruction.timing] (screenshot) — note: &quot;, $displayedMedicationRequestEvidence_note)</log>
     <interact id="ask" desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [medication[x]], [subject], [dosageInstruction], [dosageInstruction.text], [dosageInstruction.timing]" inputTitle="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [medication[x]], [subject], [dosageInstruction], [dosageInstruction.text], [dosageInstruction.timing]">
       <request desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [medication[x]], [subject], [dosageInstruction], [dosageInstruction.text], [dosageInstruction.timing]" name="notDisplayed" inputType="TEXT" required="true">$notDisplayed</request>
     </interact>

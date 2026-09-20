@@ -16,6 +16,14 @@
 
   <variables>
     <var name="handled" type="string"/>
+    <var name="handledMedicationStatementEvidence" type="binary"/>
+    <var name="handledMedicationStatementEvidence_note" type="string">
+      <value>&quot;&quot;</value>
+    </var>
+    <var name="displayedMedicationStatementEvidence" type="binary"/>
+    <var name="displayedMedicationStatementEvidence_note" type="string">
+      <value>&quot;&quot;</value>
+    </var>
     <var name="notDisplayed" type="string"/>
     <var name="loadIgBody" type="string"/>
     <var name="conformBody" type="string"/>
@@ -123,10 +131,25 @@
     <interact id="ask" desc="For the MedicationStatement resources: were these elements accepted and processed without error — [medication[x]] = cilazapril 500 microgram tablet, 90, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [subject.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [effective[x]] = 2023-12-01, [effective[x]:effectiveDateTime] = 2023-12-01, [dosage] = Take 1 daily, [dosage.text] = Take 1 daily, [dosage.timing] = (present)? Answer yes, or name the ones that caused an error." inputTitle="For the MedicationStatement resources: were these elements accepted and processed without error — [medication[x]] = cilazapril 500 microgram tablet, 90, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [subject.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [effective[x]] = 2023-12-01, [effective[x]:effectiveDateTime] = 2023-12-01, [dosage] = Take 1 daily, [dosage.text] = Take 1 daily, [dosage.timing] = (present)? Answer yes, or name the ones that caused an error.">
       <request desc="For the MedicationStatement resources: were these elements accepted and processed without error — [medication[x]] = cilazapril 500 microgram tablet, 90, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [subject.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [effective[x]] = 2023-12-01, [effective[x]:effectiveDateTime] = 2023-12-01, [dosage] = Take 1 daily, [dosage.text] = Take 1 daily, [dosage.timing] = (present)? Answer yes, or name the ones that caused an error." name="handled" inputType="TEXT" required="true">$handled</request>
     </interact>
+    <interact id="evidence" desc="Evidence: the import of the MedicationStatement resources completing without error (import log or screenshot)" inputTitle="Evidence: the import of the MedicationStatement resources completing without error (import log or screenshot)" with="Consumer">
+      <instruct desc="Demonstrate on the system under test: the import of the MedicationStatement resources completing without error (import log or screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
+      <request desc="Evidence file (screenshot, export or log) for: the import of the MedicationStatement resources completing without error (import log or screenshot)" name="handledMedicationStatementEvidence" inputType="UPLOAD" required="true">$handledMedicationStatementEvidence</request>
+      <request desc="Note (optional): where it is shown, or why it cannot be" name="handledMedicationStatementEvidence_note" inputType="TEXT" required="false">$handledMedicationStatementEvidence_note</request>
+    </interact>
+    <log>concat(&quot;Evidence submitted for: the import of the MedicationStatement resources completing without error (import log or screenshot) — note: &quot;, $handledMedicationStatementEvidence_note)</log>
     <verify handler="StringValidator" desc="$handled is yes">
       <input name="actualstring">$handled</input>
       <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
+    <interact id="inform" desc="Instruction for Consumer" with="Consumer">
+      <instruct desc="Open Patricia JORDANA's summary in the system under test and display the MedicationStatement resources, showing: [medication[x]] = cilazapril 500 microgram tablet, 90, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [effective[x]] = 2023-12-01, [effective[x]:effectiveDateTime] = 2023-12-01, [dosage] = Take 1 daily, [dosage.text] = Take 1 daily, [dosage.timing] = (present)" name="message"/>
+    </interact>
+    <interact id="evidence" desc="Evidence: the MedicationStatement resources displayed with [medication[x]], [subject], [effective[x]], [effective[x]:effectiveDateTime], [dosage], [dosage.text], [dosage.timing] (screenshot)" inputTitle="Evidence: the MedicationStatement resources displayed with [medication[x]], [subject], [effective[x]], [effective[x]:effectiveDateTime], [dosage], [dosage.text], [dosage.timing] (screenshot)" with="Consumer">
+      <instruct desc="Demonstrate on the system under test: the MedicationStatement resources displayed with [medication[x]], [subject], [effective[x]], [effective[x]:effectiveDateTime], [dosage], [dosage.text], [dosage.timing] (screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
+      <request desc="Evidence file (screenshot, export or log) for: the MedicationStatement resources displayed with [medication[x]], [subject], [effective[x]], [effective[x]:effectiveDateTime], [dosage], [dosage.text], [dosage.timing] (screenshot)" name="displayedMedicationStatementEvidence" inputType="UPLOAD" required="true">$displayedMedicationStatementEvidence</request>
+      <request desc="Note (optional): where it is shown, or why it cannot be" name="displayedMedicationStatementEvidence_note" inputType="TEXT" required="false">$displayedMedicationStatementEvidence_note</request>
+    </interact>
+    <log>concat(&quot;Evidence submitted for: the MedicationStatement resources displayed with [medication[x]], [subject], [effective[x]], [effective[x]:effectiveDateTime], [dosage], [dosage.text], [dosage.timing] (screenshot) — note: &quot;, $displayedMedicationStatementEvidence_note)</log>
     <interact id="ask" desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [medication[x]] = cilazapril 500 microgram tablet, 90, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [effective[x]] = 2023-12-01, [effective[x]:effectiveDateTime] = 2023-12-01, [dosage] = Take 1 daily, [dosage.text] = Take 1 daily, [dosage.timing] = (present)" inputTitle="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [medication[x]] = cilazapril 500 microgram tablet, 90, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [effective[x]] = 2023-12-01, [effective[x]:effectiveDateTime] = 2023-12-01, [dosage] = Take 1 daily, [dosage.text] = Take 1 daily, [dosage.timing] = (present)">
       <request desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [medication[x]] = cilazapril 500 microgram tablet, 90, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [effective[x]] = 2023-12-01, [effective[x]:effectiveDateTime] = 2023-12-01, [dosage] = Take 1 daily, [dosage.text] = Take 1 daily, [dosage.timing] = (present)" name="notDisplayed" inputType="TEXT" required="true">$notDisplayed</request>
     </interact>
