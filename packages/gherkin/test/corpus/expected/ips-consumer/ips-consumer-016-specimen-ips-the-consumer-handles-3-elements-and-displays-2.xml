@@ -15,7 +15,6 @@
   </actors>
 
   <variables>
-    <var name="handled" type="string"/>
     <var name="handledSpecimenEvidence" type="binary"/>
     <var name="handledSpecimenEvidence_note" type="string">
       <value>&quot;&quot;</value>
@@ -24,7 +23,6 @@
     <var name="displayedSpecimenEvidence_note" type="string">
       <value>&quot;&quot;</value>
     </var>
-    <var name="notDisplayed" type="string"/>
     <var name="loadIgBody" type="string"/>
     <var name="conformBody" type="string"/>
     <var name="validationErrors" type="string"/>
@@ -42,6 +40,10 @@
     <var name="conformHeaders" type="map"/>
     <var name="conformTplParams" type="map"/>
     <var name="dgFpParams" type="map"/>
+    <var name="confirmed{1}" type="string"/>
+    <var name="confirmed{2}" type="string"/>
+    <var name="confirmed{3}" type="string"/>
+    <var name="confirmed" type="string"/>
   </variables>
 
   <steps stopOnError="true">
@@ -128,36 +130,51 @@
     <interact id="inform" desc="Instruction for Consumer" with="Consumer">
       <instruct desc="Import this International Patient Summary for Patricia JORDANA into the system under test, then answer the questions that follow." name="message">$ips</instruct>
     </interact>
-    <interact id="ask" desc="For the Specimen resources: were these elements accepted and processed without error — [type], [subject], [subject.reference]? Answer yes, or name the ones that caused an error." inputTitle="For the Specimen resources: were these elements accepted and processed without error — [type], [subject], [subject.reference]? Answer yes, or name the ones that caused an error.">
-      <request desc="For the Specimen resources: were these elements accepted and processed without error — [type], [subject], [subject.reference]? Answer yes, or name the ones that caused an error." name="handled" inputType="TEXT" required="true">$handled</request>
-    </interact>
     <interact id="evidence" desc="Evidence: the import of the Specimen resources completing without error (import log or screenshot)" inputTitle="Evidence: the import of the Specimen resources completing without error (import log or screenshot)" with="Consumer">
       <instruct desc="Demonstrate on the system under test: the import of the Specimen resources completing without error (import log or screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
       <request desc="Evidence file (screenshot, export or log) for: the import of the Specimen resources completing without error (import log or screenshot)" name="handledSpecimenEvidence" inputType="UPLOAD" required="true">$handledSpecimenEvidence</request>
       <request desc="Note (optional): where it is shown, or why it cannot be" name="handledSpecimenEvidence_note" inputType="TEXT" required="false">$handledSpecimenEvidence_note</request>
     </interact>
     <log>concat(&quot;Evidence submitted for: the import of the Specimen resources completing without error (import log or screenshot) — note: &quot;, $handledSpecimenEvidence_note)</log>
-    <verify handler="StringValidator" desc="$handled is yes">
-      <input name="actualstring">$handled</input>
+    <interact id="confirm" desc="For the Specimen resources: is each of these accepted?" inputTitle="For the Specimen resources: is each of these accepted?" with="Consumer">
+      <instruct desc="For the Specimen resources, choose for each item below whether it is accepted. Leave nothing unanswered." name="instruction"/>
+      <request desc="type — " name="confirmed_1" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{1}</request>
+      <request desc="subject — " name="confirmed_2" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{2}</request>
+      <request desc="subject.reference — " name="confirmed_3" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{3}</request>
+    </interact>
+    <verify handler="StringValidator" desc="type is accepted for the Specimen resources">
+      <input name="actualstring">$confirmed{1}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="subject is accepted for the Specimen resources">
+      <input name="actualstring">$confirmed{2}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="subject.reference is accepted for the Specimen resources">
+      <input name="actualstring">$confirmed{3}</input>
       <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
     <interact id="inform" desc="Instruction for Consumer" with="Consumer">
-      <instruct desc="Open Patricia JORDANA's summary in the system under test and display the Specimen resources, showing: [type], [subject]" name="message"/>
+      <instruct desc="Open Patricia JORDANA's summary in the system under test and display the Specimen resources." name="message"/>
     </interact>
-    <interact id="evidence" desc="Evidence: the Specimen resources displayed with [type], [subject] (screenshot)" inputTitle="Evidence: the Specimen resources displayed with [type], [subject] (screenshot)" with="Consumer">
-      <instruct desc="Demonstrate on the system under test: the Specimen resources displayed with [type], [subject] (screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
-      <request desc="Evidence file (screenshot, export or log) for: the Specimen resources displayed with [type], [subject] (screenshot)" name="displayedSpecimenEvidence" inputType="UPLOAD" required="true">$displayedSpecimenEvidence</request>
+    <interact id="evidence" desc="Evidence: the Specimen resources displayed (screenshot)" inputTitle="Evidence: the Specimen resources displayed (screenshot)" with="Consumer">
+      <instruct desc="Demonstrate on the system under test: the Specimen resources displayed (screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
+      <request desc="Evidence file (screenshot, export or log) for: the Specimen resources displayed (screenshot)" name="displayedSpecimenEvidence" inputType="UPLOAD" required="true">$displayedSpecimenEvidence</request>
       <request desc="Note (optional): where it is shown, or why it cannot be" name="displayedSpecimenEvidence_note" inputType="TEXT" required="false">$displayedSpecimenEvidence_note</request>
     </interact>
-    <log>concat(&quot;Evidence submitted for: the Specimen resources displayed with [type], [subject] (screenshot) — note: &quot;, $displayedSpecimenEvidence_note)</log>
-    <interact id="ask" desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [type], [subject]" inputTitle="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [type], [subject]">
-      <request desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [type], [subject]" name="notDisplayed" inputType="TEXT" required="true">$notDisplayed</request>
+    <log>concat(&quot;Evidence submitted for: the Specimen resources displayed (screenshot) — note: &quot;, $displayedSpecimenEvidence_note)</log>
+    <interact id="confirm" desc="For the Specimen resources: is each of these displayed?" inputTitle="For the Specimen resources: is each of these displayed?" with="Consumer">
+      <instruct desc="For the Specimen resources, choose for each item below whether it is displayed. Leave nothing unanswered." name="instruction"/>
+      <request desc="type — " name="confirmed_1" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{1}</request>
+      <request desc="subject — " name="confirmed_2" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{2}</request>
     </interact>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [type]">
-      <input name="expression">not(contains($notDisplayed, &quot;[type]&quot;))</input>
+    <verify handler="StringValidator" desc="type is displayed for the Specimen resources">
+      <input name="actualstring">$confirmed{1}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [subject]">
-      <input name="expression">not(contains($notDisplayed, &quot;[subject]&quot;))</input>
+    <verify handler="StringValidator" desc="subject is displayed for the Specimen resources">
+      <input name="actualstring">$confirmed{2}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
   </steps>
 

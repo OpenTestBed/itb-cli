@@ -15,7 +15,6 @@
   </actors>
 
   <variables>
-    <var name="handled" type="string"/>
     <var name="handledImmunizationEvidence" type="binary"/>
     <var name="handledImmunizationEvidence_note" type="string">
       <value>&quot;&quot;</value>
@@ -24,7 +23,6 @@
     <var name="displayedImmunizationEvidence_note" type="string">
       <value>&quot;&quot;</value>
     </var>
-    <var name="notDisplayed" type="string"/>
     <var name="loadIgBody" type="string"/>
     <var name="conformBody" type="string"/>
     <var name="validationErrors" type="string"/>
@@ -42,6 +40,13 @@
     <var name="conformHeaders" type="map"/>
     <var name="conformTplParams" type="map"/>
     <var name="dgFpParams" type="map"/>
+    <var name="confirmed{1}" type="string"/>
+    <var name="confirmed{2}" type="string"/>
+    <var name="confirmed{3}" type="string"/>
+    <var name="confirmed{4}" type="string"/>
+    <var name="confirmed{5}" type="string"/>
+    <var name="confirmed{6}" type="string"/>
+    <var name="confirmed" type="string"/>
   </variables>
 
   <steps stopOnError="true">
@@ -128,45 +133,81 @@
     <interact id="inform" desc="Instruction for Consumer" with="Consumer">
       <instruct desc="Import this International Patient Summary for Patricia JORDANA into the system under test, then answer the questions that follow." name="message">$ips</instruct>
     </interact>
-    <interact id="ask" desc="For the Immunization resources: were these elements accepted and processed without error — [status] = completed, [vaccineCode] = Influenza, split virus, trivalent, pr…, [patient] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [patient.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [occurrence[x]] = 2024-04-10, [occurrence[x]:occurrenceDateTime] = 2024-04-10? Answer yes, or name the ones that caused an error." inputTitle="For the Immunization resources: were these elements accepted and processed without error — [status] = completed, [vaccineCode] = Influenza, split virus, trivalent, pr…, [patient] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [patient.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [occurrence[x]] = 2024-04-10, [occurrence[x]:occurrenceDateTime] = 2024-04-10? Answer yes, or name the ones that caused an error.">
-      <request desc="For the Immunization resources: were these elements accepted and processed without error — [status] = completed, [vaccineCode] = Influenza, split virus, trivalent, pr…, [patient] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [patient.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [occurrence[x]] = 2024-04-10, [occurrence[x]:occurrenceDateTime] = 2024-04-10? Answer yes, or name the ones that caused an error." name="handled" inputType="TEXT" required="true">$handled</request>
-    </interact>
     <interact id="evidence" desc="Evidence: the import of the Immunization resources completing without error (import log or screenshot)" inputTitle="Evidence: the import of the Immunization resources completing without error (import log or screenshot)" with="Consumer">
       <instruct desc="Demonstrate on the system under test: the import of the Immunization resources completing without error (import log or screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
       <request desc="Evidence file (screenshot, export or log) for: the import of the Immunization resources completing without error (import log or screenshot)" name="handledImmunizationEvidence" inputType="UPLOAD" required="true">$handledImmunizationEvidence</request>
       <request desc="Note (optional): where it is shown, or why it cannot be" name="handledImmunizationEvidence_note" inputType="TEXT" required="false">$handledImmunizationEvidence_note</request>
     </interact>
     <log>concat(&quot;Evidence submitted for: the import of the Immunization resources completing without error (import log or screenshot) — note: &quot;, $handledImmunizationEvidence_note)</log>
-    <verify handler="StringValidator" desc="$handled is yes">
-      <input name="actualstring">$handled</input>
+    <interact id="confirm" desc="For the Immunization resources: is each of these accepted?" inputTitle="For the Immunization resources: is each of these accepted?" with="Consumer">
+      <instruct desc="For the Immunization resources, choose for each item below whether it is accepted. Leave nothing unanswered." name="instruction"/>
+      <request desc="status — completed" name="confirmed_1" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{1}</request>
+      <request desc="vaccineCode — Influenza, split virus, trivalent, pr…" name="confirmed_2" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{2}</request>
+      <request desc="patient — Patient/d174bd1a-b368-41e6-83a2-af77f…" name="confirmed_3" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{3}</request>
+      <request desc="patient.reference — Patient/d174bd1a-b368-41e6-83a2-af77f…" name="confirmed_4" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{4}</request>
+      <request desc="occurrence[x] — 2024-04-10" name="confirmed_5" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{5}</request>
+      <request desc="occurrence[x]:occurrenceDateTime — 2024-04-10" name="confirmed_6" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{6}</request>
+    </interact>
+    <verify handler="StringValidator" desc="status is accepted for the Immunization resources">
+      <input name="actualstring">$confirmed{1}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="vaccineCode is accepted for the Immunization resources">
+      <input name="actualstring">$confirmed{2}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="patient is accepted for the Immunization resources">
+      <input name="actualstring">$confirmed{3}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="patient.reference is accepted for the Immunization resources">
+      <input name="actualstring">$confirmed{4}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="occurrence[x] is accepted for the Immunization resources">
+      <input name="actualstring">$confirmed{5}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="occurrence[x]:occurrenceDateTime is accepted for the Immunization resources">
+      <input name="actualstring">$confirmed{6}</input>
       <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
     <interact id="inform" desc="Instruction for Consumer" with="Consumer">
-      <instruct desc="Open Patricia JORDANA's summary in the system under test and display the Immunization resources, showing: [status] = completed, [vaccineCode] = Influenza, split virus, trivalent, pr…, [patient] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [occurrence[x]] = 2024-04-10, [occurrence[x]:occurrenceDateTime] = 2024-04-10" name="message"/>
+      <instruct desc="Open Patricia JORDANA's summary in the system under test and display the Immunization resources." name="message"/>
     </interact>
-    <interact id="evidence" desc="Evidence: the Immunization resources displayed with [status], [vaccineCode], [patient], [occurrence[x]], [occurrence[x]:occurrenceDateTime] (screenshot)" inputTitle="Evidence: the Immunization resources displayed with [status], [vaccineCode], [patient], [occurrence[x]], [occurrence[x]:occurrenceDateTime] (screenshot)" with="Consumer">
-      <instruct desc="Demonstrate on the system under test: the Immunization resources displayed with [status], [vaccineCode], [patient], [occurrence[x]], [occurrence[x]:occurrenceDateTime] (screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
-      <request desc="Evidence file (screenshot, export or log) for: the Immunization resources displayed with [status], [vaccineCode], [patient], [occurrence[x]], [occurrence[x]:occurrenceDateTime] (screenshot)" name="displayedImmunizationEvidence" inputType="UPLOAD" required="true">$displayedImmunizationEvidence</request>
+    <interact id="evidence" desc="Evidence: the Immunization resources displayed (screenshot)" inputTitle="Evidence: the Immunization resources displayed (screenshot)" with="Consumer">
+      <instruct desc="Demonstrate on the system under test: the Immunization resources displayed (screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
+      <request desc="Evidence file (screenshot, export or log) for: the Immunization resources displayed (screenshot)" name="displayedImmunizationEvidence" inputType="UPLOAD" required="true">$displayedImmunizationEvidence</request>
       <request desc="Note (optional): where it is shown, or why it cannot be" name="displayedImmunizationEvidence_note" inputType="TEXT" required="false">$displayedImmunizationEvidence_note</request>
     </interact>
-    <log>concat(&quot;Evidence submitted for: the Immunization resources displayed with [status], [vaccineCode], [patient], [occurrence[x]], [occurrence[x]:occurrenceDateTime] (screenshot) — note: &quot;, $displayedImmunizationEvidence_note)</log>
-    <interact id="ask" desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [status] = completed, [vaccineCode] = Influenza, split virus, trivalent, pr…, [patient] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [occurrence[x]] = 2024-04-10, [occurrence[x]:occurrenceDateTime] = 2024-04-10" inputTitle="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [status] = completed, [vaccineCode] = Influenza, split virus, trivalent, pr…, [patient] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [occurrence[x]] = 2024-04-10, [occurrence[x]:occurrenceDateTime] = 2024-04-10">
-      <request desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [status] = completed, [vaccineCode] = Influenza, split virus, trivalent, pr…, [patient] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [occurrence[x]] = 2024-04-10, [occurrence[x]:occurrenceDateTime] = 2024-04-10" name="notDisplayed" inputType="TEXT" required="true">$notDisplayed</request>
+    <log>concat(&quot;Evidence submitted for: the Immunization resources displayed (screenshot) — note: &quot;, $displayedImmunizationEvidence_note)</log>
+    <interact id="confirm" desc="For the Immunization resources: is each of these displayed?" inputTitle="For the Immunization resources: is each of these displayed?" with="Consumer">
+      <instruct desc="For the Immunization resources, choose for each item below whether it is displayed. Leave nothing unanswered." name="instruction"/>
+      <request desc="status — completed" name="confirmed_1" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{1}</request>
+      <request desc="vaccineCode — Influenza, split virus, trivalent, pr…" name="confirmed_2" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{2}</request>
+      <request desc="patient — Patient/d174bd1a-b368-41e6-83a2-af77f…" name="confirmed_3" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{3}</request>
+      <request desc="occurrence[x] — 2024-04-10" name="confirmed_4" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{4}</request>
+      <request desc="occurrence[x]:occurrenceDateTime — 2024-04-10" name="confirmed_5" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{5}</request>
     </interact>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [status]">
-      <input name="expression">not(contains($notDisplayed, &quot;[status]&quot;))</input>
+    <verify handler="StringValidator" desc="status is displayed for the Immunization resources">
+      <input name="actualstring">$confirmed{1}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [vaccineCode]">
-      <input name="expression">not(contains($notDisplayed, &quot;[vaccineCode]&quot;))</input>
+    <verify handler="StringValidator" desc="vaccineCode is displayed for the Immunization resources">
+      <input name="actualstring">$confirmed{2}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [patient]">
-      <input name="expression">not(contains($notDisplayed, &quot;[patient]&quot;))</input>
+    <verify handler="StringValidator" desc="patient is displayed for the Immunization resources">
+      <input name="actualstring">$confirmed{3}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [occurrence[x]]">
-      <input name="expression">not(contains($notDisplayed, &quot;[occurrence[x]]&quot;))</input>
+    <verify handler="StringValidator" desc="occurrence[x] is displayed for the Immunization resources">
+      <input name="actualstring">$confirmed{4}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [occurrence[x]:occurrenceDateTime]">
-      <input name="expression">not(contains($notDisplayed, &quot;[occurrence[x]:occurrenceDateTime]&quot;))</input>
+    <verify handler="StringValidator" desc="occurrence[x]:occurrenceDateTime is displayed for the Immunization resources">
+      <input name="actualstring">$confirmed{5}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
   </steps>
 

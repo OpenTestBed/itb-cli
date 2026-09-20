@@ -807,6 +807,75 @@ verbs:
             - { desc: 'Note (optional): where it is shown, or why it cannot be', name: '$3_note', inputType: 'TEXT', required: false, variable: '$$3_note' }
       - log: 'concat("Evidence submitted for: $2 — note: ", $$3_note)'
 
+  # Checklist. The operator confirms each item of a list in ONE dialog — a
+  # Displayed / Not displayed (or Yes / No) choice per row — and every row
+  # becomes its own verdict in the report. This is the construct behind every
+  # "SHOULD:display" / "SHALL:handle" style obligation, so a dialect never has
+  # to invent its own way of asking.
+  #
+  #   Then Consumer confirms each of these is displayed for "the allergy Penicillin":
+  #     | item           | detail  |
+  #     | clinicalStatus | active  |
+  #     | type           | allergy |
+  #
+  # `detail` is optional. The word after "is" (displayed, accepted, supported…)
+  # names the behaviour in the prompt and in each verdict.
+  - text: '{actor} confirms each of these is {word} for {string}:'
+    doc: One dialog with a per-row choice; one pass/fail verdict per row (table | item | detail |).
+    table:
+      required: [item]
+    actions:
+      - interact:
+          id: 'confirm'
+          desc: 'For $3: is each of these $2?'
+          inputTitle: 'For $3: is each of these $2?'
+          with: '$1'
+          instructions:
+            - { desc: 'For $3, choose for each item below whether it is $2. Leave nothing unanswered.', name: 'instruction', value: '""' }
+          requestsFromTable:
+            desc: '$row.item — $row.detail'
+            name: 'confirmed_$row.__index'
+            inputType: 'SELECT_SINGLE'
+            required: true
+            options: 'yes,no'
+            optionLabels: '$2,not $2'
+            variable: '$confirmed{$row.__index}'
+      - foreach:
+          from: '$tableRows'
+          do:
+            - verify:
+                handler: 'StringValidator'
+                desc: '$row.item is $2 for $3'
+                inputs: { actualstring: '$confirmed{$row.__index}', expectedstring: '"yes"' }
+
+  - text: '{actor} confirms each of these is {word}:'
+    doc: Same, without naming what the items belong to.
+    table:
+      required: [item]
+    actions:
+      - interact:
+          id: 'confirm'
+          desc: 'Is each of these $2?'
+          inputTitle: 'Is each of these $2?'
+          with: '$1'
+          instructions:
+            - { desc: 'Choose for each item below whether it is $2. Leave nothing unanswered.', name: 'instruction', value: '""' }
+          requestsFromTable:
+            desc: '$row.item — $row.detail'
+            name: 'confirmed_$row.__index'
+            inputType: 'SELECT_SINGLE'
+            required: true
+            options: 'yes,no'
+            optionLabels: '$2,not $2'
+            variable: '$confirmed{$row.__index}'
+      - foreach:
+          from: '$tableRows'
+          do:
+            - verify:
+                handler: 'StringValidator'
+                desc: '$row.item is $2'
+                inputs: { actualstring: '$confirmed{$row.__index}', expectedstring: '"yes"' }
+
   # ==================================================================
   # 8. LOGGING
   # ==================================================================

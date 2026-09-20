@@ -15,7 +15,6 @@
   </actors>
 
   <variables>
-    <var name="handled" type="string"/>
     <var name="handledAllergyIntoleranceEvidence" type="binary"/>
     <var name="handledAllergyIntoleranceEvidence_note" type="string">
       <value>&quot;&quot;</value>
@@ -24,7 +23,6 @@
     <var name="displayedAllergyIntoleranceEvidence_note" type="string">
       <value>&quot;&quot;</value>
     </var>
-    <var name="notDisplayed" type="string"/>
     <var name="loadIgBody" type="string"/>
     <var name="conformBody" type="string"/>
     <var name="validationErrors" type="string"/>
@@ -42,6 +40,17 @@
     <var name="conformHeaders" type="map"/>
     <var name="conformTplParams" type="map"/>
     <var name="dgFpParams" type="map"/>
+    <var name="confirmed{1}" type="string"/>
+    <var name="confirmed{2}" type="string"/>
+    <var name="confirmed{3}" type="string"/>
+    <var name="confirmed{4}" type="string"/>
+    <var name="confirmed{5}" type="string"/>
+    <var name="confirmed{6}" type="string"/>
+    <var name="confirmed{7}" type="string"/>
+    <var name="confirmed{8}" type="string"/>
+    <var name="confirmed{9}" type="string"/>
+    <var name="confirmed{10}" type="string"/>
+    <var name="confirmed" type="string"/>
   </variables>
 
   <steps stopOnError="true">
@@ -128,57 +137,121 @@
     <interact id="inform" desc="Instruction for Consumer" with="Consumer">
       <instruct desc="Import this International Patient Summary for Patricia JORDANA into the system under test, then answer the questions that follow." name="message">$ips</instruct>
     </interact>
-    <interact id="ask" desc="For the AllergyIntolerance resources: were these elements accepted and processed without error — [clinicalStatus] = active, [type], [code] = Penicillin, [patient] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [patient.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [onset[x]], [onset[x]:onsetDateTime], [reaction], [reaction.manifestation], [reaction.severity]? Answer yes, or name the ones that caused an error." inputTitle="For the AllergyIntolerance resources: were these elements accepted and processed without error — [clinicalStatus] = active, [type], [code] = Penicillin, [patient] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [patient.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [onset[x]], [onset[x]:onsetDateTime], [reaction], [reaction.manifestation], [reaction.severity]? Answer yes, or name the ones that caused an error.">
-      <request desc="For the AllergyIntolerance resources: were these elements accepted and processed without error — [clinicalStatus] = active, [type], [code] = Penicillin, [patient] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [patient.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [onset[x]], [onset[x]:onsetDateTime], [reaction], [reaction.manifestation], [reaction.severity]? Answer yes, or name the ones that caused an error." name="handled" inputType="TEXT" required="true">$handled</request>
-    </interact>
     <interact id="evidence" desc="Evidence: the import of the AllergyIntolerance resources completing without error (import log or screenshot)" inputTitle="Evidence: the import of the AllergyIntolerance resources completing without error (import log or screenshot)" with="Consumer">
       <instruct desc="Demonstrate on the system under test: the import of the AllergyIntolerance resources completing without error (import log or screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
       <request desc="Evidence file (screenshot, export or log) for: the import of the AllergyIntolerance resources completing without error (import log or screenshot)" name="handledAllergyIntoleranceEvidence" inputType="UPLOAD" required="true">$handledAllergyIntoleranceEvidence</request>
       <request desc="Note (optional): where it is shown, or why it cannot be" name="handledAllergyIntoleranceEvidence_note" inputType="TEXT" required="false">$handledAllergyIntoleranceEvidence_note</request>
     </interact>
     <log>concat(&quot;Evidence submitted for: the import of the AllergyIntolerance resources completing without error (import log or screenshot) — note: &quot;, $handledAllergyIntoleranceEvidence_note)</log>
-    <verify handler="StringValidator" desc="$handled is yes">
-      <input name="actualstring">$handled</input>
+    <interact id="confirm" desc="For the AllergyIntolerance resources: is each of these accepted?" inputTitle="For the AllergyIntolerance resources: is each of these accepted?" with="Consumer">
+      <instruct desc="For the AllergyIntolerance resources, choose for each item below whether it is accepted. Leave nothing unanswered." name="instruction"/>
+      <request desc="clinicalStatus — active" name="confirmed_1" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{1}</request>
+      <request desc="type — " name="confirmed_2" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{2}</request>
+      <request desc="code — Penicillin" name="confirmed_3" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{3}</request>
+      <request desc="patient — Patient/d174bd1a-b368-41e6-83a2-af77f…" name="confirmed_4" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{4}</request>
+      <request desc="patient.reference — Patient/d174bd1a-b368-41e6-83a2-af77f…" name="confirmed_5" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{5}</request>
+      <request desc="onset[x] — " name="confirmed_6" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{6}</request>
+      <request desc="onset[x]:onsetDateTime — " name="confirmed_7" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{7}</request>
+      <request desc="reaction — " name="confirmed_8" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{8}</request>
+      <request desc="reaction.manifestation — " name="confirmed_9" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{9}</request>
+      <request desc="reaction.severity — " name="confirmed_10" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{10}</request>
+    </interact>
+    <verify handler="StringValidator" desc="clinicalStatus is accepted for the AllergyIntolerance resources">
+      <input name="actualstring">$confirmed{1}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="type is accepted for the AllergyIntolerance resources">
+      <input name="actualstring">$confirmed{2}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="code is accepted for the AllergyIntolerance resources">
+      <input name="actualstring">$confirmed{3}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="patient is accepted for the AllergyIntolerance resources">
+      <input name="actualstring">$confirmed{4}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="patient.reference is accepted for the AllergyIntolerance resources">
+      <input name="actualstring">$confirmed{5}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="onset[x] is accepted for the AllergyIntolerance resources">
+      <input name="actualstring">$confirmed{6}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="onset[x]:onsetDateTime is accepted for the AllergyIntolerance resources">
+      <input name="actualstring">$confirmed{7}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="reaction is accepted for the AllergyIntolerance resources">
+      <input name="actualstring">$confirmed{8}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="reaction.manifestation is accepted for the AllergyIntolerance resources">
+      <input name="actualstring">$confirmed{9}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="reaction.severity is accepted for the AllergyIntolerance resources">
+      <input name="actualstring">$confirmed{10}</input>
       <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
     <interact id="inform" desc="Instruction for Consumer" with="Consumer">
-      <instruct desc="Open Patricia JORDANA's summary in the system under test and display the AllergyIntolerance resources, showing: [clinicalStatus] = active, [type], [code] = Penicillin, [patient] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [onset[x]], [onset[x]:onsetDateTime], [reaction], [reaction.manifestation], [reaction.severity]" name="message"/>
+      <instruct desc="Open Patricia JORDANA's summary in the system under test and display the AllergyIntolerance resources." name="message"/>
     </interact>
-    <interact id="evidence" desc="Evidence: the AllergyIntolerance resources displayed with [clinicalStatus], [type], [code], [patient], [onset[x]], [onset[x]:onsetDateTime], [reaction], [reaction.manifestation], [reaction.severity] (screenshot)" inputTitle="Evidence: the AllergyIntolerance resources displayed with [clinicalStatus], [type], [code], [patient], [onset[x]], [onset[x]:onsetDateTime], [reaction], [reaction.manifestation], [reaction.severity] (screenshot)" with="Consumer">
-      <instruct desc="Demonstrate on the system under test: the AllergyIntolerance resources displayed with [clinicalStatus], [type], [code], [patient], [onset[x]], [onset[x]:onsetDateTime], [reaction], [reaction.manifestation], [reaction.severity] (screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
-      <request desc="Evidence file (screenshot, export or log) for: the AllergyIntolerance resources displayed with [clinicalStatus], [type], [code], [patient], [onset[x]], [onset[x]:onsetDateTime], [reaction], [reaction.manifestation], [reaction.severity] (screenshot)" name="displayedAllergyIntoleranceEvidence" inputType="UPLOAD" required="true">$displayedAllergyIntoleranceEvidence</request>
+    <interact id="evidence" desc="Evidence: the AllergyIntolerance resources displayed (screenshot)" inputTitle="Evidence: the AllergyIntolerance resources displayed (screenshot)" with="Consumer">
+      <instruct desc="Demonstrate on the system under test: the AllergyIntolerance resources displayed (screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
+      <request desc="Evidence file (screenshot, export or log) for: the AllergyIntolerance resources displayed (screenshot)" name="displayedAllergyIntoleranceEvidence" inputType="UPLOAD" required="true">$displayedAllergyIntoleranceEvidence</request>
       <request desc="Note (optional): where it is shown, or why it cannot be" name="displayedAllergyIntoleranceEvidence_note" inputType="TEXT" required="false">$displayedAllergyIntoleranceEvidence_note</request>
     </interact>
-    <log>concat(&quot;Evidence submitted for: the AllergyIntolerance resources displayed with [clinicalStatus], [type], [code], [patient], [onset[x]], [onset[x]:onsetDateTime], [reaction], [reaction.manifestation], [reaction.severity] (screenshot) — note: &quot;, $displayedAllergyIntoleranceEvidence_note)</log>
-    <interact id="ask" desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [clinicalStatus] = active, [type], [code] = Penicillin, [patient] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [onset[x]], [onset[x]:onsetDateTime], [reaction], [reaction.manifestation], [reaction.severity]" inputTitle="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [clinicalStatus] = active, [type], [code] = Penicillin, [patient] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [onset[x]], [onset[x]:onsetDateTime], [reaction], [reaction.manifestation], [reaction.severity]">
-      <request desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [clinicalStatus] = active, [type], [code] = Penicillin, [patient] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [onset[x]], [onset[x]:onsetDateTime], [reaction], [reaction.manifestation], [reaction.severity]" name="notDisplayed" inputType="TEXT" required="true">$notDisplayed</request>
+    <log>concat(&quot;Evidence submitted for: the AllergyIntolerance resources displayed (screenshot) — note: &quot;, $displayedAllergyIntoleranceEvidence_note)</log>
+    <interact id="confirm" desc="For the AllergyIntolerance resources: is each of these displayed?" inputTitle="For the AllergyIntolerance resources: is each of these displayed?" with="Consumer">
+      <instruct desc="For the AllergyIntolerance resources, choose for each item below whether it is displayed. Leave nothing unanswered." name="instruction"/>
+      <request desc="clinicalStatus — active" name="confirmed_1" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{1}</request>
+      <request desc="type — " name="confirmed_2" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{2}</request>
+      <request desc="code — Penicillin" name="confirmed_3" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{3}</request>
+      <request desc="patient — Patient/d174bd1a-b368-41e6-83a2-af77f…" name="confirmed_4" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{4}</request>
+      <request desc="onset[x] — " name="confirmed_5" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{5}</request>
+      <request desc="onset[x]:onsetDateTime — " name="confirmed_6" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{6}</request>
+      <request desc="reaction — " name="confirmed_7" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{7}</request>
+      <request desc="reaction.manifestation — " name="confirmed_8" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{8}</request>
+      <request desc="reaction.severity — " name="confirmed_9" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{9}</request>
     </interact>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [clinicalStatus]">
-      <input name="expression">not(contains($notDisplayed, &quot;[clinicalStatus]&quot;))</input>
+    <verify handler="StringValidator" desc="clinicalStatus is displayed for the AllergyIntolerance resources">
+      <input name="actualstring">$confirmed{1}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [type]">
-      <input name="expression">not(contains($notDisplayed, &quot;[type]&quot;))</input>
+    <verify handler="StringValidator" desc="type is displayed for the AllergyIntolerance resources">
+      <input name="actualstring">$confirmed{2}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [code]">
-      <input name="expression">not(contains($notDisplayed, &quot;[code]&quot;))</input>
+    <verify handler="StringValidator" desc="code is displayed for the AllergyIntolerance resources">
+      <input name="actualstring">$confirmed{3}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [patient]">
-      <input name="expression">not(contains($notDisplayed, &quot;[patient]&quot;))</input>
+    <verify handler="StringValidator" desc="patient is displayed for the AllergyIntolerance resources">
+      <input name="actualstring">$confirmed{4}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [onset[x]]">
-      <input name="expression">not(contains($notDisplayed, &quot;[onset[x]]&quot;))</input>
+    <verify handler="StringValidator" desc="onset[x] is displayed for the AllergyIntolerance resources">
+      <input name="actualstring">$confirmed{5}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [onset[x]:onsetDateTime]">
-      <input name="expression">not(contains($notDisplayed, &quot;[onset[x]:onsetDateTime]&quot;))</input>
+    <verify handler="StringValidator" desc="onset[x]:onsetDateTime is displayed for the AllergyIntolerance resources">
+      <input name="actualstring">$confirmed{6}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [reaction]">
-      <input name="expression">not(contains($notDisplayed, &quot;[reaction]&quot;))</input>
+    <verify handler="StringValidator" desc="reaction is displayed for the AllergyIntolerance resources">
+      <input name="actualstring">$confirmed{7}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [reaction.manifestation]">
-      <input name="expression">not(contains($notDisplayed, &quot;[reaction.manifestation]&quot;))</input>
+    <verify handler="StringValidator" desc="reaction.manifestation is displayed for the AllergyIntolerance resources">
+      <input name="actualstring">$confirmed{8}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [reaction.severity]">
-      <input name="expression">not(contains($notDisplayed, &quot;[reaction.severity]&quot;))</input>
+    <verify handler="StringValidator" desc="reaction.severity is displayed for the AllergyIntolerance resources">
+      <input name="actualstring">$confirmed{9}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
   </steps>
 

@@ -15,7 +15,6 @@
   </actors>
 
   <variables>
-    <var name="handled" type="string"/>
     <var name="handledDiagnosticReportEvidence" type="binary"/>
     <var name="handledDiagnosticReportEvidence_note" type="string">
       <value>&quot;&quot;</value>
@@ -24,7 +23,6 @@
     <var name="displayedDiagnosticReportEvidence_note" type="string">
       <value>&quot;&quot;</value>
     </var>
-    <var name="notDisplayed" type="string"/>
     <var name="loadIgBody" type="string"/>
     <var name="conformBody" type="string"/>
     <var name="validationErrors" type="string"/>
@@ -42,6 +40,14 @@
     <var name="conformHeaders" type="map"/>
     <var name="conformTplParams" type="map"/>
     <var name="dgFpParams" type="map"/>
+    <var name="confirmed{1}" type="string"/>
+    <var name="confirmed{2}" type="string"/>
+    <var name="confirmed{3}" type="string"/>
+    <var name="confirmed{4}" type="string"/>
+    <var name="confirmed{5}" type="string"/>
+    <var name="confirmed{6}" type="string"/>
+    <var name="confirmed{7}" type="string"/>
+    <var name="confirmed" type="string"/>
   </variables>
 
   <steps stopOnError="true">
@@ -128,48 +134,91 @@
     <interact id="inform" desc="Instruction for Consumer" with="Consumer">
       <instruct desc="Import this International Patient Summary for Patricia JORDANA into the system under test, then answer the questions that follow." name="message">$ips</instruct>
     </interact>
-    <interact id="ask" desc="For the DiagnosticReport resources: were these elements accepted and processed without error — [code], [subject], [subject.reference], [effective[x]], [effective[x]:effectiveDateTime], [performer], [result:observation-results]? Answer yes, or name the ones that caused an error." inputTitle="For the DiagnosticReport resources: were these elements accepted and processed without error — [code], [subject], [subject.reference], [effective[x]], [effective[x]:effectiveDateTime], [performer], [result:observation-results]? Answer yes, or name the ones that caused an error.">
-      <request desc="For the DiagnosticReport resources: were these elements accepted and processed without error — [code], [subject], [subject.reference], [effective[x]], [effective[x]:effectiveDateTime], [performer], [result:observation-results]? Answer yes, or name the ones that caused an error." name="handled" inputType="TEXT" required="true">$handled</request>
-    </interact>
     <interact id="evidence" desc="Evidence: the import of the DiagnosticReport resources completing without error (import log or screenshot)" inputTitle="Evidence: the import of the DiagnosticReport resources completing without error (import log or screenshot)" with="Consumer">
       <instruct desc="Demonstrate on the system under test: the import of the DiagnosticReport resources completing without error (import log or screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
       <request desc="Evidence file (screenshot, export or log) for: the import of the DiagnosticReport resources completing without error (import log or screenshot)" name="handledDiagnosticReportEvidence" inputType="UPLOAD" required="true">$handledDiagnosticReportEvidence</request>
       <request desc="Note (optional): where it is shown, or why it cannot be" name="handledDiagnosticReportEvidence_note" inputType="TEXT" required="false">$handledDiagnosticReportEvidence_note</request>
     </interact>
     <log>concat(&quot;Evidence submitted for: the import of the DiagnosticReport resources completing without error (import log or screenshot) — note: &quot;, $handledDiagnosticReportEvidence_note)</log>
-    <verify handler="StringValidator" desc="$handled is yes">
-      <input name="actualstring">$handled</input>
+    <interact id="confirm" desc="For the DiagnosticReport resources: is each of these accepted?" inputTitle="For the DiagnosticReport resources: is each of these accepted?" with="Consumer">
+      <instruct desc="For the DiagnosticReport resources, choose for each item below whether it is accepted. Leave nothing unanswered." name="instruction"/>
+      <request desc="code — " name="confirmed_1" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{1}</request>
+      <request desc="subject — " name="confirmed_2" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{2}</request>
+      <request desc="subject.reference — " name="confirmed_3" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{3}</request>
+      <request desc="effective[x] — " name="confirmed_4" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{4}</request>
+      <request desc="effective[x]:effectiveDateTime — " name="confirmed_5" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{5}</request>
+      <request desc="performer — " name="confirmed_6" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{6}</request>
+      <request desc="result:observation-results — " name="confirmed_7" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{7}</request>
+    </interact>
+    <verify handler="StringValidator" desc="code is accepted for the DiagnosticReport resources">
+      <input name="actualstring">$confirmed{1}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="subject is accepted for the DiagnosticReport resources">
+      <input name="actualstring">$confirmed{2}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="subject.reference is accepted for the DiagnosticReport resources">
+      <input name="actualstring">$confirmed{3}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="effective[x] is accepted for the DiagnosticReport resources">
+      <input name="actualstring">$confirmed{4}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="effective[x]:effectiveDateTime is accepted for the DiagnosticReport resources">
+      <input name="actualstring">$confirmed{5}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="performer is accepted for the DiagnosticReport resources">
+      <input name="actualstring">$confirmed{6}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="result:observation-results is accepted for the DiagnosticReport resources">
+      <input name="actualstring">$confirmed{7}</input>
       <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
     <interact id="inform" desc="Instruction for Consumer" with="Consumer">
-      <instruct desc="Open Patricia JORDANA's summary in the system under test and display the DiagnosticReport resources, showing: [code], [subject], [effective[x]], [effective[x]:effectiveDateTime], [performer], [result:observation-results]" name="message"/>
+      <instruct desc="Open Patricia JORDANA's summary in the system under test and display the DiagnosticReport resources." name="message"/>
     </interact>
-    <interact id="evidence" desc="Evidence: the DiagnosticReport resources displayed with [code], [subject], [effective[x]], [effective[x]:effectiveDateTime], [performer], [result:observation-results] (screenshot)" inputTitle="Evidence: the DiagnosticReport resources displayed with [code], [subject], [effective[x]], [effective[x]:effectiveDateTime], [performer], [result:observation-results] (screenshot)" with="Consumer">
-      <instruct desc="Demonstrate on the system under test: the DiagnosticReport resources displayed with [code], [subject], [effective[x]], [effective[x]:effectiveDateTime], [performer], [result:observation-results] (screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
-      <request desc="Evidence file (screenshot, export or log) for: the DiagnosticReport resources displayed with [code], [subject], [effective[x]], [effective[x]:effectiveDateTime], [performer], [result:observation-results] (screenshot)" name="displayedDiagnosticReportEvidence" inputType="UPLOAD" required="true">$displayedDiagnosticReportEvidence</request>
+    <interact id="evidence" desc="Evidence: the DiagnosticReport resources displayed (screenshot)" inputTitle="Evidence: the DiagnosticReport resources displayed (screenshot)" with="Consumer">
+      <instruct desc="Demonstrate on the system under test: the DiagnosticReport resources displayed (screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
+      <request desc="Evidence file (screenshot, export or log) for: the DiagnosticReport resources displayed (screenshot)" name="displayedDiagnosticReportEvidence" inputType="UPLOAD" required="true">$displayedDiagnosticReportEvidence</request>
       <request desc="Note (optional): where it is shown, or why it cannot be" name="displayedDiagnosticReportEvidence_note" inputType="TEXT" required="false">$displayedDiagnosticReportEvidence_note</request>
     </interact>
-    <log>concat(&quot;Evidence submitted for: the DiagnosticReport resources displayed with [code], [subject], [effective[x]], [effective[x]:effectiveDateTime], [performer], [result:observation-results] (screenshot) — note: &quot;, $displayedDiagnosticReportEvidence_note)</log>
-    <interact id="ask" desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [code], [subject], [effective[x]], [effective[x]:effectiveDateTime], [performer], [result:observation-results]" inputTitle="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [code], [subject], [effective[x]], [effective[x]:effectiveDateTime], [performer], [result:observation-results]">
-      <request desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [code], [subject], [effective[x]], [effective[x]:effectiveDateTime], [performer], [result:observation-results]" name="notDisplayed" inputType="TEXT" required="true">$notDisplayed</request>
+    <log>concat(&quot;Evidence submitted for: the DiagnosticReport resources displayed (screenshot) — note: &quot;, $displayedDiagnosticReportEvidence_note)</log>
+    <interact id="confirm" desc="For the DiagnosticReport resources: is each of these displayed?" inputTitle="For the DiagnosticReport resources: is each of these displayed?" with="Consumer">
+      <instruct desc="For the DiagnosticReport resources, choose for each item below whether it is displayed. Leave nothing unanswered." name="instruction"/>
+      <request desc="code — " name="confirmed_1" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{1}</request>
+      <request desc="subject — " name="confirmed_2" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{2}</request>
+      <request desc="effective[x] — " name="confirmed_3" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{3}</request>
+      <request desc="effective[x]:effectiveDateTime — " name="confirmed_4" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{4}</request>
+      <request desc="performer — " name="confirmed_5" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{5}</request>
+      <request desc="result:observation-results — " name="confirmed_6" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{6}</request>
     </interact>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [code]">
-      <input name="expression">not(contains($notDisplayed, &quot;[code]&quot;))</input>
+    <verify handler="StringValidator" desc="code is displayed for the DiagnosticReport resources">
+      <input name="actualstring">$confirmed{1}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [subject]">
-      <input name="expression">not(contains($notDisplayed, &quot;[subject]&quot;))</input>
+    <verify handler="StringValidator" desc="subject is displayed for the DiagnosticReport resources">
+      <input name="actualstring">$confirmed{2}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [effective[x]]">
-      <input name="expression">not(contains($notDisplayed, &quot;[effective[x]]&quot;))</input>
+    <verify handler="StringValidator" desc="effective[x] is displayed for the DiagnosticReport resources">
+      <input name="actualstring">$confirmed{3}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [effective[x]:effectiveDateTime]">
-      <input name="expression">not(contains($notDisplayed, &quot;[effective[x]:effectiveDateTime]&quot;))</input>
+    <verify handler="StringValidator" desc="effective[x]:effectiveDateTime is displayed for the DiagnosticReport resources">
+      <input name="actualstring">$confirmed{4}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [performer]">
-      <input name="expression">not(contains($notDisplayed, &quot;[performer]&quot;))</input>
+    <verify handler="StringValidator" desc="performer is displayed for the DiagnosticReport resources">
+      <input name="actualstring">$confirmed{5}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [result:observation-results]">
-      <input name="expression">not(contains($notDisplayed, &quot;[result:observation-results]&quot;))</input>
+    <verify handler="StringValidator" desc="result:observation-results is displayed for the DiagnosticReport resources">
+      <input name="actualstring">$confirmed{6}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
   </steps>
 

@@ -3,12 +3,10 @@
 # A Consumer's obligations are behaviours, not document content, so the test
 # bed hands the Consumer the IG's own all-sections example and a tester confirms
 # what the system did with it:
-#   SHALL:handle     the document, with every listed element, was accepted and
-#                    processed without error — the operator answers and attaches
-#                    the import result (log or screenshot) as evidence
-#   SHOULD:display   the operator is instructed to display the listed elements and
-#                    attaches a screenshot as evidence; then names the ones NOT
-#                    shown, and every element is asserted separately
+#   SHALL:handle     the operator attaches the import result (log or screenshot)
+#                    and confirms, element by element, that it was accepted
+#   SHOULD:display   the operator displays the elements, attaches a screenshot,
+#                    and confirms each one from a list — one verdict per element
 # Evidence files are kept by the test bed in the session report, beside the step.
 # A Consumer that is a FHIR server accepting documents can be driven without a
 # tester: see the last Rule.
@@ -30,13 +28,17 @@ Feature: IPS Consumer — obligations of hl7.fhir.uv.ips 2.0.1
     @profile:Bundle-uv-ips
     @covers:Bundle.identifier @covers:Bundle.timestamp @covers:Bundle.entry:composition
     Scenario: ips-consumer-001 Bundle (IPS) — the Consumer handles 3 elements and displays 1
-      When Consumer is asked for $handled with "For the document: were these elements accepted and processed without error — [identifier], [timestamp], [entry:composition]? Answer yes, or name the ones that caused an error."
-      And Consumer submits evidence of "the import of the document completing without error (import log or screenshot)" as $handledBundleEvidence
-      Then $handled should be "yes"
-      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the document, showing: [entry:composition]"
-      And Consumer submits evidence of "the document displayed with [entry:composition] (screenshot)" as $displayedBundleEvidence
-      And Consumer is asked for $notDisplayed with "Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [entry:composition]"
-      Then $notDisplayed should not contain "[entry:composition]"
+      When Consumer submits evidence of "the import of the document completing without error (import log or screenshot)" as $handledBundleEvidence
+      Then Consumer confirms each of these is accepted for "the document":
+        | item              | detail |
+        | identifier        |  |
+        | timestamp         |  |
+        | entry:composition |  |
+      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the document."
+      And Consumer submits evidence of "the document displayed (screenshot)" as $displayedBundleEvidence
+      Then Consumer confirms each of these is displayed for "the document":
+        | item              | detail |
+        | entry:composition |  |
 
     @profile:Composition-uv-ips
     @covers:Composition.text @covers:Composition.identifier @covers:Composition.status @covers:Composition.type
@@ -61,89 +63,171 @@ Feature: IPS Consumer — obligations of hl7.fhir.uv.ips 2.0.1
     @covers:Composition.section:sectionSocialHistory.title @covers:Composition.section:sectionSocialHistory.text @covers:Composition.section:sectionVitalSigns @covers:Composition.section:sectionVitalSigns.title
     @covers:Composition.section:sectionVitalSigns.text
     Scenario: ips-consumer-002 Composition (IPS) — the Consumer handles 81 elements and displays 77
-      When Consumer is asked for $handled with "For the Composition resources: were these elements accepted and processed without error — [text] = (present), [identifier] = ac7a747c-a2c9-493c-ba39-4ac6997eed1e, [status] = final, [type] = Patient summary Document, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [subject.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [date] = 2024-09-13, [author] = Organization/7a17027f-acc0-4d77-bf84-…, [title] = International Patient Summary, [attester] = (present), [attester.mode] = professional, [attester.time] = 2024-09-13, [attester.party] = PractitionerRole/94d12c8d-a3df-47a7-a…, [custodian] = Organization/7a17027f-acc0-4d77-bf84-…, [event:careProvisioningEvent] = (present), [event:careProvisioningEvent.code] = PCPR, [event:careProvisioningEvent.period] = until 2024-09-13, [section] = Problem List, [section.title] = Problem List, [section.code] = Problem list - Reported, [section.text] = (present), [section:sectionProblems] = Problem List, [section:sectionProblems.title] = Problem List, [section:sectionProblems.text] = (present), [section:sectionProblems.entry:problem] = Condition/8039e4a7-d459-454c-92a5-6c1…, [section:sectionProblems.emptyReason], [section:sectionAllergies] = Allergies and Intolerances, [section:sectionAllergies.title] = Allergies and Intolerances, [section:sectionAllergies.text] = (present), [section:sectionAllergies.entry:allergyOrIntolerance] = AllergyIntolerance/9838cf73-c30d-4aa5…, [section:sectionAllergies.emptyReason], [section:sectionMedications] = Medication Summary, [section:sectionMedications.title] = Medication Summary, [section:sectionMedications.text] = (present), [section:sectionMedications.entry:medicationStatementOrRequest] = MedicationStatement/c3d31980-2a88-45b…, [section:sectionMedications.emptyReason], [section:sectionImmunizations] = Immunizations, [section:sectionImmunizations.title] = Immunizations, [section:sectionImmunizations.text] = (present), [section:sectionImmunizations.entry:immunization] = Immunization/17b5a6d7-307b-4726-8c8c-…, [section:sectionResults] = Results, [section:sectionResults.title] = Results, [section:sectionResults.text] = (present), [section:sectionResults.entry:results-observation-laboratory-pathology] = Observation/b0187efd-5f9b-474d-87bc-e…, [section:sectionResults.entry:results-observation-radiology] = Observation/b0187efd-5f9b-474d-87bc-e…, [section:sectionResults.entry:results-diagnosticReport], [section:sectionProceduresHx] = History of Procedures, [section:sectionProceduresHx.title] = History of Procedures, [section:sectionProceduresHx.text] = (present), [section:sectionProceduresHx.entry:procedure] = Procedure/39252, [section:sectionMedicalDevices] = Device Use, [section:sectionMedicalDevices.title] = Device Use, [section:sectionMedicalDevices.text] = (present), [section:sectionMedicalDevices.entry:deviceStatement] = DeviceUseStatement/eumfh-70-275-1, [section:sectionAdvanceDirectives] = Advance Directives, [section:sectionAdvanceDirectives.title] = Advance Directives, [section:sectionAdvanceDirectives.text] = (present), [section:sectionAlerts] = Alerts, [section:sectionAlerts.title] = Alerts, [section:sectionAlerts.text] = (present), [section:sectionFunctionalStatus] = Functional Status, [section:sectionFunctionalStatus.title] = Functional Status, [section:sectionFunctionalStatus.text] = (present), [section:sectionPastProblems] = History of Past Problems, [section:sectionPastProblems.title] = History of Past Problems, [section:sectionPastProblems.text] = (present), [section:sectionPregnancyHx] = History of Pregnancy, [section:sectionPregnancyHx.title] = History of Pregnancy, [section:sectionPregnancyHx.text] = (present), [section:sectionPatientStory] = Patient Story, [section:sectionPatientStory.title] = Patient Story, [section:sectionPatientStory.text] = (present), [section:sectionPlanOfCare] = Plan of Care, [section:sectionPlanOfCare.title] = Plan of Care, [section:sectionPlanOfCare.text] = (present), [section:sectionSocialHistory] = Social History, [section:sectionSocialHistory.title] = Social History, [section:sectionSocialHistory.text] = (present), [section:sectionVitalSigns] = Vital Signs, [section:sectionVitalSigns.title] = Vital Signs, [section:sectionVitalSigns.text] = (present)? Answer yes, or name the ones that caused an error."
-      And Consumer submits evidence of "the import of the Composition resources completing without error (import log or screenshot)" as $handledCompositionEvidence
-      Then $handled should be "yes"
-      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Composition resources, showing: [text] = (present), [status] = final, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [date] = 2024-09-13, [author] = Organization/7a17027f-acc0-4d77-bf84-…, [title] = International Patient Summary, [attester] = (present), [attester.mode] = professional, [attester.time] = 2024-09-13, [attester.party] = PractitionerRole/94d12c8d-a3df-47a7-a…, [custodian] = Organization/7a17027f-acc0-4d77-bf84-…, [event:careProvisioningEvent] = (present), [event:careProvisioningEvent.code] = PCPR, [event:careProvisioningEvent.period] = until 2024-09-13, [section] = Problem List, [section.title] = Problem List, [section.text] = (present), [section:sectionProblems] = Problem List, [section:sectionProblems.title] = Problem List, [section:sectionProblems.text] = (present), [section:sectionProblems.entry:problem] = Condition/8039e4a7-d459-454c-92a5-6c1…, [section:sectionProblems.emptyReason], [section:sectionAllergies] = Allergies and Intolerances, [section:sectionAllergies.title] = Allergies and Intolerances, [section:sectionAllergies.text] = (present), [section:sectionAllergies.entry:allergyOrIntolerance] = AllergyIntolerance/9838cf73-c30d-4aa5…, [section:sectionAllergies.emptyReason], [section:sectionMedications] = Medication Summary, [section:sectionMedications.title] = Medication Summary, [section:sectionMedications.text] = (present), [section:sectionMedications.entry:medicationStatementOrRequest] = MedicationStatement/c3d31980-2a88-45b…, [section:sectionMedications.emptyReason], [section:sectionImmunizations] = Immunizations, [section:sectionImmunizations.title] = Immunizations, [section:sectionImmunizations.text] = (present), [section:sectionImmunizations.entry:immunization] = Immunization/17b5a6d7-307b-4726-8c8c-…, [section:sectionResults] = Results, [section:sectionResults.title] = Results, [section:sectionResults.text] = (present), [section:sectionResults.entry:results-observation-laboratory-pathology] = Observation/b0187efd-5f9b-474d-87bc-e…, [section:sectionResults.entry:results-observation-radiology] = Observation/b0187efd-5f9b-474d-87bc-e…, [section:sectionResults.entry:results-diagnosticReport], [section:sectionProceduresHx] = History of Procedures, [section:sectionProceduresHx.title] = History of Procedures, [section:sectionProceduresHx.text] = (present), [section:sectionProceduresHx.entry:procedure] = Procedure/39252, [section:sectionMedicalDevices] = Device Use, [section:sectionMedicalDevices.title] = Device Use, [section:sectionMedicalDevices.text] = (present), [section:sectionMedicalDevices.entry:deviceStatement] = DeviceUseStatement/eumfh-70-275-1, [section:sectionAdvanceDirectives] = Advance Directives, [section:sectionAdvanceDirectives.title] = Advance Directives, [section:sectionAdvanceDirectives.text] = (present), [section:sectionAlerts] = Alerts, [section:sectionAlerts.title] = Alerts, [section:sectionAlerts.text] = (present), [section:sectionFunctionalStatus] = Functional Status, [section:sectionFunctionalStatus.title] = Functional Status, [section:sectionFunctionalStatus.text] = (present), [section:sectionPastProblems] = History of Past Problems, [section:sectionPastProblems.title] = History of Past Problems, [section:sectionPastProblems.text] = (present), [section:sectionPregnancyHx] = History of Pregnancy, [section:sectionPregnancyHx.title] = History of Pregnancy, [section:sectionPregnancyHx.text] = (present), [section:sectionPatientStory] = Patient Story, [section:sectionPatientStory.title] = Patient Story, [section:sectionPatientStory.text] = (present), [section:sectionPlanOfCare] = Plan of Care, [section:sectionPlanOfCare.title] = Plan of Care, [section:sectionPlanOfCare.text] = (present), [section:sectionSocialHistory] = Social History, [section:sectionSocialHistory.title] = Social History, [section:sectionSocialHistory.text] = (present), [section:sectionVitalSigns] = Vital Signs, [section:sectionVitalSigns.title] = Vital Signs, [section:sectionVitalSigns.text] = (present)"
-      And Consumer submits evidence of "the Composition resources displayed with [text], [status], [subject], [date], [author], [title], [attester], [attester.mode], [attester.time], [attester.party], [custodian], [event:careProvisioningEvent], [event:careProvisioningEvent.code], [event:careProvisioningEvent.period], [section], [section.title], [section.text], [section:sectionProblems], [section:sectionProblems.title], [section:sectionProblems.text], [section:sectionProblems.entry:problem], [section:sectionProblems.emptyReason], [section:sectionAllergies], [section:sectionAllergies.title], [section:sectionAllergies.text], [section:sectionAllergies.entry:allergyOrIntolerance], [section:sectionAllergies.emptyReason], [section:sectionMedications], [section:sectionMedications.title], [section:sectionMedications.text], [section:sectionMedications.entry:medicationStatementOrRequest], [section:sectionMedications.emptyReason], [section:sectionImmunizations], [section:sectionImmunizations.title], [section:sectionImmunizations.text], [section:sectionImmunizations.entry:immunization], [section:sectionResults], [section:sectionResults.title], [section:sectionResults.text], [section:sectionResults.entry:results-observation-laboratory-pathology], [section:sectionResults.entry:results-observation-radiology], [section:sectionResults.entry:results-diagnosticReport], [section:sectionProceduresHx], [section:sectionProceduresHx.title], [section:sectionProceduresHx.text], [section:sectionProceduresHx.entry:procedure], [section:sectionMedicalDevices], [section:sectionMedicalDevices.title], [section:sectionMedicalDevices.text], [section:sectionMedicalDevices.entry:deviceStatement], [section:sectionAdvanceDirectives], [section:sectionAdvanceDirectives.title], [section:sectionAdvanceDirectives.text], [section:sectionAlerts], [section:sectionAlerts.title], [section:sectionAlerts.text], [section:sectionFunctionalStatus], [section:sectionFunctionalStatus.title], [section:sectionFunctionalStatus.text], [section:sectionPastProblems], [section:sectionPastProblems.title], [section:sectionPastProblems.text], [section:sectionPregnancyHx], [section:sectionPregnancyHx.title], [section:sectionPregnancyHx.text], [section:sectionPatientStory], [section:sectionPatientStory.title], [section:sectionPatientStory.text], [section:sectionPlanOfCare], [section:sectionPlanOfCare.title], [section:sectionPlanOfCare.text], [section:sectionSocialHistory], [section:sectionSocialHistory.title], [section:sectionSocialHistory.text], [section:sectionVitalSigns], [section:sectionVitalSigns.title], [section:sectionVitalSigns.text] (screenshot)" as $displayedCompositionEvidence
-      And Consumer is asked for $notDisplayed with "Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [text] = (present), [status] = final, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [date] = 2024-09-13, [author] = Organization/7a17027f-acc0-4d77-bf84-…, [title] = International Patient Summary, [attester] = (present), [attester.mode] = professional, [attester.time] = 2024-09-13, [attester.party] = PractitionerRole/94d12c8d-a3df-47a7-a…, [custodian] = Organization/7a17027f-acc0-4d77-bf84-…, [event:careProvisioningEvent] = (present), [event:careProvisioningEvent.code] = PCPR, [event:careProvisioningEvent.period] = until 2024-09-13, [section] = Problem List, [section.title] = Problem List, [section.text] = (present), [section:sectionProblems] = Problem List, [section:sectionProblems.title] = Problem List, [section:sectionProblems.text] = (present), [section:sectionProblems.entry:problem] = Condition/8039e4a7-d459-454c-92a5-6c1…, [section:sectionProblems.emptyReason], [section:sectionAllergies] = Allergies and Intolerances, [section:sectionAllergies.title] = Allergies and Intolerances, [section:sectionAllergies.text] = (present), [section:sectionAllergies.entry:allergyOrIntolerance] = AllergyIntolerance/9838cf73-c30d-4aa5…, [section:sectionAllergies.emptyReason], [section:sectionMedications] = Medication Summary, [section:sectionMedications.title] = Medication Summary, [section:sectionMedications.text] = (present), [section:sectionMedications.entry:medicationStatementOrRequest] = MedicationStatement/c3d31980-2a88-45b…, [section:sectionMedications.emptyReason], [section:sectionImmunizations] = Immunizations, [section:sectionImmunizations.title] = Immunizations, [section:sectionImmunizations.text] = (present), [section:sectionImmunizations.entry:immunization] = Immunization/17b5a6d7-307b-4726-8c8c-…, [section:sectionResults] = Results, [section:sectionResults.title] = Results, [section:sectionResults.text] = (present), [section:sectionResults.entry:results-observation-laboratory-pathology] = Observation/b0187efd-5f9b-474d-87bc-e…, [section:sectionResults.entry:results-observation-radiology] = Observation/b0187efd-5f9b-474d-87bc-e…, [section:sectionResults.entry:results-diagnosticReport], [section:sectionProceduresHx] = History of Procedures, [section:sectionProceduresHx.title] = History of Procedures, [section:sectionProceduresHx.text] = (present), [section:sectionProceduresHx.entry:procedure] = Procedure/39252, [section:sectionMedicalDevices] = Device Use, [section:sectionMedicalDevices.title] = Device Use, [section:sectionMedicalDevices.text] = (present), [section:sectionMedicalDevices.entry:deviceStatement] = DeviceUseStatement/eumfh-70-275-1, [section:sectionAdvanceDirectives] = Advance Directives, [section:sectionAdvanceDirectives.title] = Advance Directives, [section:sectionAdvanceDirectives.text] = (present), [section:sectionAlerts] = Alerts, [section:sectionAlerts.title] = Alerts, [section:sectionAlerts.text] = (present), [section:sectionFunctionalStatus] = Functional Status, [section:sectionFunctionalStatus.title] = Functional Status, [section:sectionFunctionalStatus.text] = (present), [section:sectionPastProblems] = History of Past Problems, [section:sectionPastProblems.title] = History of Past Problems, [section:sectionPastProblems.text] = (present), [section:sectionPregnancyHx] = History of Pregnancy, [section:sectionPregnancyHx.title] = History of Pregnancy, [section:sectionPregnancyHx.text] = (present), [section:sectionPatientStory] = Patient Story, [section:sectionPatientStory.title] = Patient Story, [section:sectionPatientStory.text] = (present), [section:sectionPlanOfCare] = Plan of Care, [section:sectionPlanOfCare.title] = Plan of Care, [section:sectionPlanOfCare.text] = (present), [section:sectionSocialHistory] = Social History, [section:sectionSocialHistory.title] = Social History, [section:sectionSocialHistory.text] = (present), [section:sectionVitalSigns] = Vital Signs, [section:sectionVitalSigns.title] = Vital Signs, [section:sectionVitalSigns.text] = (present)"
-      Then $notDisplayed should not contain "[text]"
-      Then $notDisplayed should not contain "[status]"
-      Then $notDisplayed should not contain "[subject]"
-      Then $notDisplayed should not contain "[date]"
-      Then $notDisplayed should not contain "[author]"
-      Then $notDisplayed should not contain "[title]"
-      Then $notDisplayed should not contain "[attester]"
-      Then $notDisplayed should not contain "[attester.mode]"
-      Then $notDisplayed should not contain "[attester.time]"
-      Then $notDisplayed should not contain "[attester.party]"
-      Then $notDisplayed should not contain "[custodian]"
-      Then $notDisplayed should not contain "[event:careProvisioningEvent]"
-      Then $notDisplayed should not contain "[event:careProvisioningEvent.code]"
-      Then $notDisplayed should not contain "[event:careProvisioningEvent.period]"
-      Then $notDisplayed should not contain "[section]"
-      Then $notDisplayed should not contain "[section.title]"
-      Then $notDisplayed should not contain "[section.text]"
-      Then $notDisplayed should not contain "[section:sectionProblems]"
-      Then $notDisplayed should not contain "[section:sectionProblems.title]"
-      Then $notDisplayed should not contain "[section:sectionProblems.text]"
-      Then $notDisplayed should not contain "[section:sectionProblems.entry:problem]"
-      Then $notDisplayed should not contain "[section:sectionProblems.emptyReason]"
-      Then $notDisplayed should not contain "[section:sectionAllergies]"
-      Then $notDisplayed should not contain "[section:sectionAllergies.title]"
-      Then $notDisplayed should not contain "[section:sectionAllergies.text]"
-      Then $notDisplayed should not contain "[section:sectionAllergies.entry:allergyOrIntolerance]"
-      Then $notDisplayed should not contain "[section:sectionAllergies.emptyReason]"
-      Then $notDisplayed should not contain "[section:sectionMedications]"
-      Then $notDisplayed should not contain "[section:sectionMedications.title]"
-      Then $notDisplayed should not contain "[section:sectionMedications.text]"
-      Then $notDisplayed should not contain "[section:sectionMedications.entry:medicationStatementOrRequest]"
-      Then $notDisplayed should not contain "[section:sectionMedications.emptyReason]"
-      Then $notDisplayed should not contain "[section:sectionImmunizations]"
-      Then $notDisplayed should not contain "[section:sectionImmunizations.title]"
-      Then $notDisplayed should not contain "[section:sectionImmunizations.text]"
-      Then $notDisplayed should not contain "[section:sectionImmunizations.entry:immunization]"
-      Then $notDisplayed should not contain "[section:sectionResults]"
-      Then $notDisplayed should not contain "[section:sectionResults.title]"
-      Then $notDisplayed should not contain "[section:sectionResults.text]"
-      Then $notDisplayed should not contain "[section:sectionResults.entry:results-observation-laboratory-pathology]"
-      Then $notDisplayed should not contain "[section:sectionResults.entry:results-observation-radiology]"
-      Then $notDisplayed should not contain "[section:sectionResults.entry:results-diagnosticReport]"
-      Then $notDisplayed should not contain "[section:sectionProceduresHx]"
-      Then $notDisplayed should not contain "[section:sectionProceduresHx.title]"
-      Then $notDisplayed should not contain "[section:sectionProceduresHx.text]"
-      Then $notDisplayed should not contain "[section:sectionProceduresHx.entry:procedure]"
-      Then $notDisplayed should not contain "[section:sectionMedicalDevices]"
-      Then $notDisplayed should not contain "[section:sectionMedicalDevices.title]"
-      Then $notDisplayed should not contain "[section:sectionMedicalDevices.text]"
-      Then $notDisplayed should not contain "[section:sectionMedicalDevices.entry:deviceStatement]"
-      Then $notDisplayed should not contain "[section:sectionAdvanceDirectives]"
-      Then $notDisplayed should not contain "[section:sectionAdvanceDirectives.title]"
-      Then $notDisplayed should not contain "[section:sectionAdvanceDirectives.text]"
-      Then $notDisplayed should not contain "[section:sectionAlerts]"
-      Then $notDisplayed should not contain "[section:sectionAlerts.title]"
-      Then $notDisplayed should not contain "[section:sectionAlerts.text]"
-      Then $notDisplayed should not contain "[section:sectionFunctionalStatus]"
-      Then $notDisplayed should not contain "[section:sectionFunctionalStatus.title]"
-      Then $notDisplayed should not contain "[section:sectionFunctionalStatus.text]"
-      Then $notDisplayed should not contain "[section:sectionPastProblems]"
-      Then $notDisplayed should not contain "[section:sectionPastProblems.title]"
-      Then $notDisplayed should not contain "[section:sectionPastProblems.text]"
-      Then $notDisplayed should not contain "[section:sectionPregnancyHx]"
-      Then $notDisplayed should not contain "[section:sectionPregnancyHx.title]"
-      Then $notDisplayed should not contain "[section:sectionPregnancyHx.text]"
-      Then $notDisplayed should not contain "[section:sectionPatientStory]"
-      Then $notDisplayed should not contain "[section:sectionPatientStory.title]"
-      Then $notDisplayed should not contain "[section:sectionPatientStory.text]"
-      Then $notDisplayed should not contain "[section:sectionPlanOfCare]"
-      Then $notDisplayed should not contain "[section:sectionPlanOfCare.title]"
-      Then $notDisplayed should not contain "[section:sectionPlanOfCare.text]"
-      Then $notDisplayed should not contain "[section:sectionSocialHistory]"
-      Then $notDisplayed should not contain "[section:sectionSocialHistory.title]"
-      Then $notDisplayed should not contain "[section:sectionSocialHistory.text]"
-      Then $notDisplayed should not contain "[section:sectionVitalSigns]"
-      Then $notDisplayed should not contain "[section:sectionVitalSigns.title]"
-      Then $notDisplayed should not contain "[section:sectionVitalSigns.text]"
+      When Consumer submits evidence of "the import of the Composition resources completing without error (import log or screenshot)" as $handledCompositionEvidence
+      Then Consumer confirms each of these is accepted for "the Composition resources":
+        | item                                                                  | detail |
+        | text                                                                  | (present) |
+        | identifier                                                            | ac7a747c-a2c9-493c-ba39-4ac6997eed1e |
+        | status                                                                | final |
+        | type                                                                  | Patient summary Document |
+        | subject                                                               | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | subject.reference                                                     | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | date                                                                  | 2024-09-13 |
+        | author                                                                | Organization/7a17027f-acc0-4d77-bf84-… |
+        | title                                                                 | International Patient Summary |
+        | attester                                                              | (present) |
+        | attester.mode                                                         | professional |
+        | attester.time                                                         | 2024-09-13 |
+        | attester.party                                                        | PractitionerRole/94d12c8d-a3df-47a7-a… |
+        | custodian                                                             | Organization/7a17027f-acc0-4d77-bf84-… |
+        | event:careProvisioningEvent                                           | (present) |
+        | event:careProvisioningEvent.code                                      | PCPR |
+        | event:careProvisioningEvent.period                                    | until 2024-09-13 |
+        | section                                                               | Problem List |
+        | section.title                                                         | Problem List |
+        | section.code                                                          | Problem list - Reported |
+        | section.text                                                          | (present) |
+        | section:sectionProblems                                               | Problem List |
+        | section:sectionProblems.title                                         | Problem List |
+        | section:sectionProblems.text                                          | (present) |
+        | section:sectionProblems.entry:problem                                 | Condition/8039e4a7-d459-454c-92a5-6c1… |
+        | section:sectionProblems.emptyReason                                   |  |
+        | section:sectionAllergies                                              | Allergies and Intolerances |
+        | section:sectionAllergies.title                                        | Allergies and Intolerances |
+        | section:sectionAllergies.text                                         | (present) |
+        | section:sectionAllergies.entry:allergyOrIntolerance                   | AllergyIntolerance/9838cf73-c30d-4aa5… |
+        | section:sectionAllergies.emptyReason                                  |  |
+        | section:sectionMedications                                            | Medication Summary |
+        | section:sectionMedications.title                                      | Medication Summary |
+        | section:sectionMedications.text                                       | (present) |
+        | section:sectionMedications.entry:medicationStatementOrRequest         | MedicationStatement/c3d31980-2a88-45b… |
+        | section:sectionMedications.emptyReason                                |  |
+        | section:sectionImmunizations                                          | Immunizations |
+        | section:sectionImmunizations.title                                    | Immunizations |
+        | section:sectionImmunizations.text                                     | (present) |
+        | section:sectionImmunizations.entry:immunization                       | Immunization/17b5a6d7-307b-4726-8c8c-… |
+        | section:sectionResults                                                | Results |
+        | section:sectionResults.title                                          | Results |
+        | section:sectionResults.text                                           | (present) |
+        | section:sectionResults.entry:results-observation-laboratory-pathology | Observation/b0187efd-5f9b-474d-87bc-e… |
+        | section:sectionResults.entry:results-observation-radiology            | Observation/b0187efd-5f9b-474d-87bc-e… |
+        | section:sectionResults.entry:results-diagnosticReport                 |  |
+        | section:sectionProceduresHx                                           | History of Procedures |
+        | section:sectionProceduresHx.title                                     | History of Procedures |
+        | section:sectionProceduresHx.text                                      | (present) |
+        | section:sectionProceduresHx.entry:procedure                           | Procedure/39252 |
+        | section:sectionMedicalDevices                                         | Device Use |
+        | section:sectionMedicalDevices.title                                   | Device Use |
+        | section:sectionMedicalDevices.text                                    | (present) |
+        | section:sectionMedicalDevices.entry:deviceStatement                   | DeviceUseStatement/eumfh-70-275-1 |
+        | section:sectionAdvanceDirectives                                      | Advance Directives |
+        | section:sectionAdvanceDirectives.title                                | Advance Directives |
+        | section:sectionAdvanceDirectives.text                                 | (present) |
+        | section:sectionAlerts                                                 | Alerts |
+        | section:sectionAlerts.title                                           | Alerts |
+        | section:sectionAlerts.text                                            | (present) |
+        | section:sectionFunctionalStatus                                       | Functional Status |
+        | section:sectionFunctionalStatus.title                                 | Functional Status |
+        | section:sectionFunctionalStatus.text                                  | (present) |
+        | section:sectionPastProblems                                           | History of Past Problems |
+        | section:sectionPastProblems.title                                     | History of Past Problems |
+        | section:sectionPastProblems.text                                      | (present) |
+        | section:sectionPregnancyHx                                            | History of Pregnancy |
+        | section:sectionPregnancyHx.title                                      | History of Pregnancy |
+        | section:sectionPregnancyHx.text                                       | (present) |
+        | section:sectionPatientStory                                           | Patient Story |
+        | section:sectionPatientStory.title                                     | Patient Story |
+        | section:sectionPatientStory.text                                      | (present) |
+        | section:sectionPlanOfCare                                             | Plan of Care |
+        | section:sectionPlanOfCare.title                                       | Plan of Care |
+        | section:sectionPlanOfCare.text                                        | (present) |
+        | section:sectionSocialHistory                                          | Social History |
+        | section:sectionSocialHistory.title                                    | Social History |
+        | section:sectionSocialHistory.text                                     | (present) |
+        | section:sectionVitalSigns                                             | Vital Signs |
+        | section:sectionVitalSigns.title                                       | Vital Signs |
+        | section:sectionVitalSigns.text                                        | (present) |
+      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Composition resources."
+      And Consumer submits evidence of "the Composition resources displayed (screenshot)" as $displayedCompositionEvidence
+      Then Consumer confirms each of these is displayed for "the Composition resources":
+        | item                                                                  | detail |
+        | text                                                                  | (present) |
+        | status                                                                | final |
+        | subject                                                               | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | date                                                                  | 2024-09-13 |
+        | author                                                                | Organization/7a17027f-acc0-4d77-bf84-… |
+        | title                                                                 | International Patient Summary |
+        | attester                                                              | (present) |
+        | attester.mode                                                         | professional |
+        | attester.time                                                         | 2024-09-13 |
+        | attester.party                                                        | PractitionerRole/94d12c8d-a3df-47a7-a… |
+        | custodian                                                             | Organization/7a17027f-acc0-4d77-bf84-… |
+        | event:careProvisioningEvent                                           | (present) |
+        | event:careProvisioningEvent.code                                      | PCPR |
+        | event:careProvisioningEvent.period                                    | until 2024-09-13 |
+        | section                                                               | Problem List |
+        | section.title                                                         | Problem List |
+        | section.text                                                          | (present) |
+        | section:sectionProblems                                               | Problem List |
+        | section:sectionProblems.title                                         | Problem List |
+        | section:sectionProblems.text                                          | (present) |
+        | section:sectionProblems.entry:problem                                 | Condition/8039e4a7-d459-454c-92a5-6c1… |
+        | section:sectionProblems.emptyReason                                   |  |
+        | section:sectionAllergies                                              | Allergies and Intolerances |
+        | section:sectionAllergies.title                                        | Allergies and Intolerances |
+        | section:sectionAllergies.text                                         | (present) |
+        | section:sectionAllergies.entry:allergyOrIntolerance                   | AllergyIntolerance/9838cf73-c30d-4aa5… |
+        | section:sectionAllergies.emptyReason                                  |  |
+        | section:sectionMedications                                            | Medication Summary |
+        | section:sectionMedications.title                                      | Medication Summary |
+        | section:sectionMedications.text                                       | (present) |
+        | section:sectionMedications.entry:medicationStatementOrRequest         | MedicationStatement/c3d31980-2a88-45b… |
+        | section:sectionMedications.emptyReason                                |  |
+        | section:sectionImmunizations                                          | Immunizations |
+        | section:sectionImmunizations.title                                    | Immunizations |
+        | section:sectionImmunizations.text                                     | (present) |
+        | section:sectionImmunizations.entry:immunization                       | Immunization/17b5a6d7-307b-4726-8c8c-… |
+        | section:sectionResults                                                | Results |
+        | section:sectionResults.title                                          | Results |
+        | section:sectionResults.text                                           | (present) |
+        | section:sectionResults.entry:results-observation-laboratory-pathology | Observation/b0187efd-5f9b-474d-87bc-e… |
+        | section:sectionResults.entry:results-observation-radiology            | Observation/b0187efd-5f9b-474d-87bc-e… |
+        | section:sectionResults.entry:results-diagnosticReport                 |  |
+        | section:sectionProceduresHx                                           | History of Procedures |
+        | section:sectionProceduresHx.title                                     | History of Procedures |
+        | section:sectionProceduresHx.text                                      | (present) |
+        | section:sectionProceduresHx.entry:procedure                           | Procedure/39252 |
+        | section:sectionMedicalDevices                                         | Device Use |
+        | section:sectionMedicalDevices.title                                   | Device Use |
+        | section:sectionMedicalDevices.text                                    | (present) |
+        | section:sectionMedicalDevices.entry:deviceStatement                   | DeviceUseStatement/eumfh-70-275-1 |
+        | section:sectionAdvanceDirectives                                      | Advance Directives |
+        | section:sectionAdvanceDirectives.title                                | Advance Directives |
+        | section:sectionAdvanceDirectives.text                                 | (present) |
+        | section:sectionAlerts                                                 | Alerts |
+        | section:sectionAlerts.title                                           | Alerts |
+        | section:sectionAlerts.text                                            | (present) |
+        | section:sectionFunctionalStatus                                       | Functional Status |
+        | section:sectionFunctionalStatus.title                                 | Functional Status |
+        | section:sectionFunctionalStatus.text                                  | (present) |
+        | section:sectionPastProblems                                           | History of Past Problems |
+        | section:sectionPastProblems.title                                     | History of Past Problems |
+        | section:sectionPastProblems.text                                      | (present) |
+        | section:sectionPregnancyHx                                            | History of Pregnancy |
+        | section:sectionPregnancyHx.title                                      | History of Pregnancy |
+        | section:sectionPregnancyHx.text                                       | (present) |
+        | section:sectionPatientStory                                           | Patient Story |
+        | section:sectionPatientStory.title                                     | Patient Story |
+        | section:sectionPatientStory.text                                      | (present) |
+        | section:sectionPlanOfCare                                             | Plan of Care |
+        | section:sectionPlanOfCare.title                                       | Plan of Care |
+        | section:sectionPlanOfCare.text                                        | (present) |
+        | section:sectionSocialHistory                                          | Social History |
+        | section:sectionSocialHistory.title                                    | Social History |
+        | section:sectionSocialHistory.text                                     | (present) |
+        | section:sectionVitalSigns                                             | Vital Signs |
+        | section:sectionVitalSigns.title                                       | Vital Signs |
+        | section:sectionVitalSigns.text                                        | (present) |
 
   Rule: The people and organisations
 
@@ -152,63 +236,87 @@ Feature: IPS Consumer — obligations of hl7.fhir.uv.ips 2.0.1
     @covers:Patient.name.family @covers:Patient.name.given @covers:Patient.telecom @covers:Patient.gender
     @covers:Patient.birthDate @covers:Patient.address @covers:Patient.generalPractitioner
     Scenario: ips-consumer-003 Patient (IPS) — the Consumer handles 11 elements and displays 11
-      When Consumer is asked for $handled with "For the Patient resources: were these elements accepted and processed without error — [identifier] = ABC1234, [name] = Patricia JORDANA, [name.use] = usual, [name.text], [name.family] = JORDANA, [name.given] = Patricia, [telecom] = +1234567890, [gender] = female, [birthDate] = 1956-09-30, [address] = (present), [generalPractitioner]? Answer yes, or name the ones that caused an error."
-      And Consumer submits evidence of "the import of the Patient resources completing without error (import log or screenshot)" as $handledPatientEvidence
-      Then $handled should be "yes"
-      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Patient resources, showing: [identifier] = ABC1234, [name] = Patricia JORDANA, [name.use] = usual, [name.text], [name.family] = JORDANA, [name.given] = Patricia, [telecom] = +1234567890, [gender] = female, [birthDate] = 1956-09-30, [address] = (present), [generalPractitioner]"
-      And Consumer submits evidence of "the Patient resources displayed with [identifier], [name], [name.use], [name.text], [name.family], [name.given], [telecom], [gender], [birthDate], [address], [generalPractitioner] (screenshot)" as $displayedPatientEvidence
-      And Consumer is asked for $notDisplayed with "Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [identifier] = ABC1234, [name] = Patricia JORDANA, [name.use] = usual, [name.text], [name.family] = JORDANA, [name.given] = Patricia, [telecom] = +1234567890, [gender] = female, [birthDate] = 1956-09-30, [address] = (present), [generalPractitioner]"
-      Then $notDisplayed should not contain "[identifier]"
-      Then $notDisplayed should not contain "[name]"
-      Then $notDisplayed should not contain "[name.use]"
-      Then $notDisplayed should not contain "[name.text]"
-      Then $notDisplayed should not contain "[name.family]"
-      Then $notDisplayed should not contain "[name.given]"
-      Then $notDisplayed should not contain "[telecom]"
-      Then $notDisplayed should not contain "[gender]"
-      Then $notDisplayed should not contain "[birthDate]"
-      Then $notDisplayed should not contain "[address]"
-      Then $notDisplayed should not contain "[generalPractitioner]"
+      When Consumer submits evidence of "the import of the Patient resources completing without error (import log or screenshot)" as $handledPatientEvidence
+      Then Consumer confirms each of these is accepted for "the Patient resources":
+        | item                | detail |
+        | identifier          | ABC1234 |
+        | name                | Patricia JORDANA |
+        | name.use            | usual |
+        | name.text           |  |
+        | name.family         | JORDANA |
+        | name.given          | Patricia |
+        | telecom             | +1234567890 |
+        | gender              | female |
+        | birthDate           | 1956-09-30 |
+        | address             | (present) |
+        | generalPractitioner |  |
+      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Patient resources."
+      And Consumer submits evidence of "the Patient resources displayed (screenshot)" as $displayedPatientEvidence
+      Then Consumer confirms each of these is displayed for "the Patient resources":
+        | item                | detail |
+        | identifier          | ABC1234 |
+        | name                | Patricia JORDANA |
+        | name.use            | usual |
+        | name.text           |  |
+        | name.family         | JORDANA |
+        | name.given          | Patricia |
+        | telecom             | +1234567890 |
+        | gender              | female |
+        | birthDate           | 1956-09-30 |
+        | address             | (present) |
+        | generalPractitioner |  |
 
     @profile:Practitioner-uv-ips
     @covers:Practitioner.name @covers:Practitioner.name.family @covers:Practitioner.name.given @covers:Practitioner.telecom
     @covers:Practitioner.address
     Scenario: ips-consumer-004 Practitioner (IPS) — the Consumer handles 5 elements and displays 5
-      When Consumer is asked for $handled with "For the Practitioner resources: were these elements accepted and processed without error — [name] = HASHIRA COORAY COORAY, [name.family] = COORAY, [name.given] = HASHIRA, [telecom] = 07 850 9900, [address]? Answer yes, or name the ones that caused an error."
-      And Consumer submits evidence of "the import of the Practitioner resources completing without error (import log or screenshot)" as $handledPractitionerEvidence
-      Then $handled should be "yes"
-      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Practitioner resources, showing: [name] = HASHIRA COORAY COORAY, [name.family] = COORAY, [name.given] = HASHIRA, [telecom] = 07 850 9900, [address]"
-      And Consumer submits evidence of "the Practitioner resources displayed with [name], [name.family], [name.given], [telecom], [address] (screenshot)" as $displayedPractitionerEvidence
-      And Consumer is asked for $notDisplayed with "Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [name] = HASHIRA COORAY COORAY, [name.family] = COORAY, [name.given] = HASHIRA, [telecom] = 07 850 9900, [address]"
-      Then $notDisplayed should not contain "[name]"
-      Then $notDisplayed should not contain "[name.family]"
-      Then $notDisplayed should not contain "[name.given]"
-      Then $notDisplayed should not contain "[telecom]"
-      Then $notDisplayed should not contain "[address]"
+      When Consumer submits evidence of "the import of the Practitioner resources completing without error (import log or screenshot)" as $handledPractitionerEvidence
+      Then Consumer confirms each of these is accepted for "the Practitioner resources":
+        | item        | detail |
+        | name        | HASHIRA COORAY COORAY |
+        | name.family | COORAY |
+        | name.given  | HASHIRA |
+        | telecom     | 07 850 9900 |
+        | address     |  |
+      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Practitioner resources."
+      And Consumer submits evidence of "the Practitioner resources displayed (screenshot)" as $displayedPractitionerEvidence
+      Then Consumer confirms each of these is displayed for "the Practitioner resources":
+        | item        | detail |
+        | name        | HASHIRA COORAY COORAY |
+        | name.family | COORAY |
+        | name.given  | HASHIRA |
+        | telecom     | 07 850 9900 |
+        | address     |  |
 
     @profile:PractitionerRole-uv-ips
     @covers:PractitionerRole.organization
     Scenario: ips-consumer-005 PractitionerRole (IPS) — the Consumer handles 1 element and displays 1
-      When Consumer is asked for $handled with "For the PractitionerRole resources: were these elements accepted and processed without error — [organization]? Answer yes, or name the ones that caused an error."
-      And Consumer submits evidence of "the import of the PractitionerRole resources completing without error (import log or screenshot)" as $handledPractitionerRoleEvidence
-      Then $handled should be "yes"
-      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the PractitionerRole resources, showing: [organization]"
-      And Consumer submits evidence of "the PractitionerRole resources displayed with [organization] (screenshot)" as $displayedPractitionerRoleEvidence
-      And Consumer is asked for $notDisplayed with "Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [organization]"
-      Then $notDisplayed should not contain "[organization]"
+      When Consumer submits evidence of "the import of the PractitionerRole resources completing without error (import log or screenshot)" as $handledPractitionerRoleEvidence
+      Then Consumer confirms each of these is accepted for "the PractitionerRole resources":
+        | item         | detail |
+        | organization |  |
+      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the PractitionerRole resources."
+      And Consumer submits evidence of "the PractitionerRole resources displayed (screenshot)" as $displayedPractitionerRoleEvidence
+      Then Consumer confirms each of these is displayed for "the PractitionerRole resources":
+        | item         | detail |
+        | organization |  |
 
     @profile:Organization-uv-ips
     @covers:Organization.name @covers:Organization.telecom @covers:Organization.address
     Scenario: ips-consumer-006 Organization (IPS) — the Consumer handles 3 elements and displays 3
-      When Consumer is asked for $handled with "For the Organization resources: were these elements accepted and processed without error — [name] = NorthCare Pukete Road-Thomas Road, [telecom], [address]? Answer yes, or name the ones that caused an error."
-      And Consumer submits evidence of "the import of the Organization resources completing without error (import log or screenshot)" as $handledOrganizationEvidence
-      Then $handled should be "yes"
-      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Organization resources, showing: [name] = NorthCare Pukete Road-Thomas Road, [telecom], [address]"
-      And Consumer submits evidence of "the Organization resources displayed with [name], [telecom], [address] (screenshot)" as $displayedOrganizationEvidence
-      And Consumer is asked for $notDisplayed with "Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [name] = NorthCare Pukete Road-Thomas Road, [telecom], [address]"
-      Then $notDisplayed should not contain "[name]"
-      Then $notDisplayed should not contain "[telecom]"
-      Then $notDisplayed should not contain "[address]"
+      When Consumer submits evidence of "the import of the Organization resources completing without error (import log or screenshot)" as $handledOrganizationEvidence
+      Then Consumer confirms each of these is accepted for "the Organization resources":
+        | item    | detail |
+        | name    | NorthCare Pukete Road-Thomas Road |
+        | telecom |  |
+        | address |  |
+      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Organization resources."
+      And Consumer submits evidence of "the Organization resources displayed (screenshot)" as $displayedOrganizationEvidence
+      Then Consumer confirms each of these is displayed for "the Organization resources":
+        | item    | detail |
+        | name    | NorthCare Pukete Road-Thomas Road |
+        | telecom |  |
+        | address |  |
 
   Rule: The required sections: problems, allergies, medications
 
@@ -217,89 +325,131 @@ Feature: IPS Consumer — obligations of hl7.fhir.uv.ips 2.0.1
     @covers:AllergyIntolerance.patient.reference @covers:AllergyIntolerance.onset[x] @covers:AllergyIntolerance.onset[x]:onsetDateTime @covers:AllergyIntolerance.reaction
     @covers:AllergyIntolerance.reaction.manifestation @covers:AllergyIntolerance.reaction.severity
     Scenario: ips-consumer-007 AllergyIntolerance (IPS) — the Consumer handles 10 elements and displays 9
-      When Consumer is asked for $handled with "For the AllergyIntolerance resources: were these elements accepted and processed without error — [clinicalStatus] = active, [type], [code] = Penicillin, [patient] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [patient.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [onset[x]], [onset[x]:onsetDateTime], [reaction], [reaction.manifestation], [reaction.severity]? Answer yes, or name the ones that caused an error."
-      And Consumer submits evidence of "the import of the AllergyIntolerance resources completing without error (import log or screenshot)" as $handledAllergyIntoleranceEvidence
-      Then $handled should be "yes"
-      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the AllergyIntolerance resources, showing: [clinicalStatus] = active, [type], [code] = Penicillin, [patient] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [onset[x]], [onset[x]:onsetDateTime], [reaction], [reaction.manifestation], [reaction.severity]"
-      And Consumer submits evidence of "the AllergyIntolerance resources displayed with [clinicalStatus], [type], [code], [patient], [onset[x]], [onset[x]:onsetDateTime], [reaction], [reaction.manifestation], [reaction.severity] (screenshot)" as $displayedAllergyIntoleranceEvidence
-      And Consumer is asked for $notDisplayed with "Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [clinicalStatus] = active, [type], [code] = Penicillin, [patient] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [onset[x]], [onset[x]:onsetDateTime], [reaction], [reaction.manifestation], [reaction.severity]"
-      Then $notDisplayed should not contain "[clinicalStatus]"
-      Then $notDisplayed should not contain "[type]"
-      Then $notDisplayed should not contain "[code]"
-      Then $notDisplayed should not contain "[patient]"
-      Then $notDisplayed should not contain "[onset[x]]"
-      Then $notDisplayed should not contain "[onset[x]:onsetDateTime]"
-      Then $notDisplayed should not contain "[reaction]"
-      Then $notDisplayed should not contain "[reaction.manifestation]"
-      Then $notDisplayed should not contain "[reaction.severity]"
+      When Consumer submits evidence of "the import of the AllergyIntolerance resources completing without error (import log or screenshot)" as $handledAllergyIntoleranceEvidence
+      Then Consumer confirms each of these is accepted for "the AllergyIntolerance resources":
+        | item                   | detail |
+        | clinicalStatus         | active |
+        | type                   |  |
+        | code                   | Penicillin |
+        | patient                | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | patient.reference      | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | onset[x]               |  |
+        | onset[x]:onsetDateTime |  |
+        | reaction               |  |
+        | reaction.manifestation |  |
+        | reaction.severity      |  |
+      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the AllergyIntolerance resources."
+      And Consumer submits evidence of "the AllergyIntolerance resources displayed (screenshot)" as $displayedAllergyIntoleranceEvidence
+      Then Consumer confirms each of these is displayed for "the AllergyIntolerance resources":
+        | item                   | detail |
+        | clinicalStatus         | active |
+        | type                   |  |
+        | code                   | Penicillin |
+        | patient                | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | onset[x]               |  |
+        | onset[x]:onsetDateTime |  |
+        | reaction               |  |
+        | reaction.manifestation |  |
+        | reaction.severity      |  |
 
     @profile:Condition-uv-ips
     @covers:Condition.clinicalStatus @covers:Condition.category @covers:Condition.severity @covers:Condition.code
     @covers:Condition.subject @covers:Condition.subject.reference @covers:Condition.onset[x] @covers:Condition.onset[x]:onsetDateTime
     Scenario: ips-consumer-008 Condition (IPS) — the Consumer handles 8 elements and displays 7
-      When Consumer is asked for $handled with "For the Condition resources: were these elements accepted and processed without error — [clinicalStatus] = active, [category], [severity], [code] = Essential hypertension, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [subject.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [onset[x]] = 2016-05-25, [onset[x]:onsetDateTime] = 2016-05-25? Answer yes, or name the ones that caused an error."
-      And Consumer submits evidence of "the import of the Condition resources completing without error (import log or screenshot)" as $handledConditionEvidence
-      Then $handled should be "yes"
-      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Condition resources, showing: [clinicalStatus] = active, [category], [severity], [code] = Essential hypertension, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [onset[x]] = 2016-05-25, [onset[x]:onsetDateTime] = 2016-05-25"
-      And Consumer submits evidence of "the Condition resources displayed with [clinicalStatus], [category], [severity], [code], [subject], [onset[x]], [onset[x]:onsetDateTime] (screenshot)" as $displayedConditionEvidence
-      And Consumer is asked for $notDisplayed with "Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [clinicalStatus] = active, [category], [severity], [code] = Essential hypertension, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [onset[x]] = 2016-05-25, [onset[x]:onsetDateTime] = 2016-05-25"
-      Then $notDisplayed should not contain "[clinicalStatus]"
-      Then $notDisplayed should not contain "[category]"
-      Then $notDisplayed should not contain "[severity]"
-      Then $notDisplayed should not contain "[code]"
-      Then $notDisplayed should not contain "[subject]"
-      Then $notDisplayed should not contain "[onset[x]]"
-      Then $notDisplayed should not contain "[onset[x]:onsetDateTime]"
+      When Consumer submits evidence of "the import of the Condition resources completing without error (import log or screenshot)" as $handledConditionEvidence
+      Then Consumer confirms each of these is accepted for "the Condition resources":
+        | item                   | detail |
+        | clinicalStatus         | active |
+        | category               |  |
+        | severity               |  |
+        | code                   | Essential hypertension |
+        | subject                | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | subject.reference      | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | onset[x]               | 2016-05-25 |
+        | onset[x]:onsetDateTime | 2016-05-25 |
+      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Condition resources."
+      And Consumer submits evidence of "the Condition resources displayed (screenshot)" as $displayedConditionEvidence
+      Then Consumer confirms each of these is displayed for "the Condition resources":
+        | item                   | detail |
+        | clinicalStatus         | active |
+        | category               |  |
+        | severity               |  |
+        | code                   | Essential hypertension |
+        | subject                | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | onset[x]               | 2016-05-25 |
+        | onset[x]:onsetDateTime | 2016-05-25 |
 
     @profile:Medication-uv-ips
     @covers:Medication.code @covers:Medication.form @covers:Medication.ingredient @covers:Medication.ingredient.item[x]
     @covers:Medication.ingredient.strength
     Scenario: ips-consumer-009 Medication (IPS) — the Consumer handles 5 elements and displays 5
-      When Consumer is asked for $handled with "For the Medication resources: were these elements accepted and processed without error — [code], [form], [ingredient], [ingredient.item[x]], [ingredient.strength]? Answer yes, or name the ones that caused an error."
-      And Consumer submits evidence of "the import of the Medication resources completing without error (import log or screenshot)" as $handledMedicationEvidence
-      Then $handled should be "yes"
-      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Medication resources, showing: [code], [form], [ingredient], [ingredient.item[x]], [ingredient.strength]"
-      And Consumer submits evidence of "the Medication resources displayed with [code], [form], [ingredient], [ingredient.item[x]], [ingredient.strength] (screenshot)" as $displayedMedicationEvidence
-      And Consumer is asked for $notDisplayed with "Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [code], [form], [ingredient], [ingredient.item[x]], [ingredient.strength]"
-      Then $notDisplayed should not contain "[code]"
-      Then $notDisplayed should not contain "[form]"
-      Then $notDisplayed should not contain "[ingredient]"
-      Then $notDisplayed should not contain "[ingredient.item[x]]"
-      Then $notDisplayed should not contain "[ingredient.strength]"
+      When Consumer submits evidence of "the import of the Medication resources completing without error (import log or screenshot)" as $handledMedicationEvidence
+      Then Consumer confirms each of these is accepted for "the Medication resources":
+        | item                | detail |
+        | code                |  |
+        | form                |  |
+        | ingredient          |  |
+        | ingredient.item[x]  |  |
+        | ingredient.strength |  |
+      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Medication resources."
+      And Consumer submits evidence of "the Medication resources displayed (screenshot)" as $displayedMedicationEvidence
+      Then Consumer confirms each of these is displayed for "the Medication resources":
+        | item                | detail |
+        | code                |  |
+        | form                |  |
+        | ingredient          |  |
+        | ingredient.item[x]  |  |
+        | ingredient.strength |  |
 
     @profile:MedicationRequest-uv-ips
     @covers:MedicationRequest.medication[x] @covers:MedicationRequest.subject @covers:MedicationRequest.subject.reference @covers:MedicationRequest.dosageInstruction
     @covers:MedicationRequest.dosageInstruction.text @covers:MedicationRequest.dosageInstruction.timing
     Scenario: ips-consumer-010 MedicationRequest (IPS) — the Consumer handles 6 elements and displays 5
-      When Consumer is asked for $handled with "For the MedicationRequest resources: were these elements accepted and processed without error — [medication[x]], [subject], [subject.reference], [dosageInstruction], [dosageInstruction.text], [dosageInstruction.timing]? Answer yes, or name the ones that caused an error."
-      And Consumer submits evidence of "the import of the MedicationRequest resources completing without error (import log or screenshot)" as $handledMedicationRequestEvidence
-      Then $handled should be "yes"
-      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the MedicationRequest resources, showing: [medication[x]], [subject], [dosageInstruction], [dosageInstruction.text], [dosageInstruction.timing]"
-      And Consumer submits evidence of "the MedicationRequest resources displayed with [medication[x]], [subject], [dosageInstruction], [dosageInstruction.text], [dosageInstruction.timing] (screenshot)" as $displayedMedicationRequestEvidence
-      And Consumer is asked for $notDisplayed with "Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [medication[x]], [subject], [dosageInstruction], [dosageInstruction.text], [dosageInstruction.timing]"
-      Then $notDisplayed should not contain "[medication[x]]"
-      Then $notDisplayed should not contain "[subject]"
-      Then $notDisplayed should not contain "[dosageInstruction]"
-      Then $notDisplayed should not contain "[dosageInstruction.text]"
-      Then $notDisplayed should not contain "[dosageInstruction.timing]"
+      When Consumer submits evidence of "the import of the MedicationRequest resources completing without error (import log or screenshot)" as $handledMedicationRequestEvidence
+      Then Consumer confirms each of these is accepted for "the MedicationRequest resources":
+        | item                     | detail |
+        | medication[x]            |  |
+        | subject                  |  |
+        | subject.reference        |  |
+        | dosageInstruction        |  |
+        | dosageInstruction.text   |  |
+        | dosageInstruction.timing |  |
+      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the MedicationRequest resources."
+      And Consumer submits evidence of "the MedicationRequest resources displayed (screenshot)" as $displayedMedicationRequestEvidence
+      Then Consumer confirms each of these is displayed for "the MedicationRequest resources":
+        | item                     | detail |
+        | medication[x]            |  |
+        | subject                  |  |
+        | dosageInstruction        |  |
+        | dosageInstruction.text   |  |
+        | dosageInstruction.timing |  |
 
     @profile:MedicationStatement-uv-ips
     @covers:MedicationStatement.medication[x] @covers:MedicationStatement.subject @covers:MedicationStatement.subject.reference @covers:MedicationStatement.effective[x]
     @covers:MedicationStatement.effective[x]:effectiveDateTime @covers:MedicationStatement.dosage @covers:MedicationStatement.dosage.text @covers:MedicationStatement.dosage.timing
     Scenario: ips-consumer-011 MedicationStatement (IPS) — the Consumer handles 8 elements and displays 7
-      When Consumer is asked for $handled with "For the MedicationStatement resources: were these elements accepted and processed without error — [medication[x]] = cilazapril 500 microgram tablet, 90, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [subject.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [effective[x]] = 2023-12-01, [effective[x]:effectiveDateTime] = 2023-12-01, [dosage] = Take 1 daily, [dosage.text] = Take 1 daily, [dosage.timing] = (present)? Answer yes, or name the ones that caused an error."
-      And Consumer submits evidence of "the import of the MedicationStatement resources completing without error (import log or screenshot)" as $handledMedicationStatementEvidence
-      Then $handled should be "yes"
-      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the MedicationStatement resources, showing: [medication[x]] = cilazapril 500 microgram tablet, 90, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [effective[x]] = 2023-12-01, [effective[x]:effectiveDateTime] = 2023-12-01, [dosage] = Take 1 daily, [dosage.text] = Take 1 daily, [dosage.timing] = (present)"
-      And Consumer submits evidence of "the MedicationStatement resources displayed with [medication[x]], [subject], [effective[x]], [effective[x]:effectiveDateTime], [dosage], [dosage.text], [dosage.timing] (screenshot)" as $displayedMedicationStatementEvidence
-      And Consumer is asked for $notDisplayed with "Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [medication[x]] = cilazapril 500 microgram tablet, 90, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [effective[x]] = 2023-12-01, [effective[x]:effectiveDateTime] = 2023-12-01, [dosage] = Take 1 daily, [dosage.text] = Take 1 daily, [dosage.timing] = (present)"
-      Then $notDisplayed should not contain "[medication[x]]"
-      Then $notDisplayed should not contain "[subject]"
-      Then $notDisplayed should not contain "[effective[x]]"
-      Then $notDisplayed should not contain "[effective[x]:effectiveDateTime]"
-      Then $notDisplayed should not contain "[dosage]"
-      Then $notDisplayed should not contain "[dosage.text]"
-      Then $notDisplayed should not contain "[dosage.timing]"
+      When Consumer submits evidence of "the import of the MedicationStatement resources completing without error (import log or screenshot)" as $handledMedicationStatementEvidence
+      Then Consumer confirms each of these is accepted for "the MedicationStatement resources":
+        | item                           | detail |
+        | medication[x]                  | cilazapril 500 microgram tablet, 90 |
+        | subject                        | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | subject.reference              | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | effective[x]                   | 2023-12-01 |
+        | effective[x]:effectiveDateTime | 2023-12-01 |
+        | dosage                         | Take 1 daily |
+        | dosage.text                    | Take 1 daily |
+        | dosage.timing                  | (present) |
+      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the MedicationStatement resources."
+      And Consumer submits evidence of "the MedicationStatement resources displayed (screenshot)" as $displayedMedicationStatementEvidence
+      Then Consumer confirms each of these is displayed for "the MedicationStatement resources":
+        | item                           | detail |
+        | medication[x]                  | cilazapril 500 microgram tablet, 90 |
+        | subject                        | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | effective[x]                   | 2023-12-01 |
+        | effective[x]:effectiveDateTime | 2023-12-01 |
+        | dosage                         | Take 1 daily |
+        | dosage.text                    | Take 1 daily |
+        | dosage.timing                  | (present) |
 
   Rule: The recommended sections: immunizations, results, procedures, devices
 
@@ -307,165 +457,237 @@ Feature: IPS Consumer — obligations of hl7.fhir.uv.ips 2.0.1
     @covers:Immunization.status @covers:Immunization.vaccineCode @covers:Immunization.patient @covers:Immunization.patient.reference
     @covers:Immunization.occurrence[x] @covers:Immunization.occurrence[x]:occurrenceDateTime
     Scenario: ips-consumer-012 Immunization (IPS) — the Consumer handles 6 elements and displays 5
-      When Consumer is asked for $handled with "For the Immunization resources: were these elements accepted and processed without error — [status] = completed, [vaccineCode] = Influenza, split virus, trivalent, pr…, [patient] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [patient.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [occurrence[x]] = 2024-04-10, [occurrence[x]:occurrenceDateTime] = 2024-04-10? Answer yes, or name the ones that caused an error."
-      And Consumer submits evidence of "the import of the Immunization resources completing without error (import log or screenshot)" as $handledImmunizationEvidence
-      Then $handled should be "yes"
-      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Immunization resources, showing: [status] = completed, [vaccineCode] = Influenza, split virus, trivalent, pr…, [patient] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [occurrence[x]] = 2024-04-10, [occurrence[x]:occurrenceDateTime] = 2024-04-10"
-      And Consumer submits evidence of "the Immunization resources displayed with [status], [vaccineCode], [patient], [occurrence[x]], [occurrence[x]:occurrenceDateTime] (screenshot)" as $displayedImmunizationEvidence
-      And Consumer is asked for $notDisplayed with "Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [status] = completed, [vaccineCode] = Influenza, split virus, trivalent, pr…, [patient] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [occurrence[x]] = 2024-04-10, [occurrence[x]:occurrenceDateTime] = 2024-04-10"
-      Then $notDisplayed should not contain "[status]"
-      Then $notDisplayed should not contain "[vaccineCode]"
-      Then $notDisplayed should not contain "[patient]"
-      Then $notDisplayed should not contain "[occurrence[x]]"
-      Then $notDisplayed should not contain "[occurrence[x]:occurrenceDateTime]"
+      When Consumer submits evidence of "the import of the Immunization resources completing without error (import log or screenshot)" as $handledImmunizationEvidence
+      Then Consumer confirms each of these is accepted for "the Immunization resources":
+        | item                             | detail |
+        | status                           | completed |
+        | vaccineCode                      | Influenza, split virus, trivalent, pr… |
+        | patient                          | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | patient.reference                | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | occurrence[x]                    | 2024-04-10 |
+        | occurrence[x]:occurrenceDateTime | 2024-04-10 |
+      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Immunization resources."
+      And Consumer submits evidence of "the Immunization resources displayed (screenshot)" as $displayedImmunizationEvidence
+      Then Consumer confirms each of these is displayed for "the Immunization resources":
+        | item                             | detail |
+        | status                           | completed |
+        | vaccineCode                      | Influenza, split virus, trivalent, pr… |
+        | patient                          | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | occurrence[x]                    | 2024-04-10 |
+        | occurrence[x]:occurrenceDateTime | 2024-04-10 |
 
     @profile:Observation-results-laboratory-pathology-uv-ips
     @covers:Observation.category:laboratory @covers:Observation.code @covers:Observation.subject @covers:Observation.subject.reference
     @covers:Observation.effective[x] @covers:Observation.effective[x]:effectiveDateTime @covers:Observation.performer @covers:Observation.value[x]:valueString
     @covers:Observation.value[x]:valueQuantity @covers:Observation.value[x]:valueCodeableConcept @covers:Observation.component
     Scenario: ips-consumer-013 Observation Results - Laboratory/Pathology (IPS) — the Consumer handles 11 elements and displays 10
-      When Consumer is asked for $handled with "For the Observation resources of this kind: were these elements accepted and processed without error — [category:laboratory] = laboratory, [code] = Cholesterol.total/Cholesterol in HDL …, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [subject.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [effective[x]] = 2023-10-31T15:06:00+00:00, [effective[x]:effectiveDateTime] = 2023-10-31T15:06:00+00:00, [performer] = PractitionerRole/75ed6f24-9a7e-4568-9…, [value[x]:valueString] = A combined CVD risk of which lipids i…, [value[x]:valueQuantity] = mmol/L, [value[x]:valueCodeableConcept], [component]? Answer yes, or name the ones that caused an error."
-      And Consumer submits evidence of "the import of the Observation resources of this kind completing without error (import log or screenshot)" as $handledObservationresultslaboratorypathologyEvidence
-      Then $handled should be "yes"
-      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Observation resources of this kind, showing: [category:laboratory] = laboratory, [code] = Cholesterol.total/Cholesterol in HDL …, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [effective[x]] = 2023-10-31T15:06:00+00:00, [effective[x]:effectiveDateTime] = 2023-10-31T15:06:00+00:00, [performer] = PractitionerRole/75ed6f24-9a7e-4568-9…, [value[x]:valueString] = A combined CVD risk of which lipids i…, [value[x]:valueQuantity] = mmol/L, [value[x]:valueCodeableConcept], [component]"
-      And Consumer submits evidence of "the Observation resources of this kind displayed with [category:laboratory], [code], [subject], [effective[x]], [effective[x]:effectiveDateTime], [performer], [value[x]:valueString], [value[x]:valueQuantity], [value[x]:valueCodeableConcept], [component] (screenshot)" as $displayedObservationresultslaboratorypathologyEvidence
-      And Consumer is asked for $notDisplayed with "Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [category:laboratory] = laboratory, [code] = Cholesterol.total/Cholesterol in HDL …, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [effective[x]] = 2023-10-31T15:06:00+00:00, [effective[x]:effectiveDateTime] = 2023-10-31T15:06:00+00:00, [performer] = PractitionerRole/75ed6f24-9a7e-4568-9…, [value[x]:valueString] = A combined CVD risk of which lipids i…, [value[x]:valueQuantity] = mmol/L, [value[x]:valueCodeableConcept], [component]"
-      Then $notDisplayed should not contain "[category:laboratory]"
-      Then $notDisplayed should not contain "[code]"
-      Then $notDisplayed should not contain "[subject]"
-      Then $notDisplayed should not contain "[effective[x]]"
-      Then $notDisplayed should not contain "[effective[x]:effectiveDateTime]"
-      Then $notDisplayed should not contain "[performer]"
-      Then $notDisplayed should not contain "[value[x]:valueString]"
-      Then $notDisplayed should not contain "[value[x]:valueQuantity]"
-      Then $notDisplayed should not contain "[value[x]:valueCodeableConcept]"
-      Then $notDisplayed should not contain "[component]"
+      When Consumer submits evidence of "the import of the Observation resources of this kind completing without error (import log or screenshot)" as $handledObservationresultslaboratorypathologyEvidence
+      Then Consumer confirms each of these is accepted for "the Observation resources of this kind":
+        | item                           | detail |
+        | category:laboratory            | laboratory |
+        | code                           | Cholesterol.total/Cholesterol in HDL … |
+        | subject                        | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | subject.reference              | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | effective[x]                   | 2023-10-31T15:06:00+00:00 |
+        | effective[x]:effectiveDateTime | 2023-10-31T15:06:00+00:00 |
+        | performer                      | PractitionerRole/75ed6f24-9a7e-4568-9… |
+        | value[x]:valueString           | A combined CVD risk of which lipids i… |
+        | value[x]:valueQuantity         | mmol/L |
+        | value[x]:valueCodeableConcept  |  |
+        | component                      |  |
+      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Observation resources of this kind."
+      And Consumer submits evidence of "the Observation resources of this kind displayed (screenshot)" as $displayedObservationresultslaboratorypathologyEvidence
+      Then Consumer confirms each of these is displayed for "the Observation resources of this kind":
+        | item                           | detail |
+        | category:laboratory            | laboratory |
+        | code                           | Cholesterol.total/Cholesterol in HDL … |
+        | subject                        | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | effective[x]                   | 2023-10-31T15:06:00+00:00 |
+        | effective[x]:effectiveDateTime | 2023-10-31T15:06:00+00:00 |
+        | performer                      | PractitionerRole/75ed6f24-9a7e-4568-9… |
+        | value[x]:valueString           | A combined CVD risk of which lipids i… |
+        | value[x]:valueQuantity         | mmol/L |
+        | value[x]:valueCodeableConcept  |  |
+        | component                      |  |
 
     @profile:Observation-results-radiology-uv-ips
     @covers:Observation.category:radiology @covers:Observation.code @covers:Observation.subject @covers:Observation.subject.reference
     @covers:Observation.effective[x] @covers:Observation.effective[x]:effectiveDateTime @covers:Observation.performer @covers:Observation.value[x]:valueString
     @covers:Observation.component
     Scenario: ips-consumer-014 Observation Results - Radiology (IPS) — the Consumer handles 9 elements and displays 8
-      When Consumer is asked for $handled with "For the Observation resources of this kind: were these elements accepted and processed without error — [category:radiology], [code], [subject], [subject.reference], [effective[x]], [effective[x]:effectiveDateTime], [performer], [value[x]:valueString], [component]? Answer yes, or name the ones that caused an error."
-      And Consumer submits evidence of "the import of the Observation resources of this kind completing without error (import log or screenshot)" as $handledObservationresultsradiologyEvidence
-      Then $handled should be "yes"
-      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Observation resources of this kind, showing: [category:radiology], [code], [subject], [effective[x]], [effective[x]:effectiveDateTime], [performer], [value[x]:valueString], [component]"
-      And Consumer submits evidence of "the Observation resources of this kind displayed with [category:radiology], [code], [subject], [effective[x]], [effective[x]:effectiveDateTime], [performer], [value[x]:valueString], [component] (screenshot)" as $displayedObservationresultsradiologyEvidence
-      And Consumer is asked for $notDisplayed with "Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [category:radiology], [code], [subject], [effective[x]], [effective[x]:effectiveDateTime], [performer], [value[x]:valueString], [component]"
-      Then $notDisplayed should not contain "[category:radiology]"
-      Then $notDisplayed should not contain "[code]"
-      Then $notDisplayed should not contain "[subject]"
-      Then $notDisplayed should not contain "[effective[x]]"
-      Then $notDisplayed should not contain "[effective[x]:effectiveDateTime]"
-      Then $notDisplayed should not contain "[performer]"
-      Then $notDisplayed should not contain "[value[x]:valueString]"
-      Then $notDisplayed should not contain "[component]"
+      When Consumer submits evidence of "the import of the Observation resources of this kind completing without error (import log or screenshot)" as $handledObservationresultsradiologyEvidence
+      Then Consumer confirms each of these is accepted for "the Observation resources of this kind":
+        | item                           | detail |
+        | category:radiology             |  |
+        | code                           |  |
+        | subject                        |  |
+        | subject.reference              |  |
+        | effective[x]                   |  |
+        | effective[x]:effectiveDateTime |  |
+        | performer                      |  |
+        | value[x]:valueString           |  |
+        | component                      |  |
+      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Observation resources of this kind."
+      And Consumer submits evidence of "the Observation resources of this kind displayed (screenshot)" as $displayedObservationresultsradiologyEvidence
+      Then Consumer confirms each of these is displayed for "the Observation resources of this kind":
+        | item                           | detail |
+        | category:radiology             |  |
+        | code                           |  |
+        | subject                        |  |
+        | effective[x]                   |  |
+        | effective[x]:effectiveDateTime |  |
+        | performer                      |  |
+        | value[x]:valueString           |  |
+        | component                      |  |
 
     @profile:DiagnosticReport-uv-ips
     @covers:DiagnosticReport.code @covers:DiagnosticReport.subject @covers:DiagnosticReport.subject.reference @covers:DiagnosticReport.effective[x]
     @covers:DiagnosticReport.effective[x]:effectiveDateTime @covers:DiagnosticReport.performer @covers:DiagnosticReport.result:observation-results
     Scenario: ips-consumer-015 DiagnosticReport (IPS) — the Consumer handles 7 elements and displays 6
-      When Consumer is asked for $handled with "For the DiagnosticReport resources: were these elements accepted and processed without error — [code], [subject], [subject.reference], [effective[x]], [effective[x]:effectiveDateTime], [performer], [result:observation-results]? Answer yes, or name the ones that caused an error."
-      And Consumer submits evidence of "the import of the DiagnosticReport resources completing without error (import log or screenshot)" as $handledDiagnosticReportEvidence
-      Then $handled should be "yes"
-      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the DiagnosticReport resources, showing: [code], [subject], [effective[x]], [effective[x]:effectiveDateTime], [performer], [result:observation-results]"
-      And Consumer submits evidence of "the DiagnosticReport resources displayed with [code], [subject], [effective[x]], [effective[x]:effectiveDateTime], [performer], [result:observation-results] (screenshot)" as $displayedDiagnosticReportEvidence
-      And Consumer is asked for $notDisplayed with "Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [code], [subject], [effective[x]], [effective[x]:effectiveDateTime], [performer], [result:observation-results]"
-      Then $notDisplayed should not contain "[code]"
-      Then $notDisplayed should not contain "[subject]"
-      Then $notDisplayed should not contain "[effective[x]]"
-      Then $notDisplayed should not contain "[effective[x]:effectiveDateTime]"
-      Then $notDisplayed should not contain "[performer]"
-      Then $notDisplayed should not contain "[result:observation-results]"
+      When Consumer submits evidence of "the import of the DiagnosticReport resources completing without error (import log or screenshot)" as $handledDiagnosticReportEvidence
+      Then Consumer confirms each of these is accepted for "the DiagnosticReport resources":
+        | item                           | detail |
+        | code                           |  |
+        | subject                        |  |
+        | subject.reference              |  |
+        | effective[x]                   |  |
+        | effective[x]:effectiveDateTime |  |
+        | performer                      |  |
+        | result:observation-results     |  |
+      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the DiagnosticReport resources."
+      And Consumer submits evidence of "the DiagnosticReport resources displayed (screenshot)" as $displayedDiagnosticReportEvidence
+      Then Consumer confirms each of these is displayed for "the DiagnosticReport resources":
+        | item                           | detail |
+        | code                           |  |
+        | subject                        |  |
+        | effective[x]                   |  |
+        | effective[x]:effectiveDateTime |  |
+        | performer                      |  |
+        | result:observation-results     |  |
 
     @profile:Specimen-uv-ips
     @covers:Specimen.type @covers:Specimen.subject @covers:Specimen.subject.reference
     Scenario: ips-consumer-016 Specimen (IPS) — the Consumer handles 3 elements and displays 2
-      When Consumer is asked for $handled with "For the Specimen resources: were these elements accepted and processed without error — [type], [subject], [subject.reference]? Answer yes, or name the ones that caused an error."
-      And Consumer submits evidence of "the import of the Specimen resources completing without error (import log or screenshot)" as $handledSpecimenEvidence
-      Then $handled should be "yes"
-      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Specimen resources, showing: [type], [subject]"
-      And Consumer submits evidence of "the Specimen resources displayed with [type], [subject] (screenshot)" as $displayedSpecimenEvidence
-      And Consumer is asked for $notDisplayed with "Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [type], [subject]"
-      Then $notDisplayed should not contain "[type]"
-      Then $notDisplayed should not contain "[subject]"
+      When Consumer submits evidence of "the import of the Specimen resources completing without error (import log or screenshot)" as $handledSpecimenEvidence
+      Then Consumer confirms each of these is accepted for "the Specimen resources":
+        | item              | detail |
+        | type              |  |
+        | subject           |  |
+        | subject.reference |  |
+      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Specimen resources."
+      And Consumer submits evidence of "the Specimen resources displayed (screenshot)" as $displayedSpecimenEvidence
+      Then Consumer confirms each of these is displayed for "the Specimen resources":
+        | item    | detail |
+        | type    |  |
+        | subject |  |
 
     @profile:ImagingStudy-uv-ips
     @covers:ImagingStudy.identifier @covers:ImagingStudy.subject @covers:ImagingStudy.subject.reference @covers:ImagingStudy.started
     @covers:ImagingStudy.procedureCode @covers:ImagingStudy.reasonCode @covers:ImagingStudy.series @covers:ImagingStudy.series.uid
     @covers:ImagingStudy.series.modality @covers:ImagingStudy.series.instance @covers:ImagingStudy.series.instance.uid @covers:ImagingStudy.series.instance.sopClass
     Scenario: ips-consumer-017 ImagingStudy (IPS) — the Consumer handles 12 elements and displays 11
-      When Consumer is asked for $handled with "For the ImagingStudy resources: were these elements accepted and processed without error — [identifier], [subject], [subject.reference], [started], [procedureCode], [reasonCode], [series], [series.uid], [series.modality], [series.instance], [series.instance.uid], [series.instance.sopClass]? Answer yes, or name the ones that caused an error."
-      And Consumer submits evidence of "the import of the ImagingStudy resources completing without error (import log or screenshot)" as $handledImagingStudyEvidence
-      Then $handled should be "yes"
-      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the ImagingStudy resources, showing: [identifier], [subject], [started], [procedureCode], [reasonCode], [series], [series.uid], [series.modality], [series.instance], [series.instance.uid], [series.instance.sopClass]"
-      And Consumer submits evidence of "the ImagingStudy resources displayed with [identifier], [subject], [started], [procedureCode], [reasonCode], [series], [series.uid], [series.modality], [series.instance], [series.instance.uid], [series.instance.sopClass] (screenshot)" as $displayedImagingStudyEvidence
-      And Consumer is asked for $notDisplayed with "Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [identifier], [subject], [started], [procedureCode], [reasonCode], [series], [series.uid], [series.modality], [series.instance], [series.instance.uid], [series.instance.sopClass]"
-      Then $notDisplayed should not contain "[identifier]"
-      Then $notDisplayed should not contain "[subject]"
-      Then $notDisplayed should not contain "[started]"
-      Then $notDisplayed should not contain "[procedureCode]"
-      Then $notDisplayed should not contain "[reasonCode]"
-      Then $notDisplayed should not contain "[series]"
-      Then $notDisplayed should not contain "[series.uid]"
-      Then $notDisplayed should not contain "[series.modality]"
-      Then $notDisplayed should not contain "[series.instance]"
-      Then $notDisplayed should not contain "[series.instance.uid]"
-      Then $notDisplayed should not contain "[series.instance.sopClass]"
+      When Consumer submits evidence of "the import of the ImagingStudy resources completing without error (import log or screenshot)" as $handledImagingStudyEvidence
+      Then Consumer confirms each of these is accepted for "the ImagingStudy resources":
+        | item                     | detail |
+        | identifier               |  |
+        | subject                  |  |
+        | subject.reference        |  |
+        | started                  |  |
+        | procedureCode            |  |
+        | reasonCode               |  |
+        | series                   |  |
+        | series.uid               |  |
+        | series.modality          |  |
+        | series.instance          |  |
+        | series.instance.uid      |  |
+        | series.instance.sopClass |  |
+      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the ImagingStudy resources."
+      And Consumer submits evidence of "the ImagingStudy resources displayed (screenshot)" as $displayedImagingStudyEvidence
+      Then Consumer confirms each of these is displayed for "the ImagingStudy resources":
+        | item                     | detail |
+        | identifier               |  |
+        | subject                  |  |
+        | started                  |  |
+        | procedureCode            |  |
+        | reasonCode               |  |
+        | series                   |  |
+        | series.uid               |  |
+        | series.modality          |  |
+        | series.instance          |  |
+        | series.instance.uid      |  |
+        | series.instance.sopClass |  |
 
     @profile:Procedure-uv-ips
     @covers:Procedure.code @covers:Procedure.subject @covers:Procedure.subject.reference @covers:Procedure.performed[x]
     @covers:Procedure.performed[x]:performedDateTime
     Scenario: ips-consumer-018 Procedure (IPS) — the Consumer handles 5 elements and displays 4
-      When Consumer is asked for $handled with "For the Procedure resources: were these elements accepted and processed without error — [code] = Total hip replacement, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [subject.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [performed[x]] = 2000-04-28, [performed[x]:performedDateTime] = 2000-04-28? Answer yes, or name the ones that caused an error."
-      And Consumer submits evidence of "the import of the Procedure resources completing without error (import log or screenshot)" as $handledProcedureEvidence
-      Then $handled should be "yes"
-      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Procedure resources, showing: [code] = Total hip replacement, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [performed[x]] = 2000-04-28, [performed[x]:performedDateTime] = 2000-04-28"
-      And Consumer submits evidence of "the Procedure resources displayed with [code], [subject], [performed[x]], [performed[x]:performedDateTime] (screenshot)" as $displayedProcedureEvidence
-      And Consumer is asked for $notDisplayed with "Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [code] = Total hip replacement, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [performed[x]] = 2000-04-28, [performed[x]:performedDateTime] = 2000-04-28"
-      Then $notDisplayed should not contain "[code]"
-      Then $notDisplayed should not contain "[subject]"
-      Then $notDisplayed should not contain "[performed[x]]"
-      Then $notDisplayed should not contain "[performed[x]:performedDateTime]"
+      When Consumer submits evidence of "the import of the Procedure resources completing without error (import log or screenshot)" as $handledProcedureEvidence
+      Then Consumer confirms each of these is accepted for "the Procedure resources":
+        | item                           | detail |
+        | code                           | Total hip replacement |
+        | subject                        | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | subject.reference              | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | performed[x]                   | 2000-04-28 |
+        | performed[x]:performedDateTime | 2000-04-28 |
+      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Procedure resources."
+      And Consumer submits evidence of "the Procedure resources displayed (screenshot)" as $displayedProcedureEvidence
+      Then Consumer confirms each of these is displayed for "the Procedure resources":
+        | item                           | detail |
+        | code                           | Total hip replacement |
+        | subject                        | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | performed[x]                   | 2000-04-28 |
+        | performed[x]:performedDateTime | 2000-04-28 |
 
     @profile:Device-observer-uv-ips
     @covers:Device.identifier @covers:Device.manufacturer @covers:Device.modelNumber
     Scenario: ips-consumer-019 Device - Performer or Observer (IPS) — the Consumer handles 3 elements and displays 3
-      When Consumer is asked for $handled with "For the Device resources: were these elements accepted and processed without error — [identifier], [manufacturer], [modelNumber]? Answer yes, or name the ones that caused an error."
-      And Consumer submits evidence of "the import of the Device resources completing without error (import log or screenshot)" as $handledDeviceobserverEvidence
-      Then $handled should be "yes"
-      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Device resources, showing: [identifier], [manufacturer], [modelNumber]"
-      And Consumer submits evidence of "the Device resources displayed with [identifier], [manufacturer], [modelNumber] (screenshot)" as $displayedDeviceobserverEvidence
-      And Consumer is asked for $notDisplayed with "Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [identifier], [manufacturer], [modelNumber]"
-      Then $notDisplayed should not contain "[identifier]"
-      Then $notDisplayed should not contain "[manufacturer]"
-      Then $notDisplayed should not contain "[modelNumber]"
+      When Consumer submits evidence of "the import of the Device resources completing without error (import log or screenshot)" as $handledDeviceobserverEvidence
+      Then Consumer confirms each of these is accepted for "the Device resources":
+        | item         | detail |
+        | identifier   |  |
+        | manufacturer |  |
+        | modelNumber  |  |
+      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Device resources."
+      And Consumer submits evidence of "the Device resources displayed (screenshot)" as $displayedDeviceobserverEvidence
+      Then Consumer confirms each of these is displayed for "the Device resources":
+        | item         | detail |
+        | identifier   |  |
+        | manufacturer |  |
+        | modelNumber  |  |
 
     @profile:Device-uv-ips
     @covers:Device.type
     Scenario: ips-consumer-020 Device (IPS) — the Consumer handles 1 element and displays 1
-      When Consumer is asked for $handled with "For the Device resources: were these elements accepted and processed without error — [type] = Hip prosthesis, device (physical object)? Answer yes, or name the ones that caused an error."
-      And Consumer submits evidence of "the import of the Device resources completing without error (import log or screenshot)" as $handledDeviceEvidence
-      Then $handled should be "yes"
-      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Device resources, showing: [type] = Hip prosthesis, device (physical object)"
-      And Consumer submits evidence of "the Device resources displayed with [type] (screenshot)" as $displayedDeviceEvidence
-      And Consumer is asked for $notDisplayed with "Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [type] = Hip prosthesis, device (physical object)"
-      Then $notDisplayed should not contain "[type]"
+      When Consumer submits evidence of "the import of the Device resources completing without error (import log or screenshot)" as $handledDeviceEvidence
+      Then Consumer confirms each of these is accepted for "the Device resources":
+        | item | detail |
+        | type | Hip prosthesis, device (physical object) |
+      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Device resources."
+      And Consumer submits evidence of "the Device resources displayed (screenshot)" as $displayedDeviceEvidence
+      Then Consumer confirms each of these is displayed for "the Device resources":
+        | item | detail |
+        | type | Hip prosthesis, device (physical object) |
 
     @profile:DeviceUseStatement-uv-ips
     @covers:DeviceUseStatement.subject @covers:DeviceUseStatement.subject.reference @covers:DeviceUseStatement.timing[x] @covers:DeviceUseStatement.timing[x]:timingDateTime
     @covers:DeviceUseStatement.device
     Scenario: ips-consumer-021 DeviceUseStatement (IPS) — the Consumer handles 5 elements and displays 4
-      When Consumer is asked for $handled with "For the DeviceUseStatement resources: were these elements accepted and processed without error — [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [subject.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [timing[x]], [timing[x]:timingDateTime], [device] = Hip prosthesis? Answer yes, or name the ones that caused an error."
-      And Consumer submits evidence of "the import of the DeviceUseStatement resources completing without error (import log or screenshot)" as $handledDeviceUseStatementEvidence
-      Then $handled should be "yes"
-      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the DeviceUseStatement resources, showing: [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [timing[x]], [timing[x]:timingDateTime], [device] = Hip prosthesis"
-      And Consumer submits evidence of "the DeviceUseStatement resources displayed with [subject], [timing[x]], [timing[x]:timingDateTime], [device] (screenshot)" as $displayedDeviceUseStatementEvidence
-      And Consumer is asked for $notDisplayed with "Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [timing[x]], [timing[x]:timingDateTime], [device] = Hip prosthesis"
-      Then $notDisplayed should not contain "[subject]"
-      Then $notDisplayed should not contain "[timing[x]]"
-      Then $notDisplayed should not contain "[timing[x]:timingDateTime]"
-      Then $notDisplayed should not contain "[device]"
+      When Consumer submits evidence of "the import of the DeviceUseStatement resources completing without error (import log or screenshot)" as $handledDeviceUseStatementEvidence
+      Then Consumer confirms each of these is accepted for "the DeviceUseStatement resources":
+        | item                     | detail |
+        | subject                  | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | subject.reference        | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | timing[x]                |  |
+        | timing[x]:timingDateTime |  |
+        | device                   | Hip prosthesis |
+      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the DeviceUseStatement resources."
+      And Consumer submits evidence of "the DeviceUseStatement resources displayed (screenshot)" as $displayedDeviceUseStatementEvidence
+      Then Consumer confirms each of these is displayed for "the DeviceUseStatement resources":
+        | item                     | detail |
+        | subject                  | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | timing[x]                |  |
+        | timing[x]:timingDateTime |  |
+        | device                   | Hip prosthesis |
 
   Rule: The optional sections: alerts, pregnancy, social history
 
@@ -473,109 +695,150 @@ Feature: IPS Consumer — obligations of hl7.fhir.uv.ips 2.0.1
     @covers:Flag.extension:flag-priority @covers:Flag.category @covers:Flag.code @covers:Flag.subject
     @covers:Flag.subject.reference
     Scenario: ips-consumer-022 Flag - Alert (IPS) — the Consumer handles 5 elements and displays 4
-      When Consumer is asked for $handled with "For the Flag resources: were these elements accepted and processed without error — [extension:flag-priority], [category] = Diet, [code] = Shellfish free diet, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [subject.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…? Answer yes, or name the ones that caused an error."
-      And Consumer submits evidence of "the import of the Flag resources completing without error (import log or screenshot)" as $handledFlagalertEvidence
-      Then $handled should be "yes"
-      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Flag resources, showing: [extension:flag-priority], [category] = Diet, [code] = Shellfish free diet, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…"
-      And Consumer submits evidence of "the Flag resources displayed with [extension:flag-priority], [category], [code], [subject] (screenshot)" as $displayedFlagalertEvidence
-      And Consumer is asked for $notDisplayed with "Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [extension:flag-priority], [category] = Diet, [code] = Shellfish free diet, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…"
-      Then $notDisplayed should not contain "[extension:flag-priority]"
-      Then $notDisplayed should not contain "[category]"
-      Then $notDisplayed should not contain "[code]"
-      Then $notDisplayed should not contain "[subject]"
+      When Consumer submits evidence of "the import of the Flag resources completing without error (import log or screenshot)" as $handledFlagalertEvidence
+      Then Consumer confirms each of these is accepted for "the Flag resources":
+        | item                    | detail |
+        | extension:flag-priority |  |
+        | category                | Diet |
+        | code                    | Shellfish free diet |
+        | subject                 | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | subject.reference       | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Flag resources."
+      And Consumer submits evidence of "the Flag resources displayed (screenshot)" as $displayedFlagalertEvidence
+      Then Consumer confirms each of these is displayed for "the Flag resources":
+        | item                    | detail |
+        | extension:flag-priority |  |
+        | category                | Diet |
+        | code                    | Shellfish free diet |
+        | subject                 | Patient/d174bd1a-b368-41e6-83a2-af77f… |
 
     @profile:Observation-pregnancy-edd-uv-ips
     @covers:Observation.code @covers:Observation.subject @covers:Observation.subject.reference @covers:Observation.effective[x]
     @covers:Observation.value[x]:valueDateTime
     Scenario: ips-consumer-023 Observation Pregnancy - Expected Delivery Date (IPS) — the Consumer handles 5 elements and displays 4
-      When Consumer is asked for $handled with "For the Observation resources of this kind: were these elements accepted and processed without error — [code], [subject], [subject.reference], [effective[x]], [value[x]:valueDateTime]? Answer yes, or name the ones that caused an error."
-      And Consumer submits evidence of "the import of the Observation resources of this kind completing without error (import log or screenshot)" as $handledObservationpregnancyeddEvidence
-      Then $handled should be "yes"
-      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Observation resources of this kind, showing: [code], [subject], [effective[x]], [value[x]:valueDateTime]"
-      And Consumer submits evidence of "the Observation resources of this kind displayed with [code], [subject], [effective[x]], [value[x]:valueDateTime] (screenshot)" as $displayedObservationpregnancyeddEvidence
-      And Consumer is asked for $notDisplayed with "Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [code], [subject], [effective[x]], [value[x]:valueDateTime]"
-      Then $notDisplayed should not contain "[code]"
-      Then $notDisplayed should not contain "[subject]"
-      Then $notDisplayed should not contain "[effective[x]]"
-      Then $notDisplayed should not contain "[value[x]:valueDateTime]"
+      When Consumer submits evidence of "the import of the Observation resources of this kind completing without error (import log or screenshot)" as $handledObservationpregnancyeddEvidence
+      Then Consumer confirms each of these is accepted for "the Observation resources of this kind":
+        | item                   | detail |
+        | code                   |  |
+        | subject                |  |
+        | subject.reference      |  |
+        | effective[x]           |  |
+        | value[x]:valueDateTime |  |
+      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Observation resources of this kind."
+      And Consumer submits evidence of "the Observation resources of this kind displayed (screenshot)" as $displayedObservationpregnancyeddEvidence
+      Then Consumer confirms each of these is displayed for "the Observation resources of this kind":
+        | item                   | detail |
+        | code                   |  |
+        | subject                |  |
+        | effective[x]           |  |
+        | value[x]:valueDateTime |  |
 
     @profile:Observation-pregnancy-outcome-uv-ips
     @covers:Observation.code @covers:Observation.subject @covers:Observation.subject.reference @covers:Observation.effective[x]
     @covers:Observation.value[x]:valueQuantity
     Scenario: ips-consumer-024 Observation Pregnancy - Outcome (IPS) — the Consumer handles 5 elements and displays 4
-      When Consumer is asked for $handled with "For the Observation resources of this kind: were these elements accepted and processed without error — [code], [subject], [subject.reference], [effective[x]], [value[x]:valueQuantity]? Answer yes, or name the ones that caused an error."
-      And Consumer submits evidence of "the import of the Observation resources of this kind completing without error (import log or screenshot)" as $handledObservationpregnancyoutcomeEvidence
-      Then $handled should be "yes"
-      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Observation resources of this kind, showing: [code], [subject], [effective[x]], [value[x]:valueQuantity]"
-      And Consumer submits evidence of "the Observation resources of this kind displayed with [code], [subject], [effective[x]], [value[x]:valueQuantity] (screenshot)" as $displayedObservationpregnancyoutcomeEvidence
-      And Consumer is asked for $notDisplayed with "Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [code], [subject], [effective[x]], [value[x]:valueQuantity]"
-      Then $notDisplayed should not contain "[code]"
-      Then $notDisplayed should not contain "[subject]"
-      Then $notDisplayed should not contain "[effective[x]]"
-      Then $notDisplayed should not contain "[value[x]:valueQuantity]"
+      When Consumer submits evidence of "the import of the Observation resources of this kind completing without error (import log or screenshot)" as $handledObservationpregnancyoutcomeEvidence
+      Then Consumer confirms each of these is accepted for "the Observation resources of this kind":
+        | item                   | detail |
+        | code                   |  |
+        | subject                |  |
+        | subject.reference      |  |
+        | effective[x]           |  |
+        | value[x]:valueQuantity |  |
+      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Observation resources of this kind."
+      And Consumer submits evidence of "the Observation resources of this kind displayed (screenshot)" as $displayedObservationpregnancyoutcomeEvidence
+      Then Consumer confirms each of these is displayed for "the Observation resources of this kind":
+        | item                   | detail |
+        | code                   |  |
+        | subject                |  |
+        | effective[x]           |  |
+        | value[x]:valueQuantity |  |
 
     @profile:Observation-pregnancy-status-uv-ips
     @covers:Observation.code @covers:Observation.subject @covers:Observation.subject.reference @covers:Observation.effective[x]
     @covers:Observation.value[x]:valueCodeableConcept @covers:Observation.hasMember @covers:Observation.hasMember.reference
     Scenario: ips-consumer-025 Observation Pregnancy - Status (IPS) — the Consumer handles 7 elements and displays 6
-      When Consumer is asked for $handled with "For the Observation resources of this kind: were these elements accepted and processed without error — [code] = Pregnancy status, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [subject.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [effective[x]] = 2020-01-10, [value[x]:valueCodeableConcept] = Not Pregnant, [hasMember], [hasMember.reference]? Answer yes, or name the ones that caused an error."
-      And Consumer submits evidence of "the import of the Observation resources of this kind completing without error (import log or screenshot)" as $handledObservationpregnancystatusEvidence
-      Then $handled should be "yes"
-      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Observation resources of this kind, showing: [code] = Pregnancy status, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [effective[x]] = 2020-01-10, [value[x]:valueCodeableConcept] = Not Pregnant, [hasMember], [hasMember.reference]"
-      And Consumer submits evidence of "the Observation resources of this kind displayed with [code], [subject], [effective[x]], [value[x]:valueCodeableConcept], [hasMember], [hasMember.reference] (screenshot)" as $displayedObservationpregnancystatusEvidence
-      And Consumer is asked for $notDisplayed with "Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [code] = Pregnancy status, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [effective[x]] = 2020-01-10, [value[x]:valueCodeableConcept] = Not Pregnant, [hasMember], [hasMember.reference]"
-      Then $notDisplayed should not contain "[code]"
-      Then $notDisplayed should not contain "[subject]"
-      Then $notDisplayed should not contain "[effective[x]]"
-      Then $notDisplayed should not contain "[value[x]:valueCodeableConcept]"
-      Then $notDisplayed should not contain "[hasMember]"
-      Then $notDisplayed should not contain "[hasMember.reference]"
+      When Consumer submits evidence of "the import of the Observation resources of this kind completing without error (import log or screenshot)" as $handledObservationpregnancystatusEvidence
+      Then Consumer confirms each of these is accepted for "the Observation resources of this kind":
+        | item                          | detail |
+        | code                          | Pregnancy status |
+        | subject                       | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | subject.reference             | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | effective[x]                  | 2020-01-10 |
+        | value[x]:valueCodeableConcept | Not Pregnant |
+        | hasMember                     |  |
+        | hasMember.reference           |  |
+      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Observation resources of this kind."
+      And Consumer submits evidence of "the Observation resources of this kind displayed (screenshot)" as $displayedObservationpregnancystatusEvidence
+      Then Consumer confirms each of these is displayed for "the Observation resources of this kind":
+        | item                          | detail |
+        | code                          | Pregnancy status |
+        | subject                       | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | effective[x]                  | 2020-01-10 |
+        | value[x]:valueCodeableConcept | Not Pregnant |
+        | hasMember                     |  |
+        | hasMember.reference           |  |
 
   Rule: Data types used throughout
 
     @profile:Observation-tobaccouse-uv-ips
     @covers:Observation.code @covers:Observation.subject @covers:Observation.subject.reference @covers:Observation.effective[x]
     Scenario: ips-consumer-026 Observation Social History - Tobacco Use (IPS) — the Consumer handles 4 elements and displays 3
-      When Consumer is asked for $handled with "For the Observation resources of this kind: were these elements accepted and processed without error — [code] = Tobacco smoking status, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [subject.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [effective[x]] = 2022-10-20? Answer yes, or name the ones that caused an error."
-      And Consumer submits evidence of "the import of the Observation resources of this kind completing without error (import log or screenshot)" as $handledObservationtobaccouseEvidence
-      Then $handled should be "yes"
-      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Observation resources of this kind, showing: [code] = Tobacco smoking status, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [effective[x]] = 2022-10-20"
-      And Consumer submits evidence of "the Observation resources of this kind displayed with [code], [subject], [effective[x]] (screenshot)" as $displayedObservationtobaccouseEvidence
-      And Consumer is asked for $notDisplayed with "Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [code] = Tobacco smoking status, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [effective[x]] = 2022-10-20"
-      Then $notDisplayed should not contain "[code]"
-      Then $notDisplayed should not contain "[subject]"
-      Then $notDisplayed should not contain "[effective[x]]"
+      When Consumer submits evidence of "the import of the Observation resources of this kind completing without error (import log or screenshot)" as $handledObservationtobaccouseEvidence
+      Then Consumer confirms each of these is accepted for "the Observation resources of this kind":
+        | item              | detail |
+        | code              | Tobacco smoking status |
+        | subject           | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | subject.reference | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | effective[x]      | 2022-10-20 |
+      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Observation resources of this kind."
+      And Consumer submits evidence of "the Observation resources of this kind displayed (screenshot)" as $displayedObservationtobaccouseEvidence
+      Then Consumer confirms each of these is displayed for "the Observation resources of this kind":
+        | item         | detail |
+        | code         | Tobacco smoking status |
+        | subject      | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | effective[x] | 2022-10-20 |
 
     @profile:Observation-alcoholuse-uv-ips
     @covers:Observation.code @covers:Observation.subject @covers:Observation.subject.reference @covers:Observation.effective[x]
     Scenario: ips-consumer-027 Observation Social History - Alcohol Use (IPS) — the Consumer handles 4 elements and displays 3
-      When Consumer is asked for $handled with "For the Observation resources of this kind: were these elements accepted and processed without error — [code] = Alcoholic drinks per day, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [subject.reference] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [effective[x]] = 2016-06-22? Answer yes, or name the ones that caused an error."
-      And Consumer submits evidence of "the import of the Observation resources of this kind completing without error (import log or screenshot)" as $handledObservationalcoholuseEvidence
-      Then $handled should be "yes"
-      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Observation resources of this kind, showing: [code] = Alcoholic drinks per day, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [effective[x]] = 2016-06-22"
-      And Consumer submits evidence of "the Observation resources of this kind displayed with [code], [subject], [effective[x]] (screenshot)" as $displayedObservationalcoholuseEvidence
-      And Consumer is asked for $notDisplayed with "Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [code] = Alcoholic drinks per day, [subject] = Patient/d174bd1a-b368-41e6-83a2-af77f…, [effective[x]] = 2016-06-22"
-      Then $notDisplayed should not contain "[code]"
-      Then $notDisplayed should not contain "[subject]"
-      Then $notDisplayed should not contain "[effective[x]]"
+      When Consumer submits evidence of "the import of the Observation resources of this kind completing without error (import log or screenshot)" as $handledObservationalcoholuseEvidence
+      Then Consumer confirms each of these is accepted for "the Observation resources of this kind":
+        | item              | detail |
+        | code              | Alcoholic drinks per day |
+        | subject           | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | subject.reference | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | effective[x]      | 2016-06-22 |
+      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display the Observation resources of this kind."
+      And Consumer submits evidence of "the Observation resources of this kind displayed (screenshot)" as $displayedObservationalcoholuseEvidence
+      Then Consumer confirms each of these is displayed for "the Observation resources of this kind":
+        | item         | detail |
+        | code         | Alcoholic drinks per day |
+        | subject      | Patient/d174bd1a-b368-41e6-83a2-af77f… |
+        | effective[x] | 2016-06-22 |
 
     @profile:CodeableConcept-uv-ips
     @covers:CodeableConcept.coding @covers:CodeableConcept.text
     Scenario: ips-consumer-028 Codeable Concept (IPS) — the Consumer handles 2 elements and displays 1
-      When Consumer is asked for $handled with "For every CodeableConcept in the document: were these elements accepted and processed without error — [coding], [text]? Answer yes, or name the ones that caused an error."
-      And Consumer submits evidence of "the import of every CodeableConcept in the document completing without error (import log or screenshot)" as $handledCodeableConceptEvidence
-      Then $handled should be "yes"
-      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display every CodeableConcept in the document, showing: [text]"
-      And Consumer submits evidence of "every CodeableConcept in the document displayed with [text] (screenshot)" as $displayedCodeableConceptEvidence
-      And Consumer is asked for $notDisplayed with "Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [text]"
-      Then $notDisplayed should not contain "[text]"
+      When Consumer submits evidence of "the import of every CodeableConcept in the document completing without error (import log or screenshot)" as $handledCodeableConceptEvidence
+      Then Consumer confirms each of these is accepted for "every CodeableConcept in the document":
+        | item   | detail |
+        | coding |  |
+        | text   |  |
+      When Consumer is informed "Open Patricia JORDANA's summary in the system under test and display every CodeableConcept in the document."
+      And Consumer submits evidence of "every CodeableConcept in the document displayed (screenshot)" as $displayedCodeableConceptEvidence
+      Then Consumer confirms each of these is displayed for "every CodeableConcept in the document":
+        | item | detail |
+        | text |  |
 
     @profile:Coding-uv-ips
     @covers:Coding.system @covers:Coding.code
     Scenario: ips-consumer-029 Coding with translations — the Consumer handles 2 elements
-      When Consumer is asked for $handled with "For every Coding in the document: were these elements accepted and processed without error — [system], [code]? Answer yes, or name the ones that caused an error."
-      And Consumer submits evidence of "the import of every Coding in the document completing without error (import log or screenshot)" as $handledCodingEvidence
-      Then $handled should be "yes"
+      When Consumer submits evidence of "the import of every Coding in the document completing without error (import log or screenshot)" as $handledCodingEvidence
+      Then Consumer confirms each of these is accepted for "every Coding in the document":
+        | item   | detail |
+        | system |  |
+        | code   |  |
 
   Rule: Documents with missing information are handled, not rejected
 
@@ -584,14 +847,18 @@ Feature: IPS Consumer — obligations of hl7.fhir.uv.ips 2.0.1
     Scenario: ips-consumer-900 Required sections with an emptyReason and a minimal document are accepted
       When Tester gets "https://hl7.org/fhir/uv/ips/Bundle-bundle-no-info-required-sections.json" as $ipsNoInfo
       And Consumer is informed "Import this IPS, whose problems, allergies and medications sections carry an emptyReason instead of entries." with $ipsNoInfo
-      And Consumer is asked for $handledNoInfo with "Was the document with emptyReason on [section:sectionProblems.emptyReason], [section:sectionAllergies.emptyReason] and [section:sectionMedications.emptyReason] accepted without error, and are the three sections shown as having no information? (yes/no)"
       And Consumer submits evidence of "the three required sections shown with no information (screenshot)" as $noInfoEvidence
-      Then $handledNoInfo should be "yes"
+      Then Consumer confirms each of these is accepted for "a document whose required sections carry an emptyReason":
+        | item                                   | detail                  |
+        | section:sectionProblems.emptyReason    | shown as no information |
+        | section:sectionAllergies.emptyReason   | shown as no information |
+        | section:sectionMedications.emptyReason | shown as no information |
       When Tester gets "https://hl7.org/fhir/uv/ips/Bundle-bundle-minimal.json" as $ipsMinimal
       And Consumer is informed "Import this minimal IPS (required sections only, no optional elements)." with $ipsMinimal
-      And Consumer is asked for $handledMinimal with "Was the minimal document accepted without error? (yes/no)"
       And Consumer submits evidence of "the minimal document imported without error (import log or screenshot)" as $minimalEvidence
-      Then $handledMinimal should be "yes"
+      Then Consumer confirms each of these is accepted for "the minimal document":
+        | item         | detail                 |
+        | the document | imported without error |
 
   Rule: A Consumer that is a FHIR server is driven directly
 

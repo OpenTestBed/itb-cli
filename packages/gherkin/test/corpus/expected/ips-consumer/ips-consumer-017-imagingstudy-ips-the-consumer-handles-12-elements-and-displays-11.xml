@@ -15,7 +15,6 @@
   </actors>
 
   <variables>
-    <var name="handled" type="string"/>
     <var name="handledImagingStudyEvidence" type="binary"/>
     <var name="handledImagingStudyEvidence_note" type="string">
       <value>&quot;&quot;</value>
@@ -24,7 +23,6 @@
     <var name="displayedImagingStudyEvidence_note" type="string">
       <value>&quot;&quot;</value>
     </var>
-    <var name="notDisplayed" type="string"/>
     <var name="loadIgBody" type="string"/>
     <var name="conformBody" type="string"/>
     <var name="validationErrors" type="string"/>
@@ -42,6 +40,19 @@
     <var name="conformHeaders" type="map"/>
     <var name="conformTplParams" type="map"/>
     <var name="dgFpParams" type="map"/>
+    <var name="confirmed{1}" type="string"/>
+    <var name="confirmed{2}" type="string"/>
+    <var name="confirmed{3}" type="string"/>
+    <var name="confirmed{4}" type="string"/>
+    <var name="confirmed{5}" type="string"/>
+    <var name="confirmed{6}" type="string"/>
+    <var name="confirmed{7}" type="string"/>
+    <var name="confirmed{8}" type="string"/>
+    <var name="confirmed{9}" type="string"/>
+    <var name="confirmed{10}" type="string"/>
+    <var name="confirmed{11}" type="string"/>
+    <var name="confirmed{12}" type="string"/>
+    <var name="confirmed" type="string"/>
   </variables>
 
   <steps stopOnError="true">
@@ -128,63 +139,141 @@
     <interact id="inform" desc="Instruction for Consumer" with="Consumer">
       <instruct desc="Import this International Patient Summary for Patricia JORDANA into the system under test, then answer the questions that follow." name="message">$ips</instruct>
     </interact>
-    <interact id="ask" desc="For the ImagingStudy resources: were these elements accepted and processed without error — [identifier], [subject], [subject.reference], [started], [procedureCode], [reasonCode], [series], [series.uid], [series.modality], [series.instance], [series.instance.uid], [series.instance.sopClass]? Answer yes, or name the ones that caused an error." inputTitle="For the ImagingStudy resources: were these elements accepted and processed without error — [identifier], [subject], [subject.reference], [started], [procedureCode], [reasonCode], [series], [series.uid], [series.modality], [series.instance], [series.instance.uid], [series.instance.sopClass]? Answer yes, or name the ones that caused an error.">
-      <request desc="For the ImagingStudy resources: were these elements accepted and processed without error — [identifier], [subject], [subject.reference], [started], [procedureCode], [reasonCode], [series], [series.uid], [series.modality], [series.instance], [series.instance.uid], [series.instance.sopClass]? Answer yes, or name the ones that caused an error." name="handled" inputType="TEXT" required="true">$handled</request>
-    </interact>
     <interact id="evidence" desc="Evidence: the import of the ImagingStudy resources completing without error (import log or screenshot)" inputTitle="Evidence: the import of the ImagingStudy resources completing without error (import log or screenshot)" with="Consumer">
       <instruct desc="Demonstrate on the system under test: the import of the ImagingStudy resources completing without error (import log or screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
       <request desc="Evidence file (screenshot, export or log) for: the import of the ImagingStudy resources completing without error (import log or screenshot)" name="handledImagingStudyEvidence" inputType="UPLOAD" required="true">$handledImagingStudyEvidence</request>
       <request desc="Note (optional): where it is shown, or why it cannot be" name="handledImagingStudyEvidence_note" inputType="TEXT" required="false">$handledImagingStudyEvidence_note</request>
     </interact>
     <log>concat(&quot;Evidence submitted for: the import of the ImagingStudy resources completing without error (import log or screenshot) — note: &quot;, $handledImagingStudyEvidence_note)</log>
-    <verify handler="StringValidator" desc="$handled is yes">
-      <input name="actualstring">$handled</input>
+    <interact id="confirm" desc="For the ImagingStudy resources: is each of these accepted?" inputTitle="For the ImagingStudy resources: is each of these accepted?" with="Consumer">
+      <instruct desc="For the ImagingStudy resources, choose for each item below whether it is accepted. Leave nothing unanswered." name="instruction"/>
+      <request desc="identifier — " name="confirmed_1" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{1}</request>
+      <request desc="subject — " name="confirmed_2" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{2}</request>
+      <request desc="subject.reference — " name="confirmed_3" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{3}</request>
+      <request desc="started — " name="confirmed_4" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{4}</request>
+      <request desc="procedureCode — " name="confirmed_5" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{5}</request>
+      <request desc="reasonCode — " name="confirmed_6" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{6}</request>
+      <request desc="series — " name="confirmed_7" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{7}</request>
+      <request desc="series.uid — " name="confirmed_8" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{8}</request>
+      <request desc="series.modality — " name="confirmed_9" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{9}</request>
+      <request desc="series.instance — " name="confirmed_10" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{10}</request>
+      <request desc="series.instance.uid — " name="confirmed_11" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{11}</request>
+      <request desc="series.instance.sopClass — " name="confirmed_12" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{12}</request>
+    </interact>
+    <verify handler="StringValidator" desc="identifier is accepted for the ImagingStudy resources">
+      <input name="actualstring">$confirmed{1}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="subject is accepted for the ImagingStudy resources">
+      <input name="actualstring">$confirmed{2}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="subject.reference is accepted for the ImagingStudy resources">
+      <input name="actualstring">$confirmed{3}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="started is accepted for the ImagingStudy resources">
+      <input name="actualstring">$confirmed{4}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="procedureCode is accepted for the ImagingStudy resources">
+      <input name="actualstring">$confirmed{5}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="reasonCode is accepted for the ImagingStudy resources">
+      <input name="actualstring">$confirmed{6}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="series is accepted for the ImagingStudy resources">
+      <input name="actualstring">$confirmed{7}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="series.uid is accepted for the ImagingStudy resources">
+      <input name="actualstring">$confirmed{8}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="series.modality is accepted for the ImagingStudy resources">
+      <input name="actualstring">$confirmed{9}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="series.instance is accepted for the ImagingStudy resources">
+      <input name="actualstring">$confirmed{10}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="series.instance.uid is accepted for the ImagingStudy resources">
+      <input name="actualstring">$confirmed{11}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="series.instance.sopClass is accepted for the ImagingStudy resources">
+      <input name="actualstring">$confirmed{12}</input>
       <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
     <interact id="inform" desc="Instruction for Consumer" with="Consumer">
-      <instruct desc="Open Patricia JORDANA's summary in the system under test and display the ImagingStudy resources, showing: [identifier], [subject], [started], [procedureCode], [reasonCode], [series], [series.uid], [series.modality], [series.instance], [series.instance.uid], [series.instance.sopClass]" name="message"/>
+      <instruct desc="Open Patricia JORDANA's summary in the system under test and display the ImagingStudy resources." name="message"/>
     </interact>
-    <interact id="evidence" desc="Evidence: the ImagingStudy resources displayed with [identifier], [subject], [started], [procedureCode], [reasonCode], [series], [series.uid], [series.modality], [series.instance], [series.instance.uid], [series.instance.sopClass] (screenshot)" inputTitle="Evidence: the ImagingStudy resources displayed with [identifier], [subject], [started], [procedureCode], [reasonCode], [series], [series.uid], [series.modality], [series.instance], [series.instance.uid], [series.instance.sopClass] (screenshot)" with="Consumer">
-      <instruct desc="Demonstrate on the system under test: the ImagingStudy resources displayed with [identifier], [subject], [started], [procedureCode], [reasonCode], [series], [series.uid], [series.modality], [series.instance], [series.instance.uid], [series.instance.sopClass] (screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
-      <request desc="Evidence file (screenshot, export or log) for: the ImagingStudy resources displayed with [identifier], [subject], [started], [procedureCode], [reasonCode], [series], [series.uid], [series.modality], [series.instance], [series.instance.uid], [series.instance.sopClass] (screenshot)" name="displayedImagingStudyEvidence" inputType="UPLOAD" required="true">$displayedImagingStudyEvidence</request>
+    <interact id="evidence" desc="Evidence: the ImagingStudy resources displayed (screenshot)" inputTitle="Evidence: the ImagingStudy resources displayed (screenshot)" with="Consumer">
+      <instruct desc="Demonstrate on the system under test: the ImagingStudy resources displayed (screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
+      <request desc="Evidence file (screenshot, export or log) for: the ImagingStudy resources displayed (screenshot)" name="displayedImagingStudyEvidence" inputType="UPLOAD" required="true">$displayedImagingStudyEvidence</request>
       <request desc="Note (optional): where it is shown, or why it cannot be" name="displayedImagingStudyEvidence_note" inputType="TEXT" required="false">$displayedImagingStudyEvidence_note</request>
     </interact>
-    <log>concat(&quot;Evidence submitted for: the ImagingStudy resources displayed with [identifier], [subject], [started], [procedureCode], [reasonCode], [series], [series.uid], [series.modality], [series.instance], [series.instance.uid], [series.instance.sopClass] (screenshot) — note: &quot;, $displayedImagingStudyEvidence_note)</log>
-    <interact id="ask" desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [identifier], [subject], [started], [procedureCode], [reasonCode], [series], [series.uid], [series.modality], [series.instance], [series.instance.uid], [series.instance.sopClass]" inputTitle="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [identifier], [subject], [started], [procedureCode], [reasonCode], [series], [series.uid], [series.modality], [series.instance], [series.instance.uid], [series.instance.sopClass]">
-      <request desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [identifier], [subject], [started], [procedureCode], [reasonCode], [series], [series.uid], [series.modality], [series.instance], [series.instance.uid], [series.instance.sopClass]" name="notDisplayed" inputType="TEXT" required="true">$notDisplayed</request>
+    <log>concat(&quot;Evidence submitted for: the ImagingStudy resources displayed (screenshot) — note: &quot;, $displayedImagingStudyEvidence_note)</log>
+    <interact id="confirm" desc="For the ImagingStudy resources: is each of these displayed?" inputTitle="For the ImagingStudy resources: is each of these displayed?" with="Consumer">
+      <instruct desc="For the ImagingStudy resources, choose for each item below whether it is displayed. Leave nothing unanswered." name="instruction"/>
+      <request desc="identifier — " name="confirmed_1" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{1}</request>
+      <request desc="subject — " name="confirmed_2" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{2}</request>
+      <request desc="started — " name="confirmed_3" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{3}</request>
+      <request desc="procedureCode — " name="confirmed_4" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{4}</request>
+      <request desc="reasonCode — " name="confirmed_5" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{5}</request>
+      <request desc="series — " name="confirmed_6" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{6}</request>
+      <request desc="series.uid — " name="confirmed_7" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{7}</request>
+      <request desc="series.modality — " name="confirmed_8" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{8}</request>
+      <request desc="series.instance — " name="confirmed_9" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{9}</request>
+      <request desc="series.instance.uid — " name="confirmed_10" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{10}</request>
+      <request desc="series.instance.sopClass — " name="confirmed_11" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{11}</request>
     </interact>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [identifier]">
-      <input name="expression">not(contains($notDisplayed, &quot;[identifier]&quot;))</input>
+    <verify handler="StringValidator" desc="identifier is displayed for the ImagingStudy resources">
+      <input name="actualstring">$confirmed{1}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [subject]">
-      <input name="expression">not(contains($notDisplayed, &quot;[subject]&quot;))</input>
+    <verify handler="StringValidator" desc="subject is displayed for the ImagingStudy resources">
+      <input name="actualstring">$confirmed{2}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [started]">
-      <input name="expression">not(contains($notDisplayed, &quot;[started]&quot;))</input>
+    <verify handler="StringValidator" desc="started is displayed for the ImagingStudy resources">
+      <input name="actualstring">$confirmed{3}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [procedureCode]">
-      <input name="expression">not(contains($notDisplayed, &quot;[procedureCode]&quot;))</input>
+    <verify handler="StringValidator" desc="procedureCode is displayed for the ImagingStudy resources">
+      <input name="actualstring">$confirmed{4}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [reasonCode]">
-      <input name="expression">not(contains($notDisplayed, &quot;[reasonCode]&quot;))</input>
+    <verify handler="StringValidator" desc="reasonCode is displayed for the ImagingStudy resources">
+      <input name="actualstring">$confirmed{5}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [series]">
-      <input name="expression">not(contains($notDisplayed, &quot;[series]&quot;))</input>
+    <verify handler="StringValidator" desc="series is displayed for the ImagingStudy resources">
+      <input name="actualstring">$confirmed{6}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [series.uid]">
-      <input name="expression">not(contains($notDisplayed, &quot;[series.uid]&quot;))</input>
+    <verify handler="StringValidator" desc="series.uid is displayed for the ImagingStudy resources">
+      <input name="actualstring">$confirmed{7}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [series.modality]">
-      <input name="expression">not(contains($notDisplayed, &quot;[series.modality]&quot;))</input>
+    <verify handler="StringValidator" desc="series.modality is displayed for the ImagingStudy resources">
+      <input name="actualstring">$confirmed{8}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [series.instance]">
-      <input name="expression">not(contains($notDisplayed, &quot;[series.instance]&quot;))</input>
+    <verify handler="StringValidator" desc="series.instance is displayed for the ImagingStudy resources">
+      <input name="actualstring">$confirmed{9}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [series.instance.uid]">
-      <input name="expression">not(contains($notDisplayed, &quot;[series.instance.uid]&quot;))</input>
+    <verify handler="StringValidator" desc="series.instance.uid is displayed for the ImagingStudy resources">
+      <input name="actualstring">$confirmed{10}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [series.instance.sopClass]">
-      <input name="expression">not(contains($notDisplayed, &quot;[series.instance.sopClass]&quot;))</input>
+    <verify handler="StringValidator" desc="series.instance.sopClass is displayed for the ImagingStudy resources">
+      <input name="actualstring">$confirmed{11}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
   </steps>
 

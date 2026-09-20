@@ -15,7 +15,6 @@
 
   <variables>
     <var name="ips" type="string"/>
-    <var name="canPopulate" type="string"/>
     <var name="canPopulateEvidence" type="binary"/>
     <var name="canPopulateEvidence_note" type="string">
       <value>&quot;&quot;</value>
@@ -25,6 +24,19 @@
     <var name="FHIRValidatorBase" type="string"/>
     <var name="fhirValidatorHeaders" type="map"/>
     <var name="loadIgTplParams" type="map"/>
+    <var name="confirmed{1}" type="string"/>
+    <var name="confirmed{2}" type="string"/>
+    <var name="confirmed{3}" type="string"/>
+    <var name="confirmed{4}" type="string"/>
+    <var name="confirmed{5}" type="string"/>
+    <var name="confirmed{6}" type="string"/>
+    <var name="confirmed{7}" type="string"/>
+    <var name="confirmed{8}" type="string"/>
+    <var name="confirmed{9}" type="string"/>
+    <var name="confirmed{10}" type="string"/>
+    <var name="confirmed{11}" type="string"/>
+    <var name="confirmed{12}" type="string"/>
+    <var name="confirmed" type="string"/>
   </variables>
 
   <steps stopOnError="true">
@@ -53,17 +65,73 @@
     <interact id="ask" desc="Paste the exported IPS Bundle (JSON)" inputTitle="Paste the exported IPS Bundle (JSON)">
       <request desc="Paste the exported IPS Bundle (JSON)" name="ips" inputType="TEXT" required="true">$ips</request>
     </interact>
-    <interact id="ask" desc="The reference patient has no data for these ImagingStudy elements. Can your system populate each of them when the information is known: [identifier], [subject], [subject.reference], [started], [procedureCode], [reasonCode], [series], [series.uid], [series.modality], [series.instance], [series.instance.uid], [series.instance.sopClass]? Answer yes, or list the ones it cannot." inputTitle="The reference patient has no data for these ImagingStudy elements. Can your system populate each of them when the information is known: [identifier], [subject], [subject.reference], [started], [procedureCode], [reasonCode], [series], [series.uid], [series.modality], [series.instance], [series.instance.uid], [series.instance.sopClass]? Answer yes, or list the ones it cannot.">
-      <request desc="The reference patient has no data for these ImagingStudy elements. Can your system populate each of them when the information is known: [identifier], [subject], [subject.reference], [started], [procedureCode], [reasonCode], [series], [series.uid], [series.modality], [series.instance], [series.instance.uid], [series.instance.sopClass]? Answer yes, or list the ones it cannot." name="canPopulate" inputType="TEXT" required="true">$canPopulate</request>
-    </interact>
     <interact id="evidence" desc="Evidence: ImagingStudy [identifier], [subject], [subject.reference], [started], [procedureCode], [reasonCode], [series], [series.uid], [series.modality], [series.instance], [series.instance.uid], [series.instance.sopClass] being entered or exported (screenshot or a document carrying them)" inputTitle="Evidence: ImagingStudy [identifier], [subject], [subject.reference], [started], [procedureCode], [reasonCode], [series], [series.uid], [series.modality], [series.instance], [series.instance.uid], [series.instance.sopClass] being entered or exported (screenshot or a document carrying them)" with="Creator">
       <instruct desc="Demonstrate on the system under test: ImagingStudy [identifier], [subject], [subject.reference], [started], [procedureCode], [reasonCode], [series], [series.uid], [series.modality], [series.instance], [series.instance.uid], [series.instance.sopClass] being entered or exported (screenshot or a document carrying them). Then attach a screenshot, export or log that shows it." name="instruction"/>
       <request desc="Evidence file (screenshot, export or log) for: ImagingStudy [identifier], [subject], [subject.reference], [started], [procedureCode], [reasonCode], [series], [series.uid], [series.modality], [series.instance], [series.instance.uid], [series.instance.sopClass] being entered or exported (screenshot or a document carrying them)" name="canPopulateEvidence" inputType="UPLOAD" required="true">$canPopulateEvidence</request>
       <request desc="Note (optional): where it is shown, or why it cannot be" name="canPopulateEvidence_note" inputType="TEXT" required="false">$canPopulateEvidence_note</request>
     </interact>
     <log>concat(&quot;Evidence submitted for: ImagingStudy [identifier], [subject], [subject.reference], [started], [procedureCode], [reasonCode], [series], [series.uid], [series.modality], [series.instance], [series.instance.uid], [series.instance.sopClass] being entered or exported (screenshot or a document carrying them) — note: &quot;, $canPopulateEvidence_note)</log>
-    <verify handler="StringValidator" desc="$canPopulate is yes">
-      <input name="actualstring">$canPopulate</input>
+    <interact id="confirm" desc="For ImagingStudy, when the information is known: is each of these supported?" inputTitle="For ImagingStudy, when the information is known: is each of these supported?" with="Creator">
+      <instruct desc="For ImagingStudy, when the information is known, choose for each item below whether it is supported. Leave nothing unanswered." name="instruction"/>
+      <request desc="identifier — can be populated" name="confirmed_1" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="supported,not supported">$confirmed{1}</request>
+      <request desc="subject — can be populated" name="confirmed_2" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="supported,not supported">$confirmed{2}</request>
+      <request desc="subject.reference — can be populated" name="confirmed_3" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="supported,not supported">$confirmed{3}</request>
+      <request desc="started — can be populated" name="confirmed_4" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="supported,not supported">$confirmed{4}</request>
+      <request desc="procedureCode — can be populated" name="confirmed_5" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="supported,not supported">$confirmed{5}</request>
+      <request desc="reasonCode — can be populated" name="confirmed_6" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="supported,not supported">$confirmed{6}</request>
+      <request desc="series — can be populated" name="confirmed_7" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="supported,not supported">$confirmed{7}</request>
+      <request desc="series.uid — can be populated" name="confirmed_8" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="supported,not supported">$confirmed{8}</request>
+      <request desc="series.modality — can be populated" name="confirmed_9" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="supported,not supported">$confirmed{9}</request>
+      <request desc="series.instance — can be populated" name="confirmed_10" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="supported,not supported">$confirmed{10}</request>
+      <request desc="series.instance.uid — can be populated" name="confirmed_11" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="supported,not supported">$confirmed{11}</request>
+      <request desc="series.instance.sopClass — can be populated" name="confirmed_12" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="supported,not supported">$confirmed{12}</request>
+    </interact>
+    <verify handler="StringValidator" desc="identifier is supported for ImagingStudy, when the information is known">
+      <input name="actualstring">$confirmed{1}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="subject is supported for ImagingStudy, when the information is known">
+      <input name="actualstring">$confirmed{2}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="subject.reference is supported for ImagingStudy, when the information is known">
+      <input name="actualstring">$confirmed{3}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="started is supported for ImagingStudy, when the information is known">
+      <input name="actualstring">$confirmed{4}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="procedureCode is supported for ImagingStudy, when the information is known">
+      <input name="actualstring">$confirmed{5}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="reasonCode is supported for ImagingStudy, when the information is known">
+      <input name="actualstring">$confirmed{6}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="series is supported for ImagingStudy, when the information is known">
+      <input name="actualstring">$confirmed{7}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="series.uid is supported for ImagingStudy, when the information is known">
+      <input name="actualstring">$confirmed{8}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="series.modality is supported for ImagingStudy, when the information is known">
+      <input name="actualstring">$confirmed{9}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="series.instance is supported for ImagingStudy, when the information is known">
+      <input name="actualstring">$confirmed{10}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="series.instance.uid is supported for ImagingStudy, when the information is known">
+      <input name="actualstring">$confirmed{11}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="series.instance.sopClass is supported for ImagingStudy, when the information is known">
+      <input name="actualstring">$confirmed{12}</input>
       <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
   </steps>

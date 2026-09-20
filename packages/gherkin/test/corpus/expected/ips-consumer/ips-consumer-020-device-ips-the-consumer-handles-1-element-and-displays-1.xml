@@ -15,7 +15,6 @@
   </actors>
 
   <variables>
-    <var name="handled" type="string"/>
     <var name="handledDeviceEvidence" type="binary"/>
     <var name="handledDeviceEvidence_note" type="string">
       <value>&quot;&quot;</value>
@@ -24,7 +23,6 @@
     <var name="displayedDeviceEvidence_note" type="string">
       <value>&quot;&quot;</value>
     </var>
-    <var name="notDisplayed" type="string"/>
     <var name="loadIgBody" type="string"/>
     <var name="conformBody" type="string"/>
     <var name="validationErrors" type="string"/>
@@ -42,6 +40,8 @@
     <var name="conformHeaders" type="map"/>
     <var name="conformTplParams" type="map"/>
     <var name="dgFpParams" type="map"/>
+    <var name="confirmed{1}" type="string"/>
+    <var name="confirmed" type="string"/>
   </variables>
 
   <steps stopOnError="true">
@@ -128,33 +128,36 @@
     <interact id="inform" desc="Instruction for Consumer" with="Consumer">
       <instruct desc="Import this International Patient Summary for Patricia JORDANA into the system under test, then answer the questions that follow." name="message">$ips</instruct>
     </interact>
-    <interact id="ask" desc="For the Device resources: were these elements accepted and processed without error — [type] = Hip prosthesis, device (physical object)? Answer yes, or name the ones that caused an error." inputTitle="For the Device resources: were these elements accepted and processed without error — [type] = Hip prosthesis, device (physical object)? Answer yes, or name the ones that caused an error.">
-      <request desc="For the Device resources: were these elements accepted and processed without error — [type] = Hip prosthesis, device (physical object)? Answer yes, or name the ones that caused an error." name="handled" inputType="TEXT" required="true">$handled</request>
-    </interact>
     <interact id="evidence" desc="Evidence: the import of the Device resources completing without error (import log or screenshot)" inputTitle="Evidence: the import of the Device resources completing without error (import log or screenshot)" with="Consumer">
       <instruct desc="Demonstrate on the system under test: the import of the Device resources completing without error (import log or screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
       <request desc="Evidence file (screenshot, export or log) for: the import of the Device resources completing without error (import log or screenshot)" name="handledDeviceEvidence" inputType="UPLOAD" required="true">$handledDeviceEvidence</request>
       <request desc="Note (optional): where it is shown, or why it cannot be" name="handledDeviceEvidence_note" inputType="TEXT" required="false">$handledDeviceEvidence_note</request>
     </interact>
     <log>concat(&quot;Evidence submitted for: the import of the Device resources completing without error (import log or screenshot) — note: &quot;, $handledDeviceEvidence_note)</log>
-    <verify handler="StringValidator" desc="$handled is yes">
-      <input name="actualstring">$handled</input>
+    <interact id="confirm" desc="For the Device resources: is each of these accepted?" inputTitle="For the Device resources: is each of these accepted?" with="Consumer">
+      <instruct desc="For the Device resources, choose for each item below whether it is accepted. Leave nothing unanswered." name="instruction"/>
+      <request desc="type — Hip prosthesis, device (physical object)" name="confirmed_1" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{1}</request>
+    </interact>
+    <verify handler="StringValidator" desc="type is accepted for the Device resources">
+      <input name="actualstring">$confirmed{1}</input>
       <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
     <interact id="inform" desc="Instruction for Consumer" with="Consumer">
-      <instruct desc="Open Patricia JORDANA's summary in the system under test and display the Device resources, showing: [type] = Hip prosthesis, device (physical object)" name="message"/>
+      <instruct desc="Open Patricia JORDANA's summary in the system under test and display the Device resources." name="message"/>
     </interact>
-    <interact id="evidence" desc="Evidence: the Device resources displayed with [type] (screenshot)" inputTitle="Evidence: the Device resources displayed with [type] (screenshot)" with="Consumer">
-      <instruct desc="Demonstrate on the system under test: the Device resources displayed with [type] (screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
-      <request desc="Evidence file (screenshot, export or log) for: the Device resources displayed with [type] (screenshot)" name="displayedDeviceEvidence" inputType="UPLOAD" required="true">$displayedDeviceEvidence</request>
+    <interact id="evidence" desc="Evidence: the Device resources displayed (screenshot)" inputTitle="Evidence: the Device resources displayed (screenshot)" with="Consumer">
+      <instruct desc="Demonstrate on the system under test: the Device resources displayed (screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
+      <request desc="Evidence file (screenshot, export or log) for: the Device resources displayed (screenshot)" name="displayedDeviceEvidence" inputType="UPLOAD" required="true">$displayedDeviceEvidence</request>
       <request desc="Note (optional): where it is shown, or why it cannot be" name="displayedDeviceEvidence_note" inputType="TEXT" required="false">$displayedDeviceEvidence_note</request>
     </interact>
-    <log>concat(&quot;Evidence submitted for: the Device resources displayed with [type] (screenshot) — note: &quot;, $displayedDeviceEvidence_note)</log>
-    <interact id="ask" desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [type] = Hip prosthesis, device (physical object)" inputTitle="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [type] = Hip prosthesis, device (physical object)">
-      <request desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [type] = Hip prosthesis, device (physical object)" name="notDisplayed" inputType="TEXT" required="true">$notDisplayed</request>
+    <log>concat(&quot;Evidence submitted for: the Device resources displayed (screenshot) — note: &quot;, $displayedDeviceEvidence_note)</log>
+    <interact id="confirm" desc="For the Device resources: is each of these displayed?" inputTitle="For the Device resources: is each of these displayed?" with="Consumer">
+      <instruct desc="For the Device resources, choose for each item below whether it is displayed. Leave nothing unanswered." name="instruction"/>
+      <request desc="type — Hip prosthesis, device (physical object)" name="confirmed_1" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{1}</request>
     </interact>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [type]">
-      <input name="expression">not(contains($notDisplayed, &quot;[type]&quot;))</input>
+    <verify handler="StringValidator" desc="type is displayed for the Device resources">
+      <input name="actualstring">$confirmed{1}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
   </steps>
 

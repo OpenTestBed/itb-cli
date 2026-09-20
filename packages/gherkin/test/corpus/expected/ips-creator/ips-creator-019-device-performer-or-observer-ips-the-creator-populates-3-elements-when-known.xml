@@ -15,7 +15,6 @@
 
   <variables>
     <var name="ips" type="string"/>
-    <var name="canPopulate" type="string"/>
     <var name="canPopulateEvidence" type="binary"/>
     <var name="canPopulateEvidence_note" type="string">
       <value>&quot;&quot;</value>
@@ -25,6 +24,10 @@
     <var name="FHIRValidatorBase" type="string"/>
     <var name="fhirValidatorHeaders" type="map"/>
     <var name="loadIgTplParams" type="map"/>
+    <var name="confirmed{1}" type="string"/>
+    <var name="confirmed{2}" type="string"/>
+    <var name="confirmed{3}" type="string"/>
+    <var name="confirmed" type="string"/>
   </variables>
 
   <steps stopOnError="true">
@@ -53,17 +56,28 @@
     <interact id="ask" desc="Paste the exported IPS Bundle (JSON)" inputTitle="Paste the exported IPS Bundle (JSON)">
       <request desc="Paste the exported IPS Bundle (JSON)" name="ips" inputType="TEXT" required="true">$ips</request>
     </interact>
-    <interact id="ask" desc="The reference patient has no data for these Device elements. Can your system populate each of them when the information is known: [identifier], [manufacturer], [modelNumber]? Answer yes, or list the ones it cannot." inputTitle="The reference patient has no data for these Device elements. Can your system populate each of them when the information is known: [identifier], [manufacturer], [modelNumber]? Answer yes, or list the ones it cannot.">
-      <request desc="The reference patient has no data for these Device elements. Can your system populate each of them when the information is known: [identifier], [manufacturer], [modelNumber]? Answer yes, or list the ones it cannot." name="canPopulate" inputType="TEXT" required="true">$canPopulate</request>
-    </interact>
     <interact id="evidence" desc="Evidence: Device [identifier], [manufacturer], [modelNumber] being entered or exported (screenshot or a document carrying them)" inputTitle="Evidence: Device [identifier], [manufacturer], [modelNumber] being entered or exported (screenshot or a document carrying them)" with="Creator">
       <instruct desc="Demonstrate on the system under test: Device [identifier], [manufacturer], [modelNumber] being entered or exported (screenshot or a document carrying them). Then attach a screenshot, export or log that shows it." name="instruction"/>
       <request desc="Evidence file (screenshot, export or log) for: Device [identifier], [manufacturer], [modelNumber] being entered or exported (screenshot or a document carrying them)" name="canPopulateEvidence" inputType="UPLOAD" required="true">$canPopulateEvidence</request>
       <request desc="Note (optional): where it is shown, or why it cannot be" name="canPopulateEvidence_note" inputType="TEXT" required="false">$canPopulateEvidence_note</request>
     </interact>
     <log>concat(&quot;Evidence submitted for: Device [identifier], [manufacturer], [modelNumber] being entered or exported (screenshot or a document carrying them) — note: &quot;, $canPopulateEvidence_note)</log>
-    <verify handler="StringValidator" desc="$canPopulate is yes">
-      <input name="actualstring">$canPopulate</input>
+    <interact id="confirm" desc="For Device, when the information is known: is each of these supported?" inputTitle="For Device, when the information is known: is each of these supported?" with="Creator">
+      <instruct desc="For Device, when the information is known, choose for each item below whether it is supported. Leave nothing unanswered." name="instruction"/>
+      <request desc="identifier — can be populated" name="confirmed_1" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="supported,not supported">$confirmed{1}</request>
+      <request desc="manufacturer — can be populated" name="confirmed_2" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="supported,not supported">$confirmed{2}</request>
+      <request desc="modelNumber — can be populated" name="confirmed_3" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="supported,not supported">$confirmed{3}</request>
+    </interact>
+    <verify handler="StringValidator" desc="identifier is supported for Device, when the information is known">
+      <input name="actualstring">$confirmed{1}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="manufacturer is supported for Device, when the information is known">
+      <input name="actualstring">$confirmed{2}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="modelNumber is supported for Device, when the information is known">
+      <input name="actualstring">$confirmed{3}</input>
       <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
   </steps>

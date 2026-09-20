@@ -199,9 +199,12 @@ Feature: IPS Creator — obligations of hl7.fhir.uv.ips 2.0.1
       # Composition.section:sectionVitalSigns.text (SHALL:populate)
       Then $ips at "Bundle.entry.resource.ofType(Composition).section.where(code.coding.where(system='http://loinc.org' and code='8716-3').exists()).all(text.exists())" should be true
       # The reference data does not exercise these; the Creator attests the capability.
-      When Creator is asked for $canPopulate with "The reference patient has no data for these Composition elements. Can your system populate each of them when the information is known: [section:sectionProblems.emptyReason], [section:sectionAllergies.emptyReason], [section:sectionMedications.emptyReason]? Answer yes, or list the ones it cannot."
-      And Creator submits evidence of "Composition [section:sectionProblems.emptyReason], [section:sectionAllergies.emptyReason], [section:sectionMedications.emptyReason] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
-      Then $canPopulate should be "yes"
+      When Creator submits evidence of "Composition [section:sectionProblems.emptyReason], [section:sectionAllergies.emptyReason], [section:sectionMedications.emptyReason] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
+      Then Creator confirms each of these is supported for "Composition, when the information is known":
+        | item                                   | detail           |
+        | section:sectionProblems.emptyReason    | can be populated |
+        | section:sectionAllergies.emptyReason   | can be populated |
+        | section:sectionMedications.emptyReason | can be populated |
       And log "Composition.meta.profile MAY be populated — recorded, not asserted"
 
   Rule: The people and organisations
@@ -231,9 +234,11 @@ Feature: IPS Creator — obligations of hl7.fhir.uv.ips 2.0.1
       # Patient.address (SHALL:populate-if-known)
       Then $ips at "Bundle.entry.resource.ofType(Patient).all(address.exists())" should be true
       # The reference data does not exercise these; the Creator attests the capability.
-      When Creator is asked for $canPopulate with "The reference patient has no data for these Patient elements. Can your system populate each of them when the information is known: [name.text], [generalPractitioner]? Answer yes, or list the ones it cannot."
-      And Creator submits evidence of "Patient [name.text], [generalPractitioner] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
-      Then $canPopulate should be "yes"
+      When Creator submits evidence of "Patient [name.text], [generalPractitioner] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
+      Then Creator confirms each of these is supported for "Patient, when the information is known":
+        | item                | detail           |
+        | name.text           | can be populated |
+        | generalPractitioner | can be populated |
 
     @profile:Practitioner-uv-ips
     @covers:Practitioner.name @covers:Practitioner.name.family @covers:Practitioner.name.given @covers:Practitioner.telecom
@@ -249,18 +254,20 @@ Feature: IPS Creator — obligations of hl7.fhir.uv.ips 2.0.1
       # Practitioner.telecom (SHALL:populate-if-known)
       Then $ips at "Bundle.entry.resource.ofType(Practitioner).all(telecom.exists())" should be true
       # The reference data does not exercise these; the Creator attests the capability.
-      When Creator is asked for $canPopulate with "The reference patient has no data for these Practitioner elements. Can your system populate each of them when the information is known: [address]? Answer yes, or list the ones it cannot."
-      And Creator submits evidence of "Practitioner [address] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
-      Then $canPopulate should be "yes"
+      When Creator submits evidence of "Practitioner [address] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
+      Then Creator confirms each of these is supported for "Practitioner, when the information is known":
+        | item    | detail           |
+        | address | can be populated |
 
     @profile:PractitionerRole-uv-ips
     @covers:PractitionerRole.organization
     Scenario: ips-creator-005 PractitionerRole (IPS) — the Creator populates 1 element when known
       # Instances: Bundle.entry.resource.ofType(PractitionerRole)
       # The reference data does not exercise these; the Creator attests the capability.
-      When Creator is asked for $canPopulate with "The reference patient has no data for these PractitionerRole elements. Can your system populate each of them when the information is known: [organization]? Answer yes, or list the ones it cannot."
-      And Creator submits evidence of "PractitionerRole [organization] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
-      Then $canPopulate should be "yes"
+      When Creator submits evidence of "PractitionerRole [organization] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
+      Then Creator confirms each of these is supported for "PractitionerRole, when the information is known":
+        | item         | detail           |
+        | organization | can be populated |
 
     @profile:Organization-uv-ips
     @covers:Organization.name @covers:Organization.telecom @covers:Organization.address
@@ -269,9 +276,11 @@ Feature: IPS Creator — obligations of hl7.fhir.uv.ips 2.0.1
       # Organization.name (SHALL:populate-if-known)
       Then $ips at "Bundle.entry.resource.ofType(Organization).all(name.exists())" should be true
       # The reference data does not exercise these; the Creator attests the capability.
-      When Creator is asked for $canPopulate with "The reference patient has no data for these Organization elements. Can your system populate each of them when the information is known: [telecom], [address]? Answer yes, or list the ones it cannot."
-      And Creator submits evidence of "Organization [telecom], [address] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
-      Then $canPopulate should be "yes"
+      When Creator submits evidence of "Organization [telecom], [address] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
+      Then Creator confirms each of these is supported for "Organization, when the information is known":
+        | item    | detail           |
+        | telecom | can be populated |
+        | address | can be populated |
 
   Rule: The required sections: problems, allergies, medications
 
@@ -290,9 +299,15 @@ Feature: IPS Creator — obligations of hl7.fhir.uv.ips 2.0.1
       # AllergyIntolerance.patient.reference (SHALL:populate-if-known)
       Then $ips at "Bundle.entry.resource.ofType(AllergyIntolerance).patient.all(reference.exists())" should be true
       # The reference data does not exercise these; the Creator attests the capability.
-      When Creator is asked for $canPopulate with "The reference patient has no data for these AllergyIntolerance elements. Can your system populate each of them when the information is known: [type], [onset[x]], [onset[x]:onsetDateTime], [reaction], [reaction.manifestation], [reaction.severity]? Answer yes, or list the ones it cannot."
-      And Creator submits evidence of "AllergyIntolerance [type], [onset[x]], [onset[x]:onsetDateTime], [reaction], [reaction.manifestation], [reaction.severity] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
-      Then $canPopulate should be "yes"
+      When Creator submits evidence of "AllergyIntolerance [type], [onset[x]], [onset[x]:onsetDateTime], [reaction], [reaction.manifestation], [reaction.severity] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
+      Then Creator confirms each of these is supported for "AllergyIntolerance, when the information is known":
+        | item                   | detail           |
+        | type                   | can be populated |
+        | onset[x]               | can be populated |
+        | onset[x]:onsetDateTime | can be populated |
+        | reaction               | can be populated |
+        | reaction.manifestation | can be populated |
+        | reaction.severity      | can be populated |
 
     @profile:Condition-uv-ips
     @covers:Condition.clinicalStatus @covers:Condition.category @covers:Condition.severity @covers:Condition.code
@@ -312,9 +327,11 @@ Feature: IPS Creator — obligations of hl7.fhir.uv.ips 2.0.1
       # Condition.onset[x]:onsetDateTime (SHOULD:able-to-populate)
       Then $ips at "Bundle.entry.resource.ofType(Condition).all(onset.ofType(dateTime).exists())" should be true
       # The reference data does not exercise these; the Creator attests the capability.
-      When Creator is asked for $canPopulate with "The reference patient has no data for these Condition elements. Can your system populate each of them when the information is known: [category], [severity]? Answer yes, or list the ones it cannot."
-      And Creator submits evidence of "Condition [category], [severity] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
-      Then $canPopulate should be "yes"
+      When Creator submits evidence of "Condition [category], [severity] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
+      Then Creator confirms each of these is supported for "Condition, when the information is known":
+        | item     | detail           |
+        | category | can be populated |
+        | severity | can be populated |
 
     @profile:Medication-uv-ips
     @covers:Medication.code @covers:Medication.form @covers:Medication.ingredient @covers:Medication.ingredient.item[x]
@@ -322,9 +339,14 @@ Feature: IPS Creator — obligations of hl7.fhir.uv.ips 2.0.1
     Scenario: ips-creator-009 Medication (IPS) — the Creator populates 5 elements when known
       # Instances: Bundle.entry.resource.ofType(Medication)
       # The reference data does not exercise these; the Creator attests the capability.
-      When Creator is asked for $canPopulate with "The reference patient has no data for these Medication elements. Can your system populate each of them when the information is known: [code], [form], [ingredient], [ingredient.item[x]], [ingredient.strength]? Answer yes, or list the ones it cannot."
-      And Creator submits evidence of "Medication [code], [form], [ingredient], [ingredient.item[x]], [ingredient.strength] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
-      Then $canPopulate should be "yes"
+      When Creator submits evidence of "Medication [code], [form], [ingredient], [ingredient.item[x]], [ingredient.strength] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
+      Then Creator confirms each of these is supported for "Medication, when the information is known":
+        | item                | detail           |
+        | code                | can be populated |
+        | form                | can be populated |
+        | ingredient          | can be populated |
+        | ingredient.item[x]  | can be populated |
+        | ingredient.strength | can be populated |
 
     @profile:MedicationRequest-uv-ips
     @covers:MedicationRequest.medication[x] @covers:MedicationRequest.subject @covers:MedicationRequest.subject.reference @covers:MedicationRequest.dosageInstruction
@@ -332,9 +354,15 @@ Feature: IPS Creator — obligations of hl7.fhir.uv.ips 2.0.1
     Scenario: ips-creator-010 MedicationRequest (IPS) — the Creator populates 6 elements when known
       # Instances: Bundle.entry.resource.ofType(MedicationRequest)
       # The reference data does not exercise these; the Creator attests the capability.
-      When Creator is asked for $canPopulate with "The reference patient has no data for these MedicationRequest elements. Can your system populate each of them when the information is known: [medication[x]], [subject], [subject.reference], [dosageInstruction], [dosageInstruction.text], [dosageInstruction.timing]? Answer yes, or list the ones it cannot."
-      And Creator submits evidence of "MedicationRequest [medication[x]], [subject], [subject.reference], [dosageInstruction], [dosageInstruction.text], [dosageInstruction.timing] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
-      Then $canPopulate should be "yes"
+      When Creator submits evidence of "MedicationRequest [medication[x]], [subject], [subject.reference], [dosageInstruction], [dosageInstruction.text], [dosageInstruction.timing] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
+      Then Creator confirms each of these is supported for "MedicationRequest, when the information is known":
+        | item                     | detail           |
+        | medication[x]            | can be populated |
+        | subject                  | can be populated |
+        | subject.reference        | can be populated |
+        | dosageInstruction        | can be populated |
+        | dosageInstruction.text   | can be populated |
+        | dosageInstruction.timing | can be populated |
 
     @profile:MedicationStatement-uv-ips
     @covers:MedicationStatement.medication[x] @covers:MedicationStatement.subject @covers:MedicationStatement.subject.reference @covers:MedicationStatement.effective[x]
@@ -403,9 +431,11 @@ Feature: IPS Creator — obligations of hl7.fhir.uv.ips 2.0.1
       # Observation.value[x]:valueQuantity (SHALL:populate-if-known) — the reference data carries it on some instances
       Then $ips at "Bundle.entry.resource.ofType(Observation).where(category.coding.where(code='laboratory').exists()).where(value.ofType(Quantity).exists()).exists()" should be true
       # The reference data does not exercise these; the Creator attests the capability.
-      When Creator is asked for $canPopulate with "The reference patient has no data for these Observation elements. Can your system populate each of them when the information is known: [value[x]:valueCodeableConcept], [component]? Answer yes, or list the ones it cannot."
-      And Creator submits evidence of "Observation [value[x]:valueCodeableConcept], [component] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
-      Then $canPopulate should be "yes"
+      When Creator submits evidence of "Observation [value[x]:valueCodeableConcept], [component] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
+      Then Creator confirms each of these is supported for "Observation, when the information is known":
+        | item                          | detail           |
+        | value[x]:valueCodeableConcept | can be populated |
+        | component                     | can be populated |
 
     @profile:Observation-results-radiology-uv-ips
     @covers:Observation.category:radiology @covers:Observation.code @covers:Observation.subject @covers:Observation.subject.reference
@@ -414,9 +444,18 @@ Feature: IPS Creator — obligations of hl7.fhir.uv.ips 2.0.1
     Scenario: ips-creator-014 Observation Results - Radiology (IPS) — the Creator populates 8 elements when known
       # Instances: Bundle.entry.resource.ofType(Observation).where(category.coding.where(code='imaging').exists())
       # The reference data does not exercise these; the Creator attests the capability.
-      When Creator is asked for $canPopulate with "The reference patient has no data for these Observation elements. Can your system populate each of them when the information is known: [category:radiology], [code], [subject], [subject.reference], [effective[x]], [effective[x]:effectiveDateTime], [performer], [value[x]:valueString], [component]? Answer yes, or list the ones it cannot."
-      And Creator submits evidence of "Observation [category:radiology], [code], [subject], [subject.reference], [effective[x]], [effective[x]:effectiveDateTime], [performer], [value[x]:valueString], [component] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
-      Then $canPopulate should be "yes"
+      When Creator submits evidence of "Observation [category:radiology], [code], [subject], [subject.reference], [effective[x]], [effective[x]:effectiveDateTime], [performer], [value[x]:valueString], [component] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
+      Then Creator confirms each of these is supported for "Observation, when the information is known":
+        | item                           | detail           |
+        | category:radiology             | can be populated |
+        | code                           | can be populated |
+        | subject                        | can be populated |
+        | subject.reference              | can be populated |
+        | effective[x]                   | can be populated |
+        | effective[x]:effectiveDateTime | can be populated |
+        | performer                      | can be populated |
+        | value[x]:valueString           | can be populated |
+        | component                      | can be populated |
 
     @profile:DiagnosticReport-uv-ips
     @covers:DiagnosticReport.code @covers:DiagnosticReport.subject @covers:DiagnosticReport.subject.reference @covers:DiagnosticReport.effective[x]
@@ -424,18 +463,28 @@ Feature: IPS Creator — obligations of hl7.fhir.uv.ips 2.0.1
     Scenario: ips-creator-015 DiagnosticReport (IPS) — the Creator populates 6 elements when known
       # Instances: Bundle.entry.resource.ofType(DiagnosticReport)
       # The reference data does not exercise these; the Creator attests the capability.
-      When Creator is asked for $canPopulate with "The reference patient has no data for these DiagnosticReport elements. Can your system populate each of them when the information is known: [code], [subject], [subject.reference], [effective[x]], [effective[x]:effectiveDateTime], [performer], [result:observation-results]? Answer yes, or list the ones it cannot."
-      And Creator submits evidence of "DiagnosticReport [code], [subject], [subject.reference], [effective[x]], [effective[x]:effectiveDateTime], [performer], [result:observation-results] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
-      Then $canPopulate should be "yes"
+      When Creator submits evidence of "DiagnosticReport [code], [subject], [subject.reference], [effective[x]], [effective[x]:effectiveDateTime], [performer], [result:observation-results] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
+      Then Creator confirms each of these is supported for "DiagnosticReport, when the information is known":
+        | item                           | detail           |
+        | code                           | can be populated |
+        | subject                        | can be populated |
+        | subject.reference              | can be populated |
+        | effective[x]                   | can be populated |
+        | effective[x]:effectiveDateTime | can be populated |
+        | performer                      | can be populated |
+        | result:observation-results     | can be populated |
 
     @profile:Specimen-uv-ips
     @covers:Specimen.type @covers:Specimen.subject @covers:Specimen.subject.reference
     Scenario: ips-creator-016 Specimen (IPS) — the Creator populates 3 elements when known
       # Instances: Bundle.entry.resource.ofType(Specimen)
       # The reference data does not exercise these; the Creator attests the capability.
-      When Creator is asked for $canPopulate with "The reference patient has no data for these Specimen elements. Can your system populate each of them when the information is known: [type], [subject], [subject.reference]? Answer yes, or list the ones it cannot."
-      And Creator submits evidence of "Specimen [type], [subject], [subject.reference] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
-      Then $canPopulate should be "yes"
+      When Creator submits evidence of "Specimen [type], [subject], [subject.reference] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
+      Then Creator confirms each of these is supported for "Specimen, when the information is known":
+        | item              | detail           |
+        | type              | can be populated |
+        | subject           | can be populated |
+        | subject.reference | can be populated |
 
     @profile:ImagingStudy-uv-ips
     @covers:ImagingStudy.identifier @covers:ImagingStudy.subject @covers:ImagingStudy.subject.reference @covers:ImagingStudy.started
@@ -444,9 +493,21 @@ Feature: IPS Creator — obligations of hl7.fhir.uv.ips 2.0.1
     Scenario: ips-creator-017 ImagingStudy (IPS) — the Creator populates 12 elements when known
       # Instances: Bundle.entry.resource.ofType(ImagingStudy)
       # The reference data does not exercise these; the Creator attests the capability.
-      When Creator is asked for $canPopulate with "The reference patient has no data for these ImagingStudy elements. Can your system populate each of them when the information is known: [identifier], [subject], [subject.reference], [started], [procedureCode], [reasonCode], [series], [series.uid], [series.modality], [series.instance], [series.instance.uid], [series.instance.sopClass]? Answer yes, or list the ones it cannot."
-      And Creator submits evidence of "ImagingStudy [identifier], [subject], [subject.reference], [started], [procedureCode], [reasonCode], [series], [series.uid], [series.modality], [series.instance], [series.instance.uid], [series.instance.sopClass] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
-      Then $canPopulate should be "yes"
+      When Creator submits evidence of "ImagingStudy [identifier], [subject], [subject.reference], [started], [procedureCode], [reasonCode], [series], [series.uid], [series.modality], [series.instance], [series.instance.uid], [series.instance.sopClass] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
+      Then Creator confirms each of these is supported for "ImagingStudy, when the information is known":
+        | item                     | detail           |
+        | identifier               | can be populated |
+        | subject                  | can be populated |
+        | subject.reference        | can be populated |
+        | started                  | can be populated |
+        | procedureCode            | can be populated |
+        | reasonCode               | can be populated |
+        | series                   | can be populated |
+        | series.uid               | can be populated |
+        | series.modality          | can be populated |
+        | series.instance          | can be populated |
+        | series.instance.uid      | can be populated |
+        | series.instance.sopClass | can be populated |
 
     @profile:Procedure-uv-ips
     @covers:Procedure.code @covers:Procedure.subject @covers:Procedure.subject.reference @covers:Procedure.performed[x]
@@ -469,9 +530,12 @@ Feature: IPS Creator — obligations of hl7.fhir.uv.ips 2.0.1
     Scenario: ips-creator-019 Device - Performer or Observer (IPS) — the Creator populates 3 elements when known
       # Instances: Bundle.entry.resource.ofType(Device)
       # The reference data does not exercise these; the Creator attests the capability.
-      When Creator is asked for $canPopulate with "The reference patient has no data for these Device elements. Can your system populate each of them when the information is known: [identifier], [manufacturer], [modelNumber]? Answer yes, or list the ones it cannot."
-      And Creator submits evidence of "Device [identifier], [manufacturer], [modelNumber] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
-      Then $canPopulate should be "yes"
+      When Creator submits evidence of "Device [identifier], [manufacturer], [modelNumber] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
+      Then Creator confirms each of these is supported for "Device, when the information is known":
+        | item         | detail           |
+        | identifier   | can be populated |
+        | manufacturer | can be populated |
+        | modelNumber  | can be populated |
 
     @profile:Device-uv-ips
     @covers:Device.type
@@ -492,9 +556,11 @@ Feature: IPS Creator — obligations of hl7.fhir.uv.ips 2.0.1
       # DeviceUseStatement.device (SHALL:populate-if-known)
       Then $ips at "Bundle.entry.resource.ofType(DeviceUseStatement).all(device.exists())" should be true
       # The reference data does not exercise these; the Creator attests the capability.
-      When Creator is asked for $canPopulate with "The reference patient has no data for these DeviceUseStatement elements. Can your system populate each of them when the information is known: [timing[x]], [timing[x]:timingDateTime]? Answer yes, or list the ones it cannot."
-      And Creator submits evidence of "DeviceUseStatement [timing[x]], [timing[x]:timingDateTime] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
-      Then $canPopulate should be "yes"
+      When Creator submits evidence of "DeviceUseStatement [timing[x]], [timing[x]:timingDateTime] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
+      Then Creator confirms each of these is supported for "DeviceUseStatement, when the information is known":
+        | item                     | detail           |
+        | timing[x]                | can be populated |
+        | timing[x]:timingDateTime | can be populated |
 
   Rule: The optional sections: alerts, pregnancy, social history
 
@@ -512,9 +578,10 @@ Feature: IPS Creator — obligations of hl7.fhir.uv.ips 2.0.1
       # Flag.subject.reference (SHALL:populate-if-known)
       Then $ips at "Bundle.entry.resource.ofType(Flag).subject.all(reference.exists())" should be true
       # The reference data does not exercise these; the Creator attests the capability.
-      When Creator is asked for $canPopulate with "The reference patient has no data for these Flag elements. Can your system populate each of them when the information is known: [extension:flag-priority]? Answer yes, or list the ones it cannot."
-      And Creator submits evidence of "Flag [extension:flag-priority] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
-      Then $canPopulate should be "yes"
+      When Creator submits evidence of "Flag [extension:flag-priority] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
+      Then Creator confirms each of these is supported for "Flag, when the information is known":
+        | item                    | detail           |
+        | extension:flag-priority | can be populated |
 
     @profile:Observation-pregnancy-edd-uv-ips
     @covers:Observation.code @covers:Observation.subject @covers:Observation.subject.reference @covers:Observation.effective[x]
@@ -522,9 +589,14 @@ Feature: IPS Creator — obligations of hl7.fhir.uv.ips 2.0.1
     Scenario: ips-creator-023 Observation Pregnancy - Expected Delivery Date (IPS) — the Creator populates 5 elements when known
       # Instances: Bundle.entry.resource.ofType(Observation).where(code.coding.where(code='11778-8' or code='11779-6' or code='11780-4').exists())
       # The reference data does not exercise these; the Creator attests the capability.
-      When Creator is asked for $canPopulate with "The reference patient has no data for these Observation elements. Can your system populate each of them when the information is known: [code], [subject], [subject.reference], [effective[x]], [value[x]:valueDateTime]? Answer yes, or list the ones it cannot."
-      And Creator submits evidence of "Observation [code], [subject], [subject.reference], [effective[x]], [value[x]:valueDateTime] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
-      Then $canPopulate should be "yes"
+      When Creator submits evidence of "Observation [code], [subject], [subject.reference], [effective[x]], [value[x]:valueDateTime] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
+      Then Creator confirms each of these is supported for "Observation, when the information is known":
+        | item                   | detail           |
+        | code                   | can be populated |
+        | subject                | can be populated |
+        | subject.reference      | can be populated |
+        | effective[x]           | can be populated |
+        | value[x]:valueDateTime | can be populated |
 
     @profile:Observation-pregnancy-outcome-uv-ips
     @covers:Observation.code @covers:Observation.subject @covers:Observation.subject.reference @covers:Observation.effective[x]
@@ -532,9 +604,14 @@ Feature: IPS Creator — obligations of hl7.fhir.uv.ips 2.0.1
     Scenario: ips-creator-024 Observation Pregnancy - Outcome (IPS) — the Creator populates 5 elements when known
       # Instances: Bundle.entry.resource.ofType(Observation).where(code.coding.where(code='11636-8' or code='11637-6' or code='11638-4' or code='11639-2' or code='11640-0' or code='11612-9' or code='11613-7' or code='11614-5' or code='33065-4').exists())
       # The reference data does not exercise these; the Creator attests the capability.
-      When Creator is asked for $canPopulate with "The reference patient has no data for these Observation elements. Can your system populate each of them when the information is known: [code], [subject], [subject.reference], [effective[x]], [value[x]:valueQuantity]? Answer yes, or list the ones it cannot."
-      And Creator submits evidence of "Observation [code], [subject], [subject.reference], [effective[x]], [value[x]:valueQuantity] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
-      Then $canPopulate should be "yes"
+      When Creator submits evidence of "Observation [code], [subject], [subject.reference], [effective[x]], [value[x]:valueQuantity] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
+      Then Creator confirms each of these is supported for "Observation, when the information is known":
+        | item                   | detail           |
+        | code                   | can be populated |
+        | subject                | can be populated |
+        | subject.reference      | can be populated |
+        | effective[x]           | can be populated |
+        | value[x]:valueQuantity | can be populated |
 
     @profile:Observation-pregnancy-status-uv-ips
     @covers:Observation.code @covers:Observation.subject @covers:Observation.subject.reference @covers:Observation.effective[x]
@@ -552,9 +629,11 @@ Feature: IPS Creator — obligations of hl7.fhir.uv.ips 2.0.1
       # Observation.value[x]:valueCodeableConcept (SHALL:populate-if-known)
       Then $ips at "Bundle.entry.resource.ofType(Observation).where(code.coding.where(code='82810-3').exists()).all(value.ofType(CodeableConcept).exists())" should be true
       # The reference data does not exercise these; the Creator attests the capability.
-      When Creator is asked for $canPopulate with "The reference patient has no data for these Observation elements. Can your system populate each of them when the information is known: [hasMember], [hasMember.reference]? Answer yes, or list the ones it cannot."
-      And Creator submits evidence of "Observation [hasMember], [hasMember.reference] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
-      Then $canPopulate should be "yes"
+      When Creator submits evidence of "Observation [hasMember], [hasMember.reference] being entered or exported (screenshot or a document carrying them)" as $canPopulateEvidence
+      Then Creator confirms each of these is supported for "Observation, when the information is known":
+        | item                | detail           |
+        | hasMember           | can be populated |
+        | hasMember.reference | can be populated |
 
   Rule: Data types used throughout
 

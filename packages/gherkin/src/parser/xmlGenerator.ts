@@ -624,7 +624,10 @@ function emitIR(ir: IRAction[]): string {
         const nameAttr = req.name ? ` name="${escapeAttr(req.name)}"` : '';
         const typeAttr = req.inputType ? ` inputType="${escapeAttr(req.inputType)}"` : '';
         const reqAttr = req.required != null ? ` required="${req.required}"` : '';
-        out.push(`  <request desc="${escapeAttr(req.desc)}"${nameAttr}${typeAttr}${reqAttr}>${escapeXml(req.variable)}</request>`);
+        // options / optionLabels turn a request into a dropdown (gitb_tdl.xsd UserRequest).
+        const optAttr = req.options ? ` options="${escapeAttr(req.options)}"` : '';
+        const optLabelsAttr = req.optionLabels ? ` optionLabels="${escapeAttr(req.optionLabels)}"` : '';
+        out.push(`  <request desc="${escapeAttr(req.desc)}"${nameAttr}${typeAttr}${reqAttr}${optAttr}${optLabelsAttr}>${escapeXml(req.variable)}</request>`);
       }
       out.push(`</interact>`);
     } else if (a.type === 'receive') {

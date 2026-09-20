@@ -15,12 +15,10 @@
   </actors>
 
   <variables>
-    <var name="handledNoInfo" type="string"/>
     <var name="noInfoEvidence" type="binary"/>
     <var name="noInfoEvidence_note" type="string">
       <value>&quot;&quot;</value>
     </var>
-    <var name="handledMinimal" type="string"/>
     <var name="minimalEvidence" type="binary"/>
     <var name="minimalEvidence_note" type="string">
       <value>&quot;&quot;</value>
@@ -44,6 +42,10 @@
     <var name="dgFpParams" type="map"/>
     <var name="ipsNoInfo" type="string"/>
     <var name="ipsMinimal" type="string"/>
+    <var name="confirmed{1}" type="string"/>
+    <var name="confirmed{2}" type="string"/>
+    <var name="confirmed{3}" type="string"/>
+    <var name="confirmed" type="string"/>
   </variables>
 
   <steps stopOnError="true">
@@ -140,17 +142,28 @@
     <interact id="inform" desc="Instruction for Consumer" with="Consumer">
       <instruct desc="Import this IPS, whose problems, allergies and medications sections carry an emptyReason instead of entries." name="message">$ipsNoInfo</instruct>
     </interact>
-    <interact id="ask" desc="Was the document with emptyReason on [section:sectionProblems.emptyReason], [section:sectionAllergies.emptyReason] and [section:sectionMedications.emptyReason] accepted without error, and are the three sections shown as having no information? (yes/no)" inputTitle="Was the document with emptyReason on [section:sectionProblems.emptyReason], [section:sectionAllergies.emptyReason] and [section:sectionMedications.emptyReason] accepted without error, and are the three sections shown as having no information? (yes/no)">
-      <request desc="Was the document with emptyReason on [section:sectionProblems.emptyReason], [section:sectionAllergies.emptyReason] and [section:sectionMedications.emptyReason] accepted without error, and are the three sections shown as having no information? (yes/no)" name="handledNoInfo" inputType="TEXT" required="true">$handledNoInfo</request>
-    </interact>
     <interact id="evidence" desc="Evidence: the three required sections shown with no information (screenshot)" inputTitle="Evidence: the three required sections shown with no information (screenshot)" with="Consumer">
       <instruct desc="Demonstrate on the system under test: the three required sections shown with no information (screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
       <request desc="Evidence file (screenshot, export or log) for: the three required sections shown with no information (screenshot)" name="noInfoEvidence" inputType="UPLOAD" required="true">$noInfoEvidence</request>
       <request desc="Note (optional): where it is shown, or why it cannot be" name="noInfoEvidence_note" inputType="TEXT" required="false">$noInfoEvidence_note</request>
     </interact>
     <log>concat(&quot;Evidence submitted for: the three required sections shown with no information (screenshot) — note: &quot;, $noInfoEvidence_note)</log>
-    <verify handler="StringValidator" desc="$handledNoInfo is yes">
-      <input name="actualstring">$handledNoInfo</input>
+    <interact id="confirm" desc="For a document whose required sections carry an emptyReason: is each of these accepted?" inputTitle="For a document whose required sections carry an emptyReason: is each of these accepted?" with="Consumer">
+      <instruct desc="For a document whose required sections carry an emptyReason, choose for each item below whether it is accepted. Leave nothing unanswered." name="instruction"/>
+      <request desc="section:sectionProblems.emptyReason — shown as no information" name="confirmed_1" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{1}</request>
+      <request desc="section:sectionAllergies.emptyReason — shown as no information" name="confirmed_2" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{2}</request>
+      <request desc="section:sectionMedications.emptyReason — shown as no information" name="confirmed_3" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{3}</request>
+    </interact>
+    <verify handler="StringValidator" desc="section:sectionProblems.emptyReason is accepted for a document whose required sections carry an emptyReason">
+      <input name="actualstring">$confirmed{1}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="section:sectionAllergies.emptyReason is accepted for a document whose required sections carry an emptyReason">
+      <input name="actualstring">$confirmed{2}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="section:sectionMedications.emptyReason is accepted for a document whose required sections carry an emptyReason">
+      <input name="actualstring">$confirmed{3}</input>
       <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
     <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
@@ -163,17 +176,18 @@
     <interact id="inform" desc="Instruction for Consumer" with="Consumer">
       <instruct desc="Import this minimal IPS (required sections only, no optional elements)." name="message">$ipsMinimal</instruct>
     </interact>
-    <interact id="ask" desc="Was the minimal document accepted without error? (yes/no)" inputTitle="Was the minimal document accepted without error? (yes/no)">
-      <request desc="Was the minimal document accepted without error? (yes/no)" name="handledMinimal" inputType="TEXT" required="true">$handledMinimal</request>
-    </interact>
     <interact id="evidence" desc="Evidence: the minimal document imported without error (import log or screenshot)" inputTitle="Evidence: the minimal document imported without error (import log or screenshot)" with="Consumer">
       <instruct desc="Demonstrate on the system under test: the minimal document imported without error (import log or screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
       <request desc="Evidence file (screenshot, export or log) for: the minimal document imported without error (import log or screenshot)" name="minimalEvidence" inputType="UPLOAD" required="true">$minimalEvidence</request>
       <request desc="Note (optional): where it is shown, or why it cannot be" name="minimalEvidence_note" inputType="TEXT" required="false">$minimalEvidence_note</request>
     </interact>
     <log>concat(&quot;Evidence submitted for: the minimal document imported without error (import log or screenshot) — note: &quot;, $minimalEvidence_note)</log>
-    <verify handler="StringValidator" desc="$handledMinimal is yes">
-      <input name="actualstring">$handledMinimal</input>
+    <interact id="confirm" desc="For the minimal document: is each of these accepted?" inputTitle="For the minimal document: is each of these accepted?" with="Consumer">
+      <instruct desc="For the minimal document, choose for each item below whether it is accepted. Leave nothing unanswered." name="instruction"/>
+      <request desc="the document — imported without error" name="confirmed_1" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{1}</request>
+    </interact>
+    <verify handler="StringValidator" desc="the document is accepted for the minimal document">
+      <input name="actualstring">$confirmed{1}</input>
       <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
   </steps>

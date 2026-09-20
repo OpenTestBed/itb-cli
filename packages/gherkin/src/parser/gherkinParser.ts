@@ -92,7 +92,7 @@ export type IRAction =
    *  only be set at compile time — which is fine, because the step names the
    *  actor. `instructions` emit <instruct> (display-only) alongside <request>
    *  (input); the schema allows either, in any mix. */
-  | { type: 'interact', id?: string, desc?: string, title?: string, inputTitle?: string, with?: string, instructions?: { desc: string, name?: string, value?: string }[], requests: { desc: string, name?: string, inputType?: string, required?: boolean, variable: string }[] }
+  | { type: 'interact', id?: string, desc?: string, title?: string, inputTitle?: string, with?: string, instructions?: { desc: string, name?: string, value?: string }[], requests: { desc: string, name?: string, inputType?: string, required?: boolean, variable: string, options?: string, optionLabels?: string }[] }
   | { type: 'receive', id?: string, desc?: string, handler: string, from?: string, to?: string, txnId?: string, inputs?: Record<string,string> };
 
 
@@ -875,8 +875,8 @@ function materialize(actions: CatalogAction[], ctx: MaterializeCtx): IRAction[] 
     }
 
     if (clone.foreach) {
-      for (const row of ctx.tableRows) {
-        const rctx: MaterializeCtx = { ...ctx, _row: row };
+      for (const [i, row] of ctx.tableRows.entries()) {
+        const rctx: MaterializeCtx = { ...ctx, _row: { ...row, __index: String(i + 1) } };
         clone.foreach.do.forEach((child: any) => {
           const before = ctx._row;
           ctx._row = rctx._row;
@@ -989,13 +989,27 @@ function materialize(actions: CatalogAction[], ctx: MaterializeCtx): IRAction[] 
       return;
     }
     if (clone.interact) {
-      const requests = (clone.interact.requests || []).map((r: any) => ({
-        desc: subst(r.desc ?? ''),
-        name: subst(r.name ?? ''),
-        inputType: r.inputType,
-        required: r.required,
-        variable: subst(r.variable ?? '')
-      }));
+      const mkRequest = (r: any, row?: Record<string, string>) => {
+        const before = ctx._row;
+        if (row) ctx._row = row;
+        const out = {
+          desc: subst(r.desc ?? ''),
+          name: subst(r.name ?? ''),
+          inputType: r.inputType,
+          required: r.required,
+          variable: subst(r.variable ?? ''),
+          options: r.options !== undefined ? subst(r.options) : undefined,
+          optionLabels: r.optionLabels !== undefined ? subst(r.optionLabels) : undefined,
+        };
+        ctx._row = before;
+        return out;
+      };
+      // `requestsFromTable`: one request per table row, from the template
+      // request, with $row.<col> and $row.__index available — how a single
+      // dialog asks the operator to confirm each item of a list.
+      const requests = clone.interact.requestsFromTable
+        ? (ctx.tableRows ?? []).map((row, i) => mkRequest(clone.interact.requestsFromTable, { ...row, __index: String(i + 1) }))
+        : (clone.interact.requests || []).map((r: any) => mkRequest(r));
       const instructions = (clone.interact.instructions || []).map((i: any) => ({
         desc: subst(i.desc ?? ''),
         name: subst(i.name ?? ''),

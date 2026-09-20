@@ -15,7 +15,6 @@
   </actors>
 
   <variables>
-    <var name="handled" type="string"/>
     <var name="handledBundleEvidence" type="binary"/>
     <var name="handledBundleEvidence_note" type="string">
       <value>&quot;&quot;</value>
@@ -24,7 +23,6 @@
     <var name="displayedBundleEvidence_note" type="string">
       <value>&quot;&quot;</value>
     </var>
-    <var name="notDisplayed" type="string"/>
     <var name="loadIgBody" type="string"/>
     <var name="conformBody" type="string"/>
     <var name="validationErrors" type="string"/>
@@ -42,6 +40,10 @@
     <var name="conformHeaders" type="map"/>
     <var name="conformTplParams" type="map"/>
     <var name="dgFpParams" type="map"/>
+    <var name="confirmed{1}" type="string"/>
+    <var name="confirmed{2}" type="string"/>
+    <var name="confirmed{3}" type="string"/>
+    <var name="confirmed" type="string"/>
   </variables>
 
   <steps stopOnError="true">
@@ -128,33 +130,46 @@
     <interact id="inform" desc="Instruction for Consumer" with="Consumer">
       <instruct desc="Import this International Patient Summary for Patricia JORDANA into the system under test, then answer the questions that follow." name="message">$ips</instruct>
     </interact>
-    <interact id="ask" desc="For the document: were these elements accepted and processed without error — [identifier], [timestamp], [entry:composition]? Answer yes, or name the ones that caused an error." inputTitle="For the document: were these elements accepted and processed without error — [identifier], [timestamp], [entry:composition]? Answer yes, or name the ones that caused an error.">
-      <request desc="For the document: were these elements accepted and processed without error — [identifier], [timestamp], [entry:composition]? Answer yes, or name the ones that caused an error." name="handled" inputType="TEXT" required="true">$handled</request>
-    </interact>
     <interact id="evidence" desc="Evidence: the import of the document completing without error (import log or screenshot)" inputTitle="Evidence: the import of the document completing without error (import log or screenshot)" with="Consumer">
       <instruct desc="Demonstrate on the system under test: the import of the document completing without error (import log or screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
       <request desc="Evidence file (screenshot, export or log) for: the import of the document completing without error (import log or screenshot)" name="handledBundleEvidence" inputType="UPLOAD" required="true">$handledBundleEvidence</request>
       <request desc="Note (optional): where it is shown, or why it cannot be" name="handledBundleEvidence_note" inputType="TEXT" required="false">$handledBundleEvidence_note</request>
     </interact>
     <log>concat(&quot;Evidence submitted for: the import of the document completing without error (import log or screenshot) — note: &quot;, $handledBundleEvidence_note)</log>
-    <verify handler="StringValidator" desc="$handled is yes">
-      <input name="actualstring">$handled</input>
+    <interact id="confirm" desc="For the document: is each of these accepted?" inputTitle="For the document: is each of these accepted?" with="Consumer">
+      <instruct desc="For the document, choose for each item below whether it is accepted. Leave nothing unanswered." name="instruction"/>
+      <request desc="identifier — " name="confirmed_1" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{1}</request>
+      <request desc="timestamp — " name="confirmed_2" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{2}</request>
+      <request desc="entry:composition — " name="confirmed_3" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{3}</request>
+    </interact>
+    <verify handler="StringValidator" desc="identifier is accepted for the document">
+      <input name="actualstring">$confirmed{1}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="timestamp is accepted for the document">
+      <input name="actualstring">$confirmed{2}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="entry:composition is accepted for the document">
+      <input name="actualstring">$confirmed{3}</input>
       <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
     <interact id="inform" desc="Instruction for Consumer" with="Consumer">
-      <instruct desc="Open Patricia JORDANA's summary in the system under test and display the document, showing: [entry:composition]" name="message"/>
+      <instruct desc="Open Patricia JORDANA's summary in the system under test and display the document." name="message"/>
     </interact>
-    <interact id="evidence" desc="Evidence: the document displayed with [entry:composition] (screenshot)" inputTitle="Evidence: the document displayed with [entry:composition] (screenshot)" with="Consumer">
-      <instruct desc="Demonstrate on the system under test: the document displayed with [entry:composition] (screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
-      <request desc="Evidence file (screenshot, export or log) for: the document displayed with [entry:composition] (screenshot)" name="displayedBundleEvidence" inputType="UPLOAD" required="true">$displayedBundleEvidence</request>
+    <interact id="evidence" desc="Evidence: the document displayed (screenshot)" inputTitle="Evidence: the document displayed (screenshot)" with="Consumer">
+      <instruct desc="Demonstrate on the system under test: the document displayed (screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
+      <request desc="Evidence file (screenshot, export or log) for: the document displayed (screenshot)" name="displayedBundleEvidence" inputType="UPLOAD" required="true">$displayedBundleEvidence</request>
       <request desc="Note (optional): where it is shown, or why it cannot be" name="displayedBundleEvidence_note" inputType="TEXT" required="false">$displayedBundleEvidence_note</request>
     </interact>
-    <log>concat(&quot;Evidence submitted for: the document displayed with [entry:composition] (screenshot) — note: &quot;, $displayedBundleEvidence_note)</log>
-    <interact id="ask" desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [entry:composition]" inputTitle="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [entry:composition]">
-      <request desc="Of these, which are NOT displayed to the user (copy the bracketed names, or answer none): [entry:composition]" name="notDisplayed" inputType="TEXT" required="true">$notDisplayed</request>
+    <log>concat(&quot;Evidence submitted for: the document displayed (screenshot) — note: &quot;, $displayedBundleEvidence_note)</log>
+    <interact id="confirm" desc="For the document: is each of these displayed?" inputTitle="For the document: is each of these displayed?" with="Consumer">
+      <instruct desc="For the document, choose for each item below whether it is displayed. Leave nothing unanswered." name="instruction"/>
+      <request desc="entry:composition — " name="confirmed_1" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="displayed,not displayed">$confirmed{1}</request>
     </interact>
-    <verify handler="ExpressionValidator" desc="$notDisplayed does not contain [entry:composition]">
-      <input name="expression">not(contains($notDisplayed, &quot;[entry:composition]&quot;))</input>
+    <verify handler="StringValidator" desc="entry:composition is displayed for the document">
+      <input name="actualstring">$confirmed{1}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
   </steps>
 

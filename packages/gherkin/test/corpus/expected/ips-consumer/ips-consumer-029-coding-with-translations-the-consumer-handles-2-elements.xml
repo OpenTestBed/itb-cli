@@ -15,7 +15,6 @@
   </actors>
 
   <variables>
-    <var name="handled" type="string"/>
     <var name="handledCodingEvidence" type="binary"/>
     <var name="handledCodingEvidence_note" type="string">
       <value>&quot;&quot;</value>
@@ -37,6 +36,9 @@
     <var name="conformHeaders" type="map"/>
     <var name="conformTplParams" type="map"/>
     <var name="dgFpParams" type="map"/>
+    <var name="confirmed{1}" type="string"/>
+    <var name="confirmed{2}" type="string"/>
+    <var name="confirmed" type="string"/>
   </variables>
 
   <steps stopOnError="true">
@@ -123,17 +125,23 @@
     <interact id="inform" desc="Instruction for Consumer" with="Consumer">
       <instruct desc="Import this International Patient Summary for Patricia JORDANA into the system under test, then answer the questions that follow." name="message">$ips</instruct>
     </interact>
-    <interact id="ask" desc="For every Coding in the document: were these elements accepted and processed without error — [system], [code]? Answer yes, or name the ones that caused an error." inputTitle="For every Coding in the document: were these elements accepted and processed without error — [system], [code]? Answer yes, or name the ones that caused an error.">
-      <request desc="For every Coding in the document: were these elements accepted and processed without error — [system], [code]? Answer yes, or name the ones that caused an error." name="handled" inputType="TEXT" required="true">$handled</request>
-    </interact>
     <interact id="evidence" desc="Evidence: the import of every Coding in the document completing without error (import log or screenshot)" inputTitle="Evidence: the import of every Coding in the document completing without error (import log or screenshot)" with="Consumer">
       <instruct desc="Demonstrate on the system under test: the import of every Coding in the document completing without error (import log or screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
       <request desc="Evidence file (screenshot, export or log) for: the import of every Coding in the document completing without error (import log or screenshot)" name="handledCodingEvidence" inputType="UPLOAD" required="true">$handledCodingEvidence</request>
       <request desc="Note (optional): where it is shown, or why it cannot be" name="handledCodingEvidence_note" inputType="TEXT" required="false">$handledCodingEvidence_note</request>
     </interact>
     <log>concat(&quot;Evidence submitted for: the import of every Coding in the document completing without error (import log or screenshot) — note: &quot;, $handledCodingEvidence_note)</log>
-    <verify handler="StringValidator" desc="$handled is yes">
-      <input name="actualstring">$handled</input>
+    <interact id="confirm" desc="For every Coding in the document: is each of these accepted?" inputTitle="For every Coding in the document: is each of these accepted?" with="Consumer">
+      <instruct desc="For every Coding in the document, choose for each item below whether it is accepted. Leave nothing unanswered." name="instruction"/>
+      <request desc="system — " name="confirmed_1" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{1}</request>
+      <request desc="code — " name="confirmed_2" inputType="SELECT_SINGLE" required="true" options="yes,no" optionLabels="accepted,not accepted">$confirmed{2}</request>
+    </interact>
+    <verify handler="StringValidator" desc="system is accepted for every Coding in the document">
+      <input name="actualstring">$confirmed{1}</input>
+      <input name="expectedstring">&quot;yes&quot;</input>
+    </verify>
+    <verify handler="StringValidator" desc="code is accepted for every Coding in the document">
+      <input name="actualstring">$confirmed{2}</input>
       <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
   </steps>
