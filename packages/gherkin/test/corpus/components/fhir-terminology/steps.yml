@@ -14,8 +14,8 @@
 #   Client validates a batch on TxServer with:
 #   Client reads the capability statement of TxServer as $caps
 #   Client reads the terminology capabilities of TxServer as $caps
-#   $response should match the expected response "simple/simple-expand-all-response-valueSet.json"
-#   $response should match one of the expected responses:   | response | (one match is enough)
+#   $response should match the pattern in "simple/simple-expand-all-response-valueSet.json"
+#   $response should match one of the patterns in:          | pattern | (one match is enough)
 #
 # The server is named in every operation (`on TxServer`) because it is usually
 # the system under test, and "is the system under test" carries no kind.
@@ -269,16 +269,17 @@ verbs:
             headers: '$jsonHeaders'
       - assign: { to: '$3', value: '$lastRequest{response}{body}' }
 
-  # The expected file is fetched from the test material and used as the
-  # matchetype, verbatim. The validator is the one declared as a fhir-validator
-  # unless named ("… on FHIRValidator").
-  - text: '{ref} should match the expected response {string}( on {actor:fhir-validator})?'
-    doc: Compare a response with an upstream expected file (a matchetype) through the FHIR validator.
+  # The upstream expected-response file IS a matchetype: it is fetched from the
+  # test material and used as the pattern, verbatim. Same comparison as the core
+  # `should match pattern:` step, with the pattern in a file rather than inline.
+  # The validator is the one declared as a fhir-validator unless named.
+  - text: '{ref} should match the pattern in {string}( on {actor:fhir-validator})?'
+    doc: Compare a value with a matchetype held in a file of the test material, through the FHIR validator.
     actions:
       - *fetchHeaders
       - send:
           id: 'txExpectedRequest'
-          desc: 'Fetch expected $2'
+          desc: 'Fetch pattern $2'
           handler: 'HttpMessagingV2'
           inputs:
             uri: 'concat($txTestsBase, "$2")'
@@ -309,16 +310,16 @@ verbs:
       - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'matchResult', inputs: { content: '$matchRequest{response}{body}', pointer: '"/report/result"' } }
       - verify:
           handler: 'StringValidator'
-          desc: '$$1 matches the expected response $2'
+          desc: '$$1 matches the pattern in $2'
           inputs: { actualstring: '$matchResult', expectedstring: '"SUCCESS"' }
 
-  # Several acceptable expected files (upstream "response2", "response:flat",
-  # "response:tx.fhir.org"): compare against each, judge once. The rows are
-  # unrolled at compile time, so the verdict is accumulated row by row.
-  - text: '{ref} should match one of the expected responses:( on {actor:fhir-validator})?'
-    doc: Compare a response with each of several upstream expected files (table | response |); one match is enough.
+  # Several acceptable answers (upstream "response2", "response:flat",
+  # "response:tx.fhir.org"): compare against each pattern, judge once. The rows
+  # are unrolled at compile time, so the verdict is accumulated row by row.
+  - text: '{ref} should match one of the patterns in:( on {actor:fhir-validator})?'
+    doc: Compare a value with each of several matchetype files (table | pattern |); one match is enough.
     table:
-      required: [response]
+      required: [pattern]
     actions:
       - *fetchHeaders
       - assign: { to: 'matchHeaders{Content-Type}', value: '"application/json"' }
@@ -330,10 +331,10 @@ verbs:
           do:
             - send:
                 id: 'txExpectedRequest'
-                desc: 'Fetch expected $row.response'
+                desc: 'Fetch pattern $row.pattern'
                 handler: 'HttpMessagingV2'
                 inputs:
-                  uri: 'concat($txTestsBase, "$row.response")'
+                  uri: 'concat($txTestsBase, "$row.pattern")'
                   method: '"GET"'
                   headers: '$txFetchHeaders'
             - assign: { to: 'matchTplParams{matchetype}', value: '$txExpectedRequest{response}{body}' }
@@ -347,7 +348,7 @@ verbs:
                   parameters: '$matchTplParams'
             - send:
                 id: 'matchRequest'
-                desc: 'Matchetype: $row.response'
+                desc: 'Matchetype: $row.pattern'
                 handler: 'HttpMessagingV2'
                 to: '$target'
                 inputs:
@@ -359,5 +360,5 @@ verbs:
             - assign: { to: 'anyMatch', value: 'if ($matchResult = "SUCCESS") then "true" else $anyMatch' }
       - verify:
           handler: 'ExpressionValidator'
-          desc: '$$1 matches one of the expected responses'
+          desc: '$$1 matches one of the patterns'
           inputs: { expression: '$anyMatch = "true"' }
