@@ -15,6 +15,7 @@
 #   Client reads the capability statement of TxServer as $caps
 #   Client reads the terminology capabilities of TxServer as $caps
 #   $response should match the expected response "simple/simple-expand-all-response-valueSet.json"
+#   $response should match one of the expected responses:   | response | (one match is enough)
 #
 # The server is named in every operation (`on TxServer`) because it is usually
 # the system under test, and "is the system under test" carries no kind.
@@ -310,3 +311,53 @@ verbs:
           handler: 'StringValidator'
           desc: '$$1 matches the expected response $2'
           inputs: { actualstring: '$matchResult', expectedstring: '"SUCCESS"' }
+
+  # Several acceptable expected files (upstream "response2", "response:flat",
+  # "response:tx.fhir.org"): compare against each, judge once. The rows are
+  # unrolled at compile time, so the verdict is accumulated row by row.
+  - text: '{ref} should match one of the expected responses:( on {actor:fhir-validator})?'
+    doc: Compare a response with each of several upstream expected files (table | response |); one match is enough.
+    table:
+      required: [response]
+    actions:
+      - *fetchHeaders
+      - assign: { to: 'matchHeaders{Content-Type}', value: '"application/json"' }
+      - assign: { to: 'matchHeaders{Accept}', value: '"application/json"' }
+      - assign: { to: 'anyMatch', value: '"false"' }
+      - assign: { to: 'matchTplParams{resource}', value: '$1' }
+      - foreach:
+          from: '$tableRows'
+          do:
+            - send:
+                id: 'txExpectedRequest'
+                desc: 'Fetch expected $row.response'
+                handler: 'HttpMessagingV2'
+                inputs:
+                  uri: 'concat($txTestsBase, "$row.response")'
+                  method: '"GET"'
+                  headers: '$txFetchHeaders'
+            - assign: { to: 'matchTplParams{matchetype}', value: '$txExpectedRequest{response}{body}' }
+            - process:
+                handler: 'TemplateProcessor'
+                operation: 'process'
+                output: 'matchBody'
+                inputs:
+                  syntax: '"freemarker"'
+                  template: "'{ \"input\": [ { \"name\": \"contentToValidate\", \"value\": \"${resource?json_string}\", \"embeddingMethod\": \"STRING\" }, { \"name\": \"matchetype\", \"value\": \"${matchetype?json_string}\", \"embeddingMethod\": \"STRING\" } ] }'"
+                  parameters: '$matchTplParams'
+            - send:
+                id: 'matchRequest'
+                desc: 'Matchetype: $row.response'
+                handler: 'HttpMessagingV2'
+                to: '$target'
+                inputs:
+                  uri: 'concat($targetBase, "/itb/matchetype/validate")'
+                  method: '"POST"'
+                  headers: '$matchHeaders'
+                  body: '$matchBody'
+            - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'matchResult', inputs: { content: '$matchRequest{response}{body}', pointer: '"/report/result"' } }
+            - assign: { to: 'anyMatch', value: 'if ($matchResult = "SUCCESS") then "true" else $anyMatch' }
+      - verify:
+          handler: 'ExpressionValidator'
+          desc: '$$1 matches one of the expected responses'
+          inputs: { expression: '$anyMatch = "true"' }

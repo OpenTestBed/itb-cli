@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testcase id="expand-regex-bad"
+          xmlns="http://www.gitb.com/tdl/v1/"
+          xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>expand-regex-bad</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>Terminology server — regex-bad</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="TxServer" role="SUT"/>
+    <gitb:actor id="FHIRValidator" role="SIMULATED"/>
+    <gitb:actor id="Client" role="SIMULATED"/>
+  </actors>
+
+  <variables>
+    <var name="txBody" type="string"/>
+    <var name="matchBody" type="string"/>
+    <var name="matchResult" type="string"/>
+    <var name="txMaterialRequest" type="map"/>
+    <var name="lastRequest" type="map"/>
+    <var name="txExpectedRequest" type="map"/>
+    <var name="matchRequest" type="map"/>
+    <var name="TxServerBase" type="string"/>
+    <var name="FHIRValidatorBase" type="string"/>
+    <var name="txTestsBase" type="string"/>
+    <var name="txResourceParams" type="string"/>
+    <var name="txFetchHeaders" type="map"/>
+    <var name="txParams" type="map"/>
+    <var name="jsonHeaders" type="map"/>
+    <var name="sigStatus" type="string"/>
+    <var name="matchTplParams" type="map"/>
+    <var name="matchHeaders" type="map"/>
+    <var name="expand" type="string"/>
+  </variables>
+
+  <steps stopOnError="true">
+    <assign to="TxServerBase">&quot;https://178.104.103.200.sslip.io/tx/r4&quot;</assign>
+    <assign to="FHIRValidatorBase">&quot;http://fhir-validator:8080&quot;</assign>
+    <assign to="txTestsBase">&quot;https://raw.githubusercontent.com/HL7/fhir-tx-ecosystem-ig/5bf53a4adb4a522a34a037fc4f7e797eb2956830/tests/&quot;</assign>
+    <assign to="txResourceParams">&quot;&quot;</assign>
+    <assign to="txFetchHeaders{Accept}">&quot;application/json&quot;</assign>
+    <send id="txMaterialRequest" desc="Fetch regex-bad/codesystem-bad-regex.json" handler="HttpMessagingV2" from="TxServer">
+      <input name="uri">concat($txTestsBase, &quot;regex-bad/codesystem-bad-regex.json&quot;)</input>
+      <input name="method">&quot;GET&quot;</input>
+      <input name="headers">$txFetchHeaders</input>
+    </send>
+    <assign to="txResourceParams">concat($txResourceParams, &quot;,{\&quot;name\&quot;:\&quot;tx-resource\&quot;,\&quot;resource\&quot;:&quot;, $txMaterialRequest{response}{body}, &quot;}&quot;)</assign>
+    <send id="txMaterialRequest" desc="Fetch regex-bad/valueset-regex-bad.json" handler="HttpMessagingV2" from="TxServer">
+      <input name="uri">concat($txTestsBase, &quot;regex-bad/valueset-regex-bad.json&quot;)</input>
+      <input name="method">&quot;GET&quot;</input>
+      <input name="headers">$txFetchHeaders</input>
+    </send>
+    <assign to="txResourceParams">concat($txResourceParams, &quot;,{\&quot;name\&quot;:\&quot;tx-resource\&quot;,\&quot;resource\&quot;:&quot;, $txMaterialRequest{response}{body}, &quot;}&quot;)</assign>
+    <send id="txMaterialRequest" desc="Fetch regex-bad/codesystem-bad-regex-2.json" handler="HttpMessagingV2" from="TxServer">
+      <input name="uri">concat($txTestsBase, &quot;regex-bad/codesystem-bad-regex-2.json&quot;)</input>
+      <input name="method">&quot;GET&quot;</input>
+      <input name="headers">$txFetchHeaders</input>
+    </send>
+    <assign to="txResourceParams">concat($txResourceParams, &quot;,{\&quot;name\&quot;:\&quot;tx-resource\&quot;,\&quot;resource\&quot;:&quot;, $txMaterialRequest{response}{body}, &quot;}&quot;)</assign>
+    <send id="txMaterialRequest" desc="Fetch regex-bad/valueset-regex-bad-2.json" handler="HttpMessagingV2" from="TxServer">
+      <input name="uri">concat($txTestsBase, &quot;regex-bad/valueset-regex-bad-2.json&quot;)</input>
+      <input name="method">&quot;GET&quot;</input>
+      <input name="headers">$txFetchHeaders</input>
+    </send>
+    <assign to="txResourceParams">concat($txResourceParams, &quot;,{\&quot;name\&quot;:\&quot;tx-resource\&quot;,\&quot;resource\&quot;:&quot;, $txMaterialRequest{response}{body}, &quot;}&quot;)</assign>
+    <assign to="txParams{request}">'{
+      &quot;resourceType&quot;: &quot;Parameters&quot;,
+      &quot;parameter&quot;: [
+        { &quot;name&quot;: &quot;url&quot;, &quot;valueUri&quot;: &quot;http://hl7.org/fhir/test/ValueSet/simple-filter-regex-bad&quot; },
+        { &quot;name&quot;: &quot;excludeNested&quot;, &quot;valueBoolean&quot;: true },
+        { &quot;name&quot;: &quot;uuid&quot;, &quot;valueUuid&quot;: &quot;urn:uuid:8acdbfdc-e9d2-11ed-a05b-0242ac120003&quot; }
+      ]
+    }'</assign>
+    <assign to="txParams{resources}">$txResourceParams</assign>
+    <process handler="TemplateProcessor" operation="process" output="txBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'${request?keep_before_last(&quot;]&quot;)}${resources}]}'</input>
+      <input name="parameters">$txParams</input>
+    </process>
+    <assign to="jsonHeaders{Content-Type}">&quot;application/fhir+json&quot;</assign>
+    <assign to="jsonHeaders{Accept}">&quot;application/fhir+json&quot;</assign>
+    <send id="lastRequest" desc="POST /ValueSet/$expand" handler="HttpMessagingV2" from="Client" to="TxServer">
+      <input name="uri">concat($TxServerBase, &quot;/ValueSet/$expand&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$jsonHeaders</input>
+      <input name="body">$txBody</input>
+    </send>
+    <assign to="sigStatus">if (empty($lastRequest{response}{status})) then &quot;0&quot; else $lastRequest{response}{status}</assign>
+    <verify handler="NumberValidator" desc="Response status is 200">
+      <input name="actualnumber">$sigStatus</input>
+      <input name="expectednumber">&quot;200&quot;</input>
+    </verify>
+    <assign to="txFetchHeaders{Accept}">&quot;application/json&quot;</assign>
+    <send id="txExpectedRequest" desc="Fetch expected regex-bad/expand-regex-bad-response.json" handler="HttpMessagingV2" from="TxServer">
+      <input name="uri">concat($txTestsBase, &quot;regex-bad/expand-regex-bad-response.json&quot;)</input>
+      <input name="method">&quot;GET&quot;</input>
+      <input name="headers">$txFetchHeaders</input>
+    </send>
+    <assign to="matchTplParams{resource}">$lastRequest{response}{body}</assign>
+    <assign to="matchTplParams{matchetype}">$txExpectedRequest{response}{body}</assign>
+    <process handler="TemplateProcessor" operation="process" output="matchBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;matchetype&quot;, &quot;value&quot;: &quot;${matchetype?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="parameters">$matchTplParams</input>
+    </process>
+    <assign to="matchHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="matchHeaders{Accept}">&quot;application/json&quot;</assign>
+    <send id="matchRequest" desc="Matchetype: regex-bad/expand-regex-bad-response.json" handler="HttpMessagingV2" from="TxServer" to="FHIRValidator">
+      <input name="uri">concat($FHIRValidatorBase, &quot;/itb/matchetype/validate&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$matchHeaders</input>
+      <input name="body">$matchBody</input>
+    </send>
+    <process handler="JsonPointerProcessor" operation="process" output="matchResult">
+      <input name="content">$matchRequest{response}{body}</input>
+      <input name="pointer">&quot;/report/result&quot;</input>
+    </process>
+    <verify handler="StringValidator" desc="$response matches the expected response regex-bad/expand-regex-bad-response.json">
+      <input name="actualstring">$matchResult</input>
+      <input name="expectedstring">&quot;SUCCESS&quot;</input>
+    </verify>
+  </steps>
+
+  <output>
+    <success>
+      <default>"Test case completed successfully."</default>
+    </success>
+    <failure>
+      <default>"Test case failed. Check step reports and logs."</default>
+    </failure>
+  </output>
+</testcase>
