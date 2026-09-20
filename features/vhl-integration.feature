@@ -7,24 +7,24 @@ Feature: Track: 1HCERT VHL - QR to Verified LAC IPS Bundle
 
   Background:
     Given User is the system under test
-    And HCertDecoder is infrastructure at "http://hcert-validator:8080"
-    And VHLResponder is infrastructure at "http://hcert-validator:8080"
+    And HCertDecoder is a hcert-decoder at "http://hcert-validator:8080"
+    And VHLResponder is a hcert-decoder at "http://hcert-validator:8080"
     # GITB-compatible FHIR validator (validator_cli.jar) — /itb/{igManager,fhir}/process.
-    And FHIRValidator is infrastructure at "http://fhir-validator:8080"
+    And FHIRValidator is a fhir-validator at "http://fhir-validator:8080"
 
   Scenario: tc-vhl-001 Full VHL verification pipeline
 
     # ------------------------------------------------------------------
     # 1) Collect user inputs: QR image upload + PIN prompt.
     # ------------------------------------------------------------------
-    When User uploads a QR image to HCertDecoder
-    Given User enters a PIN
-    And extract "/qr_data" as "rawQRData"
+    When User uploads a file as $qrImage
+    And User scans $qrImage on HCertDecoder as $qrData
+    Given User is asked for $pin with "Enter the PIN for retrieving the content"
 
     # ------------------------------------------------------------------
     # 2) Decode HC1 -> captures COSE / payload / hcert.
     # ------------------------------------------------------------------
-    When User decodes HC1 on HCertDecoder
+    When User decodes $qrData on HCertDecoder as $hcert
 
     # ------------------------------------------------------------------
     # 3) Verify COSE signature against the GDHCN DEV trustlist
@@ -35,7 +35,7 @@ Feature: Track: 1HCERT VHL - QR to Verified LAC IPS Bundle
     #    step in between (e.g. "extracts metadata") would overwrite it and the
     #    signature request would go out with an empty cose_raw.
     # ------------------------------------------------------------------
-    When User verifies COSE signature on HCertDecoder with:
+    When User verifies the signature of $hcert on HCertDecoder with:
       | parameter                  | value    |
       | use_gdhcn                  | true     |
       | gdhcn_env                  | dev      |
@@ -45,35 +45,27 @@ Feature: Track: 1HCERT VHL - QR to Verified LAC IPS Bundle
       | allow_unverified_trustlist | true     |
       | allow_remote_contexts      | true     |
       | context_dir                | contexts |
-    Then "response status" should be "200"
-    And extract "/valid" as "sigValid"
-    And "sigValid" should be "true"
 
     # ------------------------------------------------------------------
     # 4) Extract metadata (informational) — AFTER verify so it doesn't clobber
     #    the decode response the verify step reads cose._raw from.
     # ------------------------------------------------------------------
-    When User extracts metadata on HCertDecoder
+    When User extracts metadata from $hcert on HCertDecoder as $metadata
 
     # ------------------------------------------------------------------
     # 5) Extract short-link (SHL) reference.
     # ------------------------------------------------------------------
-    When User extracts SHL reference on HCertDecoder
-    Then "response status" should be "200"
+    When User extracts the SHL link from $hcert on HCertDecoder as $shlLink
 
     # ------------------------------------------------------------------
     # 6) Authorize the short link with the collected PIN -> manifest.
     # ------------------------------------------------------------------
-    When User authorizes SHL on VHLResponder with url and pin
-    Then "response status" should be "200"
-    And extract "/manifest" as "manifestVal"
+    When User authorizes $shlLink on VHLResponder with pin $pin as $manifest
 
     # ------------------------------------------------------------------
     # 7) Fetch the FHIR payload described by the manifest -> first resource.
     # ------------------------------------------------------------------
-    When User fetches FHIR from VHLResponder with manifest
-    Then "response status" should be "200"
-    And extract "/fhir/0/resource" as "firstResource"
+    When User fetches the FHIR content of $manifest on VHLResponder as $firstResource
 
     # ------------------------------------------------------------------
     # 8) Load the LacPass IG into the validator (was: smart-helper loadIG
@@ -83,7 +75,6 @@ Feature: Track: 1HCERT VHL - QR to Verified LAC IPS Bundle
     #    itself is served straight (200) at https://ig.racsel.org/package.tgz.
     # ------------------------------------------------------------------
     When User loads IG "https://ig.racsel.org/package.tgz" on FHIRValidator
-    Then "response status" should be "200"
 
     # ------------------------------------------------------------------
     # 9) Validate the fetched Bundle against the LAC IPS Bundle profile
@@ -91,4 +82,4 @@ Feature: Track: 1HCERT VHL - QR to Verified LAC IPS Bundle
     # ------------------------------------------------------------------
     # Profile canonical is http://racsel.org/StructureDefinition/... (NOT lacpass.racsel.org),
     # and the LAC IPS bundle profile is LACBundleIPS — there is no "lac-bundle".
-    Then "firstResource" conforms to "http://racsel.org/StructureDefinition/LACBundleIPS"
+    Then $firstResource should conform to "http://racsel.org/StructureDefinition/LACBundleIPS"

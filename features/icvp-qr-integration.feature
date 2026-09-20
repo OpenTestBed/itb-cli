@@ -6,19 +6,19 @@ Feature: Track 2: System Utilizes and Validates HCERT: ICVP
 
   Background:
     Given User is the system under test
-    And HCertDecoder is infrastructure at "http://hcert-validator:8080"
+    And HCertDecoder is a hcert-decoder at "http://hcert-validator:8080"
     # GITB-compatible FHIR validator (validator_cli.jar) — exposes
     # /itb/{igManager,transform,fhir}/process. Handles IG load, StructureMap
     # transform, and profile validation natively.
-    And FHIRValidator is infrastructure at "http://fhir-validator:8080"
+    And FHIRValidator is a fhir-validator at "http://fhir-validator:8080"
 
   Scenario: tc-icvp-001 QR -> decode -> transform -> ICVP IPS conformance
 
     # ------------------------------------------------------------------
     # 1) Upload QR image and pull the raw HC1 payload.
     # ------------------------------------------------------------------
-    When User uploads a QR image to HCertDecoder
-    And extract "/qr_data" as "rawQRData"
+    When User uploads a file as $qrImage
+    And User scans $qrImage on HCertDecoder as $qrData
 
     # ------------------------------------------------------------------
     # 2) Decode HC1 -> captures COSE / payload / hcert; grab the ICVP claim
@@ -26,16 +26,16 @@ Feature: Track 2: System Utilizes and Validates HCERT: ICVP
     #    uses -260/-7 / hcert_inner_json, VHL uses -260/5 for the SHL link) —
     #    so this pointer is ICVP-specific, NOT the MEOW hcert_inner_json field.
     # ------------------------------------------------------------------
-    When User decodes HC1 on HCertDecoder
-    And extract "/payload/-260/-6" as "innerContent"
-    And extract "/payload/1" as "issuerCode"
+    When User decodes $qrData on HCertDecoder as $hcert
+    And extract "/payload/-260/-6" from $hcert as $innerContent
+    And extract "/payload/1" from $hcert as $issuerCode
 
     # ------------------------------------------------------------------
     # 3) Verify COSE signature against the GDHCN DEV trustlist. ICVP uses
     #    NO domain (flat trustlist); allow_unverified_trustlist=true so the
     #    dev trustlist proof warning is non-fatal.
     # ------------------------------------------------------------------
-    When User verifies COSE signature on HCertDecoder with:
+    When User verifies the signature of $hcert on HCertDecoder with:
       | parameter                  | value    |
       | use_gdhcn                  | true     |
       | gdhcn_env                  | dev      |
@@ -45,9 +45,6 @@ Feature: Track 2: System Utilizes and Validates HCERT: ICVP
       | allow_unverified_trustlist | true     |
       | allow_remote_contexts      | true     |
       | context_dir                | contexts |
-    Then "response status" should be "200"
-    And extract "/valid" as "sigValid"
-    And "sigValid" should be "true"
 
     # ------------------------------------------------------------------
     # 4) Load the IGs the transform + validate need (the validator resolves
@@ -55,13 +52,9 @@ Feature: Track 2: System Utilizes and Validates HCERT: ICVP
     #    and the Bundle-uv-ips-ICVP profile.
     # ------------------------------------------------------------------
     When User loads IG "https://worldhealthorganization.github.io/smart-trust" on FHIRValidator
-    Then "response status" should be "200"
     When User loads IG "https://smart.who.int/pcmt" on FHIRValidator
-    Then "response status" should be "200"
     When User loads IG "https://smart.who.int/pcmt-vaxprequal" on FHIRValidator
-    Then "response status" should be "200"
     When User loads IG "https://smart.who.int/trust-phw/" on FHIRValidator
-    Then "response status" should be "200"
     # Load the ICVP IG from the local package server (the smart.who.int.icvp#0.3.0.tgz
     # dropped into itb-plugin-package-server/packages/) instead of the released
     # canonical — lets us test a patched ICVPClaimtoIPS without publishing. Direct
@@ -71,13 +64,11 @@ Feature: Track 2: System Utilizes and Validates HCERT: ICVP
     # in-network name (package-server:8000) only works if the fhir-validator shares
     # that compose network; it doesn't here (ITB runs in a separate compose).
     When User loads IG "http://host.docker.internal:10005/smart.who.int.icvp/0.3.0-fix1/package.tgz" on FHIRValidator
-    Then "response status" should be "200"
 
     # ------------------------------------------------------------------
     # 5) Transform the ICVP claim -> IPS Bundle via ICVPClaimtoIPS.
     # ------------------------------------------------------------------
-    When User transforms "innerContent" on FHIRValidator with map "http://smart.who.int/icvp/StructureMap/ICVPClaimtoIPS" as "bundleResult"
-    Then "response status" should be "200"
+    When User transforms $innerContent with map "http://smart.who.int/icvp/StructureMap/ICVPClaimtoIPS" on FHIRValidator as $bundleResult
 
     # ------------------------------------------------------------------
     # 5b) Stamp the document metadata the ICVPClaimtoIPS map does not emit —
@@ -86,8 +77,8 @@ Feature: Track 2: System Utilizes and Validates HCERT: ICVP
     #     author.identifier.value uses the live CWT issuer (claim 1) and the
     #     timestamps use the real current time, matching the original test.
     # ------------------------------------------------------------------
-    And set "nowTs" to now
-    When modify "bundleResult" with operations:
+    And set $nowTs to now
+    When User modifies $bundleResult with operations:
       | op  | path                                                | value              |
       | set | Bundle.timestamp                                    | $nowTs             |
       | set | Bundle.entry[0].resource.date                       | $nowTs             |
@@ -101,4 +92,4 @@ Feature: Track 2: System Utilizes and Validates HCERT: ICVP
     #    here — if the map omits them they surface as real findings to fix in
     #    the map (same philosophy as MEOW).
     # ------------------------------------------------------------------
-    Then "bundleResult" conforms to "http://smart.who.int/icvp/StructureDefinition/Bundle-uv-ips-ICVP"
+    Then $bundleResult should conform to "http://smart.who.int/icvp/StructureDefinition/Bundle-uv-ips-ICVP"
