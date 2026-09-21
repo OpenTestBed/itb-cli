@@ -54,6 +54,21 @@ async function doCompile(featurePath, outDir, zipName) {
   return { zip, suiteId: suite?.id, caseIds: cases.map(c => c.id) };
 }
 
+/** Feature paths from the command line: files, or every .feature in a folder. */
+function expandFeatureArgs(args) {
+  const out = [];
+  for (const arg of args) {
+    const p = path.resolve(arg);
+    if (!fs.existsSync(p)) { console.error(`not found: ${arg}`); process.exit(2); }
+    if (fs.statSync(p).isDirectory()) {
+      out.push(...fs.readdirSync(p).filter(f => f.endsWith('.feature')).sort().map(f => path.join(p, f)));
+    } else {
+      out.push(p);
+    }
+  }
+  return out;
+}
+
 function suiteEntry(cfg) {
   const s = cfg.suites?.[0];
   if (!s) { console.error('No suites[] entry in config'); process.exit(2); }
@@ -75,12 +90,33 @@ switch (cmd) {
     await resolveFromMaster(cfg);       // no-ops when keys already known (state/env)
     await ensureDomainAndSpec(cfg);     // no-ops when target.specification is set
     saveState(cfg);
-    const s = suiteEntry(cfg);
-    const { zip } = await doCompile(s.feature, s.out, s.zip);
-    const res = await deploySuite(cfg, zip);
-    const ids = res.identifiers ?? res;
-    console.log('deployed:', JSON.stringify(ids, null, 2).slice(0, 1500));
-    console.log(`\nView it: ${cfg.instance.baseUrl} -> Domain -> Specification (suite replaced in place)`);
+    // A feature file is a test suite: ITB stores one suite per file, so a set
+    // of features (the HL7 terminology tests are 38 of them) is a set of
+    // deploys. Name them on the command line, or a folder holding them, and
+    // they go up one after another; with neither, the configured suite is used.
+    const features = expandFeatureArgs(positional);
+    if (features.length === 0) {
+      const s = suiteEntry(cfg);
+      features.push(s.feature);
+    }
+    let ok = 0;
+    for (const feature of features) {
+      const name = path.basename(feature).replace(/\.feature$/, '');
+      try {
+        const { zip } = await doCompile(feature, path.join(ROOT, 'out', name), `${name}.zip`);
+        const res = await deploySuite(cfg, zip);
+        const ids = res.identifiers ?? res;
+        ok++;
+        console.log(features.length > 1
+          ? `[${ok}/${features.length}] deployed ${name}`
+          : `deployed: ${JSON.stringify(ids, null, 2).slice(0, 1500)}`);
+      } catch (e) {
+        console.error(`FAILED ${name}: ${e.message ?? e}`);
+        if (features.length === 1) process.exit(1);
+      }
+    }
+    if (features.length > 1) console.log(`\n${ok}/${features.length} suite(s) deployed`);
+    console.log(`\nView them: ${cfg.instance.baseUrl} -> Domain -> Specification (each suite replaced in place)`);
     break;
   }
   case 'run': {
@@ -239,7 +275,7 @@ switch (cmd) {
 usage:
   node bin/itb-suite.mjs compile [feature.feature] [--out dir] [--zip name]
   node bin/itb-suite.mjs init    # fresh instance: creates domain+spec, resolves keys
-  node bin/itb-suite.mjs deploy  [--config itb-suite.config.yaml]
+  node bin/itb-suite.mjs deploy  [feature.feature|folder ...] [--config itb-suite.config.yaml]
   node bin/itb-suite.mjs run     [--case <testCaseId>] [--wait <seconds>]
   node bin/itb-suite.mjs watch   [--run]  # feature save -> auto deploy (or deploy+run)
   node bin/itb-suite.mjs undeploy [--suite <id>]  # remove the suite from the spec
