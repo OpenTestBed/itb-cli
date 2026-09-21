@@ -37,7 +37,7 @@
   </variables>
 
   <steps stopOnError="true">
-    <assign to="TxServerBase">&quot;https://178.104.103.200.sslip.io/tx/r4&quot;</assign>
+    <assign to="TxServerBase">&quot;https://178.104.103.200.sslip.io/tx/r5&quot;</assign>
     <assign to="FHIRValidatorBase">&quot;http://fhir-validator:8080&quot;</assign>
     <assign to="txTestsBase">&quot;https://raw.githubusercontent.com/HL7/fhir-tx-ecosystem-ig/main/tests/&quot;</assign>
     <assign to="txResourceParams">&quot;&quot;</assign>
