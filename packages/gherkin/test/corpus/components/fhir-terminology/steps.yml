@@ -458,6 +458,14 @@ verbs:
   # test material and used as the pattern, verbatim. Same comparison as the core
   # `should match pattern:` step, with the pattern in a file rather than inline.
   # The validator is the one declared as a fhir-validator unless named.
+  # Two ways to compare, and they are the service's two modes.
+  #
+  #   complete  the response must match the file, wildcards aside
+  #   partial   the file is the minimum the response must contain
+  #
+  # Both ask the service to normalise the response first (normalize=tx): the
+  # expectation files are stored in the order the terminology test runner's
+  # sorters produce, so without it a correct response fails on array order.
   - text: '{ref} should match the pattern in {string}( on {actor:fhir-validator})?'
     doc: Compare a value with a matchetype held in a file of the test material, through the FHIR validator.
     actions:
@@ -470,6 +478,7 @@ verbs:
             uri: 'concat($txTestsBase, "$2")'
             method: '"GET"'
             headers: '$txFetchHeaders'
+      - assign: { to: 'matchTplParams{mode}', value: '"complete"' }
       - assign: { to: 'matchTplParams{resource}', value: '$1', type: 'string' }
       - assign: { to: 'matchTplParams{matchetype}', value: '$txExpectedRequest{response}{body}', type: 'string' }
       - process:
@@ -478,7 +487,7 @@ verbs:
           output: 'matchBody'
           inputs:
             syntax: '"freemarker"'
-            template: "'{ \"input\": [ { \"name\": \"contentToValidate\", \"value\": \"${resource?json_string}\", \"embeddingMethod\": \"STRING\" }, { \"name\": \"matchetype\", \"value\": \"${matchetype?json_string}\", \"embeddingMethod\": \"STRING\" } ] }'"
+            template: "'{ \"input\": [ { \"name\": \"contentToValidate\", \"value\": \"${resource?json_string}\", \"embeddingMethod\": \"STRING\" }, { \"name\": \"matchetype\", \"value\": \"${matchetype?json_string}\", \"embeddingMethod\": \"STRING\" }, { \"name\": \"normalize\", \"value\": \"tx\", \"embeddingMethod\": \"STRING\" }, { \"name\": \"mode\", \"value\": \"${mode}\", \"embeddingMethod\": \"STRING\" } ] }'"
             parameters: '$matchTplParams'
       - assign: { to: 'matchHeaders{Content-Type}', value: '"application/json"' }
       - assign: { to: 'matchHeaders{Accept}', value: '"application/json"' }
@@ -501,6 +510,50 @@ verbs:
   # Several acceptable answers (upstream "response2", "response:flat",
   # "response:tx.fhir.org"): compare against each pattern, judge once. The rows
   # are unrolled at compile time, so the verdict is accumulated row by row.
+  - text: '{ref} should contain the pattern in {string}( on {actor:fhir-validator})?'
+    doc: The file lists what the value must contain; anything it does not mention is allowed. For the capability statements, whose expected files state the minimum.
+    actions:
+      - *fetchHeaders
+      - send:
+          id: 'txExpectedRequest'
+          desc: 'Fetch pattern $2'
+          handler: 'HttpMessagingV2'
+          inputs:
+            uri: 'concat($txTestsBase, "$2")'
+            method: '"GET"'
+            headers: '$txFetchHeaders'
+      - assign: { to: 'matchTplParams{mode}', value: '"partial"' }
+      - assign: { to: 'matchTplParams{resource}', value: '$1', type: 'string' }
+      - assign: { to: 'matchTplParams{matchetype}', value: '$txExpectedRequest{response}{body}', type: 'string' }
+      - process:
+          handler: 'TemplateProcessor'
+          operation: 'process'
+          output: 'matchBody'
+          inputs:
+            syntax: '"freemarker"'
+            template: "'{ \"input\": [ { \"name\": \"contentToValidate\", \"value\": \"${resource?json_string}\", \"embeddingMethod\": \"STRING\" }, { \"name\": \"matchetype\", \"value\": \"${matchetype?json_string}\", \"embeddingMethod\": \"STRING\" }, { \"name\": \"normalize\", \"value\": \"tx\", \"embeddingMethod\": \"STRING\" }, { \"name\": \"mode\", \"value\": \"${mode}\", \"embeddingMethod\": \"STRING\" } ] }'"
+            parameters: '$matchTplParams'
+      - assign: { to: 'matchHeaders{Content-Type}', value: '"application/json"' }
+      - assign: { to: 'matchHeaders{Accept}', value: '"application/json"' }
+      - send:
+          id: 'matchRequest'
+          desc: 'Matchetype: $2'
+          handler: 'HttpMessagingV2'
+          to: '$target'
+          inputs:
+            uri: 'concat($targetBase, "/itb/matchetype/validate")'
+            method: '"POST"'
+            headers: '$matchHeaders'
+            body: '$matchBody'
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'matchResult', inputs: { content: '$matchRequest{response}{body}', pointer: '"/report/result"' } }
+      - verify:
+          handler: 'StringValidator'
+          desc: '$$1 contains the pattern in $2'
+          inputs: { actualstring: '$matchResult', expectedstring: '"SUCCESS"' }
+
+  # Several acceptable answers (upstream "response2", "response:flat",
+  # "response:tx.fhir.org"): compare against each pattern, judge once. The rows
+  # are unrolled at compile time, so the verdict is accumulated row by row.
   - text: '{ref} should match one of the patterns in:( on {actor:fhir-validator})?'
     doc: Compare a value with each of several matchetype files (table | pattern |); one match is enough.
     table:
@@ -510,6 +563,7 @@ verbs:
       - assign: { to: 'matchHeaders{Content-Type}', value: '"application/json"' }
       - assign: { to: 'matchHeaders{Accept}', value: '"application/json"' }
       - assign: { to: 'anyMatch', value: '"false"' }
+      - assign: { to: 'matchTplParams{mode}', value: '"complete"' }
       - assign: { to: 'matchTplParams{resource}', value: '$1', type: 'string' }
       - foreach:
           from: '$tableRows'
@@ -529,7 +583,7 @@ verbs:
                 output: 'matchBody'
                 inputs:
                   syntax: '"freemarker"'
-                  template: "'{ \"input\": [ { \"name\": \"contentToValidate\", \"value\": \"${resource?json_string}\", \"embeddingMethod\": \"STRING\" }, { \"name\": \"matchetype\", \"value\": \"${matchetype?json_string}\", \"embeddingMethod\": \"STRING\" } ] }'"
+                  template: "'{ \"input\": [ { \"name\": \"contentToValidate\", \"value\": \"${resource?json_string}\", \"embeddingMethod\": \"STRING\" }, { \"name\": \"matchetype\", \"value\": \"${matchetype?json_string}\", \"embeddingMethod\": \"STRING\" }, { \"name\": \"normalize\", \"value\": \"tx\", \"embeddingMethod\": \"STRING\" }, { \"name\": \"mode\", \"value\": \"${mode}\", \"embeddingMethod\": \"STRING\" } ] }'"
                   parameters: '$matchTplParams'
             - send:
                 id: 'matchRequest'

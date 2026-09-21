@@ -102,6 +102,7 @@
     <assign to="matchHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="matchHeaders{Accept}">&quot;application/json&quot;</assign>
     <assign to="anyMatch">&quot;false&quot;</assign>
+    <assign to="matchTplParams{mode}">&quot;complete&quot;</assign>
     <assign to="matchTplParams{resource}" type="string">$lastRequest{response}{body}</assign>
     <send id="txExpectedRequest" desc="Fetch pattern regex-bad/expand-regex-bad-2-response.json" handler="HttpMessagingV2" from="TxServer">
       <input name="uri">concat($txTestsBase, &quot;regex-bad/expand-regex-bad-2-response.json&quot;)</input>
@@ -111,7 +112,7 @@
     <assign to="matchTplParams{matchetype}" type="string">$txExpectedRequest{response}{body}</assign>
     <process handler="TemplateProcessor" operation="process" output="matchBody">
       <input name="syntax">&quot;freemarker&quot;</input>
-      <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;matchetype&quot;, &quot;value&quot;: &quot;${matchetype?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;matchetype&quot;, &quot;value&quot;: &quot;${matchetype?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;normalize&quot;, &quot;value&quot;: &quot;tx&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;mode&quot;, &quot;value&quot;: &quot;${mode}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$matchTplParams</input>
     </process>
     <send id="matchRequest" desc="Matchetype: regex-bad/expand-regex-bad-2-response.json" handler="HttpMessagingV2" from="TxServer" to="FHIRValidator">
@@ -133,7 +134,7 @@
     <assign to="matchTplParams{matchetype}" type="string">$txExpectedRequest{response}{body}</assign>
     <process handler="TemplateProcessor" operation="process" output="matchBody">
       <input name="syntax">&quot;freemarker&quot;</input>
-      <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;matchetype&quot;, &quot;value&quot;: &quot;${matchetype?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
+      <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;matchetype&quot;, &quot;value&quot;: &quot;${matchetype?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;normalize&quot;, &quot;value&quot;: &quot;tx&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;mode&quot;, &quot;value&quot;: &quot;${mode}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
       <input name="parameters">$matchTplParams</input>
     </process>
     <send id="matchRequest" desc="Matchetype: regex-bad/expand-regex-bad-2-error.json" handler="HttpMessagingV2" from="TxServer" to="FHIRValidator">

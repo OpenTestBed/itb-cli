@@ -23,7 +23,7 @@ Feature: Terminology server — metadata
     Scenario: metadata
       When Client reads the capability statement of TxServer as $capabilities
       Then $response.status should be 200
-      And $capabilities should match the pattern in "capstmt.json"
+      And $capabilities should contain the pattern in "capstmt.json"
 
   Rule: Terminology capabilities
 
@@ -32,4 +32,4 @@ Feature: Terminology server — metadata
     Scenario: term-caps
       When Client reads the terminology capabilities of TxServer as $capabilities
       Then $response.status should be 200
-      And $capabilities should match the pattern in "capterms.json"
+      And $capabilities should contain the pattern in "capterms.json"
