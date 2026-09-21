@@ -101,8 +101,8 @@ x-compose-file: &composeFile
         uri: 'concat($txTestsBase, "$4")'
         method: '"GET"'
         headers: '$txFetchHeaders'
-  - assign: { to: 'txParams{request}', value: '$txRequestFetch{response}{body}' }
-  - assign: { to: 'txParams{profile}', value: '$txProfileFetch{response}{body}' }
+  - assign: { to: 'txParams{request}', value: '$txRequestFetch{response}{body}', type: 'string' }
+  - assign: { to: 'txParams{profile}', value: '$txProfileFetch{response}{body}', type: 'string' }
   - assign: { to: 'txParams{resources}', value: '$txResourceParams' }
   - process:
       handler: 'TemplateProcessor'
@@ -137,9 +137,11 @@ verbs:
                   uri: 'concat($txTestsBase, "$row.resource")'
                   method: '"GET"'
                   headers: '$txFetchHeaders'
+            # As a string first: concat() on a byte[] body is not a string operation.
+            - assign: { to: 'txMaterialBody', value: '$txMaterialRequest{response}{body}', type: 'string' }
             - assign:
                 to: 'txResourceParams'
-                value: "concat($txResourceParams, ',{\"name\":\"tx-resource\",\"resource\":', $txMaterialRequest{response}{body}, '}')"
+                value: "concat($txResourceParams, ',{\"name\":\"tx-resource\",\"resource\":', $txMaterialBody, '}')"
 
   - text: '{actor} expands on {actor:terminology-server} with:'
     doc: ValueSet/$expand with the doc string as the request Parameters.
@@ -434,7 +436,7 @@ verbs:
             uri: 'concat($targetBase, "/metadata")'
             method: '"GET"'
             headers: '$jsonHeaders'
-      - assign: { to: '$3', value: '$lastRequest{response}{body}' }
+      - assign: { to: '$3', value: '$lastRequest{response}{body}', type: 'string' }
 
   - text: '{actor} reads the terminology capabilities of {actor:terminology-server} as {var}'
     doc: GET /metadata?mode=terminology.
@@ -450,7 +452,7 @@ verbs:
             uri: 'concat($targetBase, "/metadata?mode=terminology")'
             method: '"GET"'
             headers: '$jsonHeaders'
-      - assign: { to: '$3', value: '$lastRequest{response}{body}' }
+      - assign: { to: '$3', value: '$lastRequest{response}{body}', type: 'string' }
 
   # The upstream expected-response file IS a matchetype: it is fetched from the
   # test material and used as the pattern, verbatim. Same comparison as the core
@@ -468,8 +470,8 @@ verbs:
             uri: 'concat($txTestsBase, "$2")'
             method: '"GET"'
             headers: '$txFetchHeaders'
-      - assign: { to: 'matchTplParams{resource}', value: '$1' }
-      - assign: { to: 'matchTplParams{matchetype}', value: '$txExpectedRequest{response}{body}' }
+      - assign: { to: 'matchTplParams{resource}', value: '$1', type: 'string' }
+      - assign: { to: 'matchTplParams{matchetype}', value: '$txExpectedRequest{response}{body}', type: 'string' }
       - process:
           handler: 'TemplateProcessor'
           operation: 'process'
@@ -508,7 +510,7 @@ verbs:
       - assign: { to: 'matchHeaders{Content-Type}', value: '"application/json"' }
       - assign: { to: 'matchHeaders{Accept}', value: '"application/json"' }
       - assign: { to: 'anyMatch', value: '"false"' }
-      - assign: { to: 'matchTplParams{resource}', value: '$1' }
+      - assign: { to: 'matchTplParams{resource}', value: '$1', type: 'string' }
       - foreach:
           from: '$tableRows'
           do:
@@ -520,7 +522,7 @@ verbs:
                   uri: 'concat($txTestsBase, "$row.pattern")'
                   method: '"GET"'
                   headers: '$txFetchHeaders'
-            - assign: { to: 'matchTplParams{matchetype}', value: '$txExpectedRequest{response}{body}' }
+            - assign: { to: 'matchTplParams{matchetype}', value: '$txExpectedRequest{response}{body}', type: 'string' }
             - process:
                 handler: 'TemplateProcessor'
                 operation: 'process'

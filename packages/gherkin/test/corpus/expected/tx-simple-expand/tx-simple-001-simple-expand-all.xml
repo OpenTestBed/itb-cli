@@ -96,7 +96,7 @@
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
-    <assign to="matchTplParams{resource}">$lastRequest{response}{body}</assign>
+    <assign to="matchTplParams{resource}" type="string">$lastRequest{response}{body}</assign>
     <assign to="matchTplParams{matchetype}">'{
       &quot;$optional-properties$&quot;: [&quot;id&quot;, &quot;date&quot;, &quot;publisher&quot;, &quot;compose&quot;],
       &quot;resourceType&quot;: &quot;ValueSet&quot;,

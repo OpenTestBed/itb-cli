@@ -79,7 +79,7 @@ export type IRAction =
   | { type: 'etxn', txnId: string }
   | { type: 'verify', handler: string, desc?: string, inputs: Record<string,string> }
   | { type: 'process', handler: string, operation: string, output?: string, from?: string, to?: string, inputs: Record<string,string>, hidden?: boolean }
-  | { type: 'assign', to: string, value: string, append?: boolean }
+  | { type: 'assign', to: string, value: string, append?: boolean, varType?: string }
   | { type: 'log', value: string }
   | { type: 'listAppend', list: string, item: Record<string,string> }
   | { type: 'foreach', from: string, do: IRAction[] }
@@ -1043,7 +1043,7 @@ function materialize(actions: CatalogAction[], ctx: MaterializeCtx): IRAction[] 
     }
     if (clone.assign) {
       clone.assign.value = subst(clone.assign.value);
-      out.push({ type: 'assign', to: subst(clone.assign.to), value: typeof clone.assign.value === 'string' ? clone.assign.value : JSON.stringify(clone.assign.value), append: clone.assign.append });
+      out.push({ type: 'assign', to: subst(clone.assign.to), value: typeof clone.assign.value === 'string' ? clone.assign.value : JSON.stringify(clone.assign.value), append: clone.assign.append, varType: clone.assign.type });
       return;
     }
     if (clone.listAppend) {

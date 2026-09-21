@@ -111,7 +111,7 @@
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
-    <assign to="assertTplParams{resource}">$patient</assign>
+    <assign to="assertTplParams{resource}" type="string">$patient</assign>
     <assign to="assertTplParams{expression}">&quot;Patient.name.family.exists()&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="assertBody">
       <input name="syntax">&quot;freemarker&quot;</input>

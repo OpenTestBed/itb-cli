@@ -44,7 +44,7 @@
       <input name="method">&quot;GET&quot;</input>
       <input name="headers">$jsonHeaders</input>
     </send>
-    <assign to="capabilities">$lastRequest{response}{body}</assign>
+    <assign to="capabilities" type="string">$lastRequest{response}{body}</assign>
     <assign to="sigStatus">if (empty($lastRequest{response}{status})) then &quot;0&quot; else $lastRequest{response}{status}</assign>
     <verify handler="NumberValidator" desc="Response status is 200">
       <input name="actualnumber">$sigStatus</input>
@@ -56,8 +56,8 @@
       <input name="method">&quot;GET&quot;</input>
       <input name="headers">$txFetchHeaders</input>
     </send>
-    <assign to="matchTplParams{resource}">$capabilities</assign>
-    <assign to="matchTplParams{matchetype}">$txExpectedRequest{response}{body}</assign>
+    <assign to="matchTplParams{resource}" type="string">$capabilities</assign>
+    <assign to="matchTplParams{matchetype}" type="string">$txExpectedRequest{response}{body}</assign>
     <process handler="TemplateProcessor" operation="process" output="matchBody">
       <input name="syntax">&quot;freemarker&quot;</input>
       <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;matchetype&quot;, &quot;value&quot;: &quot;${matchetype?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>

@@ -140,7 +140,7 @@
     </process>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
-    <assign to="validateTplParams{resource}">$darkOrder</assign>
+    <assign to="validateTplParams{resource}" type="string">$darkOrder</assign>
     <assign to="validateTplParams{resourceType}">&quot;MedicationRequest&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="validateBody">
       <input name="syntax">&quot;freemarker&quot;</input>

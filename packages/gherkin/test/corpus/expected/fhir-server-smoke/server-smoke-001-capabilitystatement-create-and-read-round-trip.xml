@@ -57,7 +57,7 @@
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
-    <assign to="matchTplParams{resource}">$metadata</assign>
+    <assign to="matchTplParams{resource}" type="string">$metadata</assign>
     <assign to="matchTplParams{matchetype}">'{&quot;resourceType&quot;: &quot;CapabilityStatement&quot;}'</assign>
     <process handler="TemplateProcessor" operation="process" output="matchBody">
       <input name="syntax">&quot;freemarker&quot;</input>
@@ -116,7 +116,7 @@
     </process>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
-    <assign to="validateTplParams{resource}">$patient</assign>
+    <assign to="validateTplParams{resource}" type="string">$patient</assign>
     <assign to="validateTplParams{resourceType}">&quot;Patient&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="validateBody">
       <input name="syntax">&quot;freemarker&quot;</input>
@@ -164,7 +164,7 @@
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
-    <assign to="matchTplParams{resource}">$fetched</assign>
+    <assign to="matchTplParams{resource}" type="string">$fetched</assign>
     <assign to="matchTplParams{matchetype}">'{&quot;resourceType&quot;: &quot;Patient&quot;, &quot;id&quot;: &quot;smoke-pat-001&quot;}'</assign>
     <process handler="TemplateProcessor" operation="process" output="matchBody">
       <input name="syntax">&quot;freemarker&quot;</input>
@@ -187,7 +187,7 @@
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
-    <assign to="assertTplParams{resource}">$fetched</assign>
+    <assign to="assertTplParams{resource}" type="string">$fetched</assign>
     <assign to="assertTplParams{expression}">&quot;Patient.id = 'smoke-pat-001'&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="assertBody">
       <input name="syntax">&quot;freemarker&quot;</input>

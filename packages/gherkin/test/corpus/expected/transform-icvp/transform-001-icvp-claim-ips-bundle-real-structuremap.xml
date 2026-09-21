@@ -71,7 +71,7 @@
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
-    <assign to="transformTplParams{content}">$icvpClaim</assign>
+    <assign to="transformTplParams{content}" type="string">$icvpClaim</assign>
     <assign to="transformTplParams{map}">&quot;http://smart.who.int/icvp/StructureMap/ICVPClaimtoIPS&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="transformBody">
       <input name="syntax">&quot;freemarker&quot;</input>
@@ -94,7 +94,7 @@
     </process>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
-    <assign to="assertTplParams{resource}">$ipsBundle</assign>
+    <assign to="assertTplParams{resource}" type="string">$ipsBundle</assign>
     <assign to="assertTplParams{expression}">&quot;Bundle.type = 'document'&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="assertBody">
       <input name="syntax">&quot;freemarker&quot;</input>
@@ -117,7 +117,7 @@
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
-    <assign to="assertTplParams{resource}">$ipsBundle</assign>
+    <assign to="assertTplParams{resource}" type="string">$ipsBundle</assign>
     <assign to="assertTplParams{expression}">&quot;Bundle.entry.resource.ofType(Patient).name.text.first() = 'Cristina Rodriguez'&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="assertBody">
       <input name="syntax">&quot;freemarker&quot;</input>
@@ -140,7 +140,7 @@
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
-    <assign to="assertTplParams{resource}">$ipsBundle</assign>
+    <assign to="assertTplParams{resource}" type="string">$ipsBundle</assign>
     <assign to="assertTplParams{expression}">&quot;Bundle.entry.resource.ofType(Patient).gender = 'male'&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="assertBody">
       <input name="syntax">&quot;freemarker&quot;</input>
@@ -163,7 +163,7 @@
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
-    <assign to="assertTplParams{resource}">$ipsBundle</assign>
+    <assign to="assertTplParams{resource}" type="string">$ipsBundle</assign>
     <assign to="assertTplParams{expression}">&quot;Bundle.entry.resource.ofType(Patient).birthDate = '1994-10-13'&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="assertBody">
       <input name="syntax">&quot;freemarker&quot;</input>
@@ -186,7 +186,7 @@
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
-    <assign to="assertTplParams{resource}">$ipsBundle</assign>
+    <assign to="assertTplParams{resource}" type="string">$ipsBundle</assign>
     <assign to="assertTplParams{expression}">&quot;Bundle.entry.resource.ofType(Immunization).lotNumber = 'A1234'&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="assertBody">
       <input name="syntax">&quot;freemarker&quot;</input>
@@ -209,7 +209,7 @@
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
-    <assign to="assertTplParams{resource}">$ipsBundle</assign>
+    <assign to="assertTplParams{resource}" type="string">$ipsBundle</assign>
     <assign to="assertTplParams{expression}">&quot;Bundle.entry.resource.ofType(Immunization).vaccineCode.coding.code.first() = 'YellowFever'&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="assertBody">
       <input name="syntax">&quot;freemarker&quot;</input>
@@ -232,7 +232,7 @@
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
-    <assign to="assertTplParams{resource}">$ipsBundle</assign>
+    <assign to="assertTplParams{resource}" type="string">$ipsBundle</assign>
     <assign to="assertTplParams{expression}">&quot;Bundle.entry.resource.ofType(Composition).type.coding.code.first() = '60591-5'&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="assertBody">
       <input name="syntax">&quot;freemarker&quot;</input>

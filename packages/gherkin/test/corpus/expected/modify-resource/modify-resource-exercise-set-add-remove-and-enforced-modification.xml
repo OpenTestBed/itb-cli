@@ -98,7 +98,7 @@
       <input name="template">'${accum}]'</input>
       <input name="parameters">$closeOpsTplParams</input>
     </process>
-    <assign to="modifyTplParams{resource}">$patient</assign>
+    <assign to="modifyTplParams{resource}" type="string">$patient</assign>
     <assign to="modifyTplParams{operations}">$opsJson</assign>
     <assign to="modifyTplParams{profile}">&quot;&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="modifyBody">
@@ -118,7 +118,7 @@
     </process>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
-    <assign to="assertTplParams{resource}">$patient</assign>
+    <assign to="assertTplParams{resource}" type="string">$patient</assign>
     <assign to="assertTplParams{expression}">&quot;Patient.id = 'modify-after-01'&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="assertBody">
       <input name="syntax">&quot;freemarker&quot;</input>
@@ -206,7 +206,7 @@
       <input name="template">'${accum}]'</input>
       <input name="parameters">$closeOpsTplParams</input>
     </process>
-    <assign to="modifyTplParams{resource}">$allergy</assign>
+    <assign to="modifyTplParams{resource}" type="string">$allergy</assign>
     <assign to="modifyTplParams{operations}">$opsJson</assign>
     <assign to="modifyTplParams{profile}">&quot;&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="modifyBody">
@@ -226,7 +226,7 @@
     </process>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
-    <assign to="assertTplParams{resource}">$allergy</assign>
+    <assign to="assertTplParams{resource}" type="string">$allergy</assign>
     <assign to="assertTplParams{expression}">&quot;AllergyIntolerance.clinicalStatus.coding.count() = 1&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="assertBody">
       <input name="syntax">&quot;freemarker&quot;</input>
@@ -249,7 +249,7 @@
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
-    <assign to="assertTplParams{resource}">$allergy</assign>
+    <assign to="assertTplParams{resource}" type="string">$allergy</assign>
     <assign to="assertTplParams{expression}">&quot;AllergyIntolerance.clinicalStatus.coding.first().code = 'extra'&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="assertBody">
       <input name="syntax">&quot;freemarker&quot;</input>
@@ -326,7 +326,7 @@
       <input name="template">'${accum}]'</input>
       <input name="parameters">$closeOpsTplParams</input>
     </process>
-    <assign to="modifyTplParams{resource}">$patient2</assign>
+    <assign to="modifyTplParams{resource}" type="string">$patient2</assign>
     <assign to="modifyTplParams{operations}">$opsJson</assign>
     <assign to="modifyTplParams{profile}">&quot;http://hl7.org/fhir/StructureDefinition/Patient&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="modifyBody">
@@ -370,7 +370,7 @@
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
-    <assign to="assertTplParams{resource}">$patient2</assign>
+    <assign to="assertTplParams{resource}" type="string">$patient2</assign>
     <assign to="assertTplParams{expression}">&quot;Patient.gender = 'female'&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="assertBody">
       <input name="syntax">&quot;freemarker&quot;</input>

@@ -279,6 +279,25 @@ function upgradeVarsForScriptletCalls(
  *   TDL-042  no backslash escapes: "…\"x\"…" does not parse — use '…' inside "…"
  *   TDL-042  translate() is XPath's 3-argument form: translate(s, from, to)
  */
+/**
+ * A TDL string literal for arbitrary text.
+ *
+ * ITB has no escape character in expressions — a backslash is refused outright
+ * (TDL-042) — so a quote inside a literal cannot be escaped. What is left is
+ * choosing the quote the text does not use, and, when it uses both, splicing
+ * the pieces with concat().
+ */
+export function tdlLiteral(text: string): string {
+  const hasSingle = text.includes("'");
+  const hasDouble = text.includes('"');
+  if (!hasSingle) return `'${text}'`;
+  if (!hasDouble) return `"${text}"`;
+  // Both: every run between single quotes is itself single-quoted, and each
+  // single quote travels as the one thing a single-quoted literal cannot hold.
+  const parts = text.split("'").map(part => `'${part}'`);
+  return `concat(${parts.join(`, "'", `)})`;
+}
+
 function lintSteps(stepsXml: string, testcase: string): ParseIssue[] {
   const issues: ParseIssue[] = [];
   // Every one of these is an expression to ITB: a <log> body, an <assign>
@@ -632,25 +651,31 @@ function emitIR(ir: IRAction[]): string {
       // Skip empty-list initializations — TDL creates lists implicitly on first append
       if (a.value === '[]' || a.value === '') continue;
       const appendAttr = a.append ? ' append="true"' : '';
+      // `type` asks ITB to convert the value as it is assigned. The one that
+      // matters in practice is binary -> string: a messaging handler hands back
+      // a response body as bytes when it does not recognise the content type as
+      // text, and a FreeMarker template then fails with "Expected a string ...
+      // but this has evaluated to a sequence (byte[])".
+      const typeAttr = a.varType ? ` type="${escapeAttr(a.varType)}"` : '';
       // ITB's <assign> body is an expression. If the value looks like a JSON
       // object/array literal (e.g. from a `set "x" to:` docstring with a JSON
       // body), wrap it in single quotes so the expression evaluator sees a
       // string literal — otherwise the leading `{` errors as an unexpected
-      // token. Escape any embedded single quotes.
+      // token.
       let value = a.value;
       const trimmed = value.trim();
       const isJsonLiteral =
         (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
         (trimmed.startsWith('[') && trimmed.endsWith(']'));
       if (isJsonLiteral) {
-        value = `'${value.replace(/'/g, "\\'")}'`;
+        value = tdlLiteral(value);
       }
-      out.push(`<assign to="${escapeAttr(a.to)}"${appendAttr}>${escapeXml(value)}</assign>`);
+      out.push(`<assign to="${escapeAttr(a.to)}"${appendAttr}${typeAttr}>${escapeXml(value)}</assign>`);
     } else if (a.type === 'listAppend') {
       // TDL assign values are expressions — use single-quoted string to avoid quote conflicts
-      const jsonStr = JSON.stringify(a.item).replace(/'/g, "\\'");
+      const jsonStr = JSON.stringify(a.item);
       out.push(
-        `<assign to="${escapeAttr(a.list)}" append="true">'${escapeXml(jsonStr)}'</assign>`
+        `<assign to="${escapeAttr(a.list)}" append="true">${escapeXml(tdlLiteral(jsonStr))}</assign>`
       );
     } else if (a.type === 'declareVariable') {
       // Variable declarations are handled in <variables> section, not in <steps>

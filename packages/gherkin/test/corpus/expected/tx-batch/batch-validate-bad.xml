@@ -27,6 +27,7 @@
     <var name="txTestsBase" type="string"/>
     <var name="txResourceParams" type="string"/>
     <var name="txFetchHeaders" type="map"/>
+    <var name="txMaterialBody" type="string"/>
     <var name="txParams" type="map"/>
     <var name="jsonHeaders" type="map"/>
     <var name="sigStatus" type="string"/>
@@ -46,7 +47,8 @@
       <input name="method">&quot;GET&quot;</input>
       <input name="headers">$txFetchHeaders</input>
     </send>
-    <assign to="txResourceParams">concat($txResourceParams, ',{&quot;name&quot;:&quot;tx-resource&quot;,&quot;resource&quot;:', $txMaterialRequest{response}{body}, '}')</assign>
+    <assign to="txMaterialBody" type="string">$txMaterialRequest{response}{body}</assign>
+    <assign to="txResourceParams">concat($txResourceParams, ',{&quot;name&quot;:&quot;tx-resource&quot;,&quot;resource&quot;:', $txMaterialBody, '}')</assign>
     <assign to="txParams{request}">'{
       &quot;resourceType&quot;: &quot;Parameters&quot;,
       &quot;parameter&quot;: [
@@ -155,8 +157,8 @@
       <input name="method">&quot;GET&quot;</input>
       <input name="headers">$txFetchHeaders</input>
     </send>
-    <assign to="matchTplParams{resource}">$lastRequest{response}{body}</assign>
-    <assign to="matchTplParams{matchetype}">$txExpectedRequest{response}{body}</assign>
+    <assign to="matchTplParams{resource}" type="string">$lastRequest{response}{body}</assign>
+    <assign to="matchTplParams{matchetype}" type="string">$txExpectedRequest{response}{body}</assign>
     <process handler="TemplateProcessor" operation="process" output="matchBody">
       <input name="syntax">&quot;freemarker&quot;</input>
       <input name="template">'{ &quot;input&quot;: [ { &quot;name&quot;: &quot;contentToValidate&quot;, &quot;value&quot;: &quot;${resource?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;matchetype&quot;, &quot;value&quot;: &quot;${matchetype?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>

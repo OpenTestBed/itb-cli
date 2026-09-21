@@ -87,7 +87,7 @@
     <assign to="fmlText">$lastRequest{response}{body}</assign>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
-    <assign to="parseFmlTplParams{content}">$fmlText</assign>
+    <assign to="parseFmlTplParams{content}" type="string">$fmlText</assign>
     <assign to="parseFmlTplParams{name}">&quot;fmlText&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="parseFmlBody">
       <input name="syntax">&quot;freemarker&quot;</input>
@@ -110,7 +110,7 @@
     </process>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
-    <assign to="regSmTplParams{content}">$structureMap</assign>
+    <assign to="regSmTplParams{content}" type="string">$structureMap</assign>
     <process handler="TemplateProcessor" operation="process" output="regSmBody">
       <input name="syntax">&quot;freemarker&quot;</input>
       <input name="template">'{ &quot;operation&quot;: &quot;loadResource&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;content&quot;, &quot;value&quot;: &quot;${content?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; }, { &quot;name&quot;: &quot;replace&quot;, &quot;value&quot;: &quot;true&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
@@ -152,7 +152,7 @@
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
-    <assign to="transformTplParams{content}">$medMin</assign>
+    <assign to="transformTplParams{content}" type="string">$medMin</assign>
     <assign to="transformTplParams{map}">&quot;http://smart.who.int/ph4h/StructureMap/MedicationOverviewMin-to-MedicationOverviewBundle&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="transformBody">
       <input name="syntax">&quot;freemarker&quot;</input>

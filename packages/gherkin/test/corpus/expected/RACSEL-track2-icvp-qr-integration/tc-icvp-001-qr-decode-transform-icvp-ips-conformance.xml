@@ -256,7 +256,7 @@
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
-    <assign to="transformTplParams{content}">$innerContent</assign>
+    <assign to="transformTplParams{content}" type="string">$innerContent</assign>
     <assign to="transformTplParams{map}">&quot;http://smart.who.int/icvp/StructureMap/ICVPClaimtoIPS&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="transformBody">
       <input name="syntax">&quot;freemarker&quot;</input>
@@ -333,7 +333,7 @@
       <input name="template">'${accum}]'</input>
       <input name="parameters">$closeOpsTplParams</input>
     </process>
-    <assign to="modifyTplParams{resource}">$bundleResult</assign>
+    <assign to="modifyTplParams{resource}" type="string">$bundleResult</assign>
     <assign to="modifyTplParams{operations}">$opsJson</assign>
     <assign to="modifyTplParams{profile}">&quot;&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="modifyBody">

@@ -155,7 +155,7 @@
     </process>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
-    <assign to="validateTplParams{resource}">$patient</assign>
+    <assign to="validateTplParams{resource}" type="string">$patient</assign>
     <assign to="validateTplParams{resourceType}">&quot;Patient&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="validateBody">
       <input name="syntax">&quot;freemarker&quot;</input>
@@ -178,7 +178,7 @@
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
-    <assign to="validateTplParams{resource}">$allergy</assign>
+    <assign to="validateTplParams{resource}" type="string">$allergy</assign>
     <assign to="validateTplParams{profiles}">&quot;https://www.ehealth.fgov.be/standards/fhir/allergy/StructureDefinition/be-allergyintolerance&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="validateBody">
       <input name="syntax">&quot;freemarker&quot;</input>
@@ -255,7 +255,7 @@
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
-    <assign to="matchTplParams{resource}">$patient</assign>
+    <assign to="matchTplParams{resource}" type="string">$patient</assign>
     <assign to="matchTplParams{matchetype}">'{&quot;resourceType&quot;: &quot;Patient&quot;, &quot;id&quot;: &quot;$string$&quot;}'</assign>
     <process handler="TemplateProcessor" operation="process" output="matchBody">
       <input name="syntax">&quot;freemarker&quot;</input>
@@ -278,7 +278,7 @@
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
-    <assign to="assertTplParams{resource}">$patient</assign>
+    <assign to="assertTplParams{resource}" type="string">$patient</assign>
     <assign to="assertTplParams{expression}">&quot;Patient.id.exists()&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="assertBody">
       <input name="syntax">&quot;freemarker&quot;</input>
@@ -301,7 +301,7 @@
     </verify>
     <assign to="fhirValidatorHeaders{Content-Type}">&quot;application/json&quot;</assign>
     <assign to="fhirValidatorHeaders{Accept}">&quot;application/json&quot;</assign>
-    <assign to="summarizeTplParams{outcome}">$validationOutcome</assign>
+    <assign to="summarizeTplParams{outcome}" type="string">$validationOutcome</assign>
     <process handler="TemplateProcessor" operation="process" output="summarizeBody">
       <input name="syntax">&quot;freemarker&quot;</input>
       <input name="template">'{ &quot;operation&quot;: &quot;summarize&quot;, &quot;input&quot;: [ { &quot;name&quot;: &quot;outcome&quot;, &quot;value&quot;: &quot;${outcome?json_string}&quot;, &quot;embeddingMethod&quot;: &quot;STRING&quot; } ] }'</input>
