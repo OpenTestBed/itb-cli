@@ -1,6 +1,9 @@
 {
   "name": "@opentestbed/otb-gherkin",
-  "version": "0.3.6",
+  "version": "0.4.0",
+  "bin": {
+    "otb-gherkin": "bin/otb-gherkin.mjs"
+  },
   "description": "Gherkin -> GITB TDL compiler: the FHIR Gherkin dialect, its parser and its XML generator",
   "license": "BSD-3-Clause",
   "type": "module",
@@ -20,6 +23,7 @@
     }
   },
   "files": [
+    "bin",
     "dist",
     "lang",
     "README.md",

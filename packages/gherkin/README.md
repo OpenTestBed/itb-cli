@@ -17,20 +17,27 @@ npm install @opentestbed/otb-gherkin
 npm install @opentestbed/dialect-fhir-validator @opentestbed/dialect-hcert-decoder
 ```
 
-The compiler reads dialects from a `components/` directory, so the installed
-packages have to be assembled into one. The `spec-to-tests` skill ships a
-script that does it, and it works from installed packages, a checkout, or a URL:
+The compiler reads dialects from a `components/` directory, so assemble the
+installed packages into one, then compile:
 
 ```bash
-node get-dialects.mjs --installed --out assets
-ITB_ASSET_ROOT=./assets node compile.mjs my.feature --out build --zip suite.zip
+npx otb-gherkin dialects --installed --out assets
+ITB_ASSET_ROOT=./assets npx otb-gherkin compile my.feature --out build --zip suite.zip
 ```
 
-Both scripts, and the procedure for turning a specification into a test suite,
-are at
-[itb-plugin-authoring/.claude/skills/spec-to-tests](https://github.com/OpenTestBed/itb-plugin-authoring/tree/main/.claude/skills/spec-to-tests).
-They depend only on this package and on the Test Bed's documented REST API, so
-they run without the OpenTestBed CLI and without containers.
+`dialects --installed` reads `node_modules` for packages carrying an
+`otbDialect` field, so the set is pinned by your lockfile and needs no network.
+It also takes `--from <path|url>` for a dialect that is not on npm. `compile`
+exits non-zero on any error and prints every diagnostic; `--zip` packages the
+suite for upload.
+
+The procedure for turning a specification into a test suite — scope it, agree
+which kinds of test to write, author, compile, run — is the `spec-to-tests`
+skill at
+[itb-plugin-authoring](https://github.com/OpenTestBed/itb-plugin-authoring/tree/main/.claude/skills/spec-to-tests).
+It also carries a script for executing a suite against a Test Bed, which uses
+that product's documented REST API and needs neither the OpenTestBed CLI nor
+containers.
 
 A **Test Bed is optional**. Everything above — authoring, compiling, packaging
 a deployable suite — needs nothing but Node. Connect one when you want to
@@ -153,7 +160,9 @@ shapes.
 |---|---|
 | `npm test` | golden corpus: every fixture compiles clean and byte-identical to its snapshot |
 | `npm run test:update` | re-record snapshots (review the diff) |
-| `node scripts/check-features.mjs <assets> <features>` | compile a project's features and list errors; CI gate |
+| `otb-gherkin compile <files…>` | compile features; exits non-zero on error, so it doubles as a CI gate |
+| `otb-gherkin dialects --installed` | assemble installed dialect packages into `components/` |
+| `node scripts/check-features.mjs <assets> <features>` | the same gate, from a checkout of this repo |
 | `node scripts/convert-v1-to-v2.mjs <files…>` | migrate generation-1 feature files |
 
 ## Versioning
