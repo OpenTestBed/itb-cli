@@ -37,8 +37,8 @@
   <steps stopOnError="true">
     <assign to="FHIRValidatorBase">&quot;http://fhir-validator:8081&quot;</assign>
     <btxn from="DocumentSource" to="DocumentResponder" txnId="txn_DocumentResponder_DocumentSource" handler="HttpMessagingV2"/>
-    <interact id="inform" desc="Instruction for DocumentSource" with="DocumentSource">
-      <instruct desc="Send a CH:MHD-1 Update Document Metadata request to the Responder endpoint configured for this session, changing only the document description." name="message"/>
+    <interact id="inform" desc="Send a CH:MHD-1 Update Document Metadata request to the Responder endpoint configured for this session, changing only the document description." inputTitle="Instruction for DocumentSource" with="DocumentSource">
+      <instruct desc="Instruction" name="message" forceDisplay="true">&quot;Send a CH:MHD-1 Update Document Metadata request to the Responder endpoint configured for this session, changing only the document description.&quot;</instruct>
     </interact>
     <receive id="lastReceived" desc="Receive from DocumentSource" handler="HttpMessagingV2" from="DocumentSource" to="DocumentResponder" txnId="txn_DocumentResponder_DocumentSource">
       <input name="timeout">&quot;300&quot;</input>

@@ -21,8 +21,8 @@
 
   <steps stopOnError="true">
     <assign to="FHIRValidatorBase">&quot;http://fhir-validator:8080&quot;</assign>
-    <interact id="inform" desc="Instruction for MedicationOverviewConsumer" with="MedicationOverviewConsumer">
-      <instruct desc="ROUND 1 of 3 — query the Responder for the test patient's medication overview using ONLY the patient parameter, then wait." name="message"/>
+    <interact id="inform" desc="ROUND 1 of 3 — query the Responder for the test patient's medication overview using ONLY the patient parameter, then wait." inputTitle="Instruction for MedicationOverviewConsumer" with="MedicationOverviewConsumer">
+      <instruct desc="Instruction" name="message" forceDisplay="true">&quot;ROUND 1 of 3 — query the Responder for the test patient's medication overview using ONLY the patient parameter, then wait.&quot;</instruct>
     </interact>
     <receive id="lastReceived" desc="Wait for message" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="MedicationOverviewResponder">
       <input name="timeout">&quot;300&quot;</input>
@@ -46,8 +46,8 @@
       <input name="expectedstring">&quot;fhir+json&quot;</input>
       <input name="matchType">&quot;contains&quot;</input>
     </verify>
-    <interact id="inform" desc="Instruction for MedicationOverviewConsumer" with="MedicationOverviewConsumer">
-      <instruct desc="ROUND 2 of 3 — query the same patient again, this time ALSO filtering by status (for example status=active), then wait." name="message"/>
+    <interact id="inform" desc="ROUND 2 of 3 — query the same patient again, this time ALSO filtering by status (for example status=active), then wait." inputTitle="Instruction for MedicationOverviewConsumer" with="MedicationOverviewConsumer">
+      <instruct desc="Instruction" name="message" forceDisplay="true">&quot;ROUND 2 of 3 — query the same patient again, this time ALSO filtering by status (for example status=active), then wait.&quot;</instruct>
     </interact>
     <receive id="lastReceived" desc="Wait for message" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="MedicationOverviewResponder">
       <input name="timeout">&quot;300&quot;</input>
@@ -71,8 +71,8 @@
       <input name="expectedstring">&quot;status=&quot;</input>
       <input name="matchType">&quot;contains&quot;</input>
     </verify>
-    <interact id="inform" desc="Instruction for MedicationOverviewConsumer" with="MedicationOverviewConsumer">
-      <instruct desc="ROUND 3 of 3 — query the same patient again, this time ALSO filtering by _lastUpdated (an incremental sync since a given instant), then wait." name="message"/>
+    <interact id="inform" desc="ROUND 3 of 3 — query the same patient again, this time ALSO filtering by _lastUpdated (an incremental sync since a given instant), then wait." inputTitle="Instruction for MedicationOverviewConsumer" with="MedicationOverviewConsumer">
+      <instruct desc="Instruction" name="message" forceDisplay="true">&quot;ROUND 3 of 3 — query the same patient again, this time ALSO filtering by _lastUpdated (an incremental sync since a given instant), then wait.&quot;</instruct>
     </interact>
     <receive id="lastReceived" desc="Wait for message" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="MedicationOverviewResponder">
       <input name="timeout">&quot;300&quot;</input>
@@ -96,8 +96,8 @@
       <input name="expectedstring">&quot;_lastUpdated=&quot;</input>
       <input name="matchType">&quot;contains&quot;</input>
     </verify>
-    <interact id="inform" desc="Instruction for MedicationOverviewConsumer" with="MedicationOverviewConsumer">
-      <instruct desc="PHARM-11 query conformance passed: the Consumer builds well-formed queries by patient, by status, and by _lastUpdated." name="message"/>
+    <interact id="inform" desc="PHARM-11 query conformance passed: the Consumer builds well-formed queries by patient, by status, and by _lastUpdated." inputTitle="Instruction for MedicationOverviewConsumer" with="MedicationOverviewConsumer">
+      <instruct desc="Instruction" name="message" forceDisplay="true">&quot;PHARM-11 query conformance passed: the Consumer builds well-formed queries by patient, by status, and by _lastUpdated.&quot;</instruct>
     </interact>
   </steps>
 

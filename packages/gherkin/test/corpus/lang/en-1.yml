@@ -16,6 +16,16 @@ specVersion: "1.7.0"
 #   "validation warnings", "validation outcome", "validation severity"
 # ====================================================================
 
+# Scriptlets the core language itself calls. They ship inside this package
+# (lang/scriptlets/) because the core must not depend on an optional dialect:
+# `serializeJsonObject` used to come from smart-helper, and `instructUser`
+# came from nowhere at all, which made `paced manually` uncompilable for
+# anyone outside the workbench checkout. A dialect may call these too — the
+# compiler resolves scriptlets by path across every enabled source.
+scriptlets:
+  - instructUser.xml
+  - serializeJsonObject.xml
+
 steps:
 
   # ==================================================================

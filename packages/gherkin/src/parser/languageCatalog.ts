@@ -90,6 +90,9 @@ export interface Catalog {
   types?: Record<string, TypeDecl>;
   /** v2, merged: component id → conformance handler. */
   conforms?: Record<string, ConformsDecl>;
+  /** Scriptlets the core language calls, read from lang/scriptlets/.
+   *  Declared in the language file as a list of file names. */
+  scriptlets?: ComponentScriptlet[];
 }
 
 /** Extension catalog loaded from a component's steps.yml */
@@ -562,7 +565,34 @@ export async function loadCatalog(locale = 'en', opts: LoadOptions = {}): Promis
   }
   const core = normalizeLanguageFile(yaml.load(text)) as Catalog;
   compileCatalogSteps(core.steps, core.types);
+  core.scriptlets = await loadCoreScriptlets(core);
   return core;
+}
+
+/**
+ * Scriptlets the core language itself calls, shipped beside the language file
+ * in `lang/scriptlets/`.
+ *
+ * The core must not depend on a dialect for these. `serializeJsonObject` used
+ * to be supplied by smart-helper and `instructUser` by nothing at all, which
+ * made `posts … N times, paced manually` fail to compile for anyone who did
+ * not happen to have a copy beside their feature files.
+ *
+ * A name that cannot be read is skipped rather than fatal: the catalog still
+ * loads, and the author gets the ordinary "Scriptlet not found" diagnostic
+ * pointing at the step that needs it.
+ */
+async function loadCoreScriptlets(core: Catalog): Promise<ComponentScriptlet[]> {
+  const names = (core as unknown as { scriptlets?: unknown }).scriptlets;
+  if (!Array.isArray(names)) return [];
+  const dir = `${base()}lang/scriptlets/`;
+  const out: ComponentScriptlet[] = [];
+  for (const entry of names) {
+    if (typeof entry !== 'string' || !entry) continue;
+    const xml = await src().read(`${dir}${entry}`);
+    if (xml !== null) out.push({ path: `scriptlets/${entry}`, xml });
+  }
+  return out;
 }
 
 /** Discover available components from the index */

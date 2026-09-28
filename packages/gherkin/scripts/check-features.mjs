@@ -9,6 +9,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { GherkinParser, XMLGenerator, setCatalogSource, parseITBHeader, scriptletSearchPaths } from '../dist/index.js';
 import { createNodeSource } from '../dist/node.js';
 
@@ -23,6 +24,17 @@ for (const f of ['en.yml', 'en-1.yml']) {
     assets[`lang/${f}`] = fs.readFileSync(new URL(`../lang/${f}`, import.meta.url), 'utf8');
   }
 }
+// The scriptlets the core language itself calls, alongside the language. An
+// asset root that ships its own copy keeps it; otherwise these come from here,
+// or `paced manually` and `is informed` fail with "Scriptlet not found".
+try {
+  const dir = fileURLToPath(new URL('../lang/scriptlets/', import.meta.url));
+  for (const f of fs.readdirSync(dir)) {
+    if (!f.endsWith('.xml')) continue;
+    const key = `lang/scriptlets/${f}`;
+    if (!fs.existsSync(path.join(root, key))) assets[key] = fs.readFileSync(path.join(dir, f), 'utf8');
+  }
+} catch { /* none shipped */ }
 setCatalogSource(createNodeSource(root, { assets }));
 
 /** scriptlets/<id>.xml beside the features, plus `# itb:` header locations. */

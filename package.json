@@ -2,6 +2,7 @@
   "name": "@opentestbed/otb",
   "version": "0.1.0",
   "description": "itb-suite MVP: compile Gherkin -> ITB test suite zip, deploy to a running ITB, execute and poll",
+  "private": true,
   "type": "module",
   "bin": {
     "otb": "bin/itb-suite.mjs"

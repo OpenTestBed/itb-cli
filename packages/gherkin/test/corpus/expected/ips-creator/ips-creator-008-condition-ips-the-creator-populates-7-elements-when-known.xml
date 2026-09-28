@@ -50,8 +50,8 @@
       <input name="actualnumber">$lastRequest{response}{status}</input>
       <input name="expectednumber">&quot;200&quot;</input>
     </verify>
-    <interact id="inform" desc="Instruction for Creator" with="Creator">
-      <instruct desc="Load the reference patient Patricia JORDANA (identifier ABC1234) into your system from https://hl7.org/fhir/uv/ips/Bundle-bundle-ips-all-sections.json, then export her International Patient Summary as a FHIR document Bundle." name="message"/>
+    <interact id="inform" desc="Load the reference patient Patricia JORDANA (identifier ABC1234) into your system from https://hl7.org/fhir/uv/ips/Bundle-bundle-ips-all-sections.json, then export her International Patient Summary as a FHIR document Bundle." inputTitle="Instruction for Creator" with="Creator">
+      <instruct desc="Instruction" name="message" forceDisplay="true">&quot;Load the reference patient Patricia JORDANA (identifier ABC1234) into your system from https://hl7.org/fhir/uv/ips/Bundle-bundle-ips-all-sections.json, then export her International Patient Summary as a FHIR document Bundle.&quot;</instruct>
     </interact>
     <interact id="ask" desc="Paste the exported IPS Bundle (JSON)" inputTitle="Paste the exported IPS Bundle (JSON)">
       <request desc="Paste the exported IPS Bundle (JSON)" name="ips" inputType="TEXT" required="true">$ips</request>

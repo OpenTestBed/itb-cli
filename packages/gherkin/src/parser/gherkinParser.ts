@@ -942,6 +942,20 @@ function materialize(actions: CatalogAction[], ctx: MaterializeCtx): IRAction[] 
       delete clone.when;
     }
 
+    // `unless: '$3'` — the inverse: skip the action when the guard DOES
+    // substitute to something. The pair lets one entry branch on an optional
+    // slot, as the core's file-upload verb and the FHIR validator's
+    // conformance handler both do.
+    //
+    // This was documented in GRAMMAR.md and TUTORIAL.md and implemented
+    // nowhere, so an action carrying it always ran. The visible symptom was
+    // `uploads a file as $x with "prompt"` emitting two <interact> blocks and
+    // asking the operator for the same file twice, with no diagnostic.
+    if (clone.unless !== undefined) {
+      if (subst(String(clone.unless)).trim() !== '') return;
+      delete clone.unless;
+    }
+
     if (clone.foreach) {
       for (const [i, row] of ctx.tableRows.entries()) {
         const rctx: MaterializeCtx = { ...ctx, _row: { ...row, __index: String(i + 1) } };

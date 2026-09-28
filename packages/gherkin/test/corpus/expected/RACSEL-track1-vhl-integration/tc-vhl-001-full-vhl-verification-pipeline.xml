@@ -340,7 +340,6 @@
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/report/context/4/value&quot;</input>
     </process>
-    <assign to="conformanceErrors">$validationErrors</assign>
     <assign to="dgFpParams{resource}">$validationOutcome</assign>
     <assign to="dgFpParams{expression}">&quot;issue.where(severity = 'error').count() - issue.where(severity = 'error' and details.text.contains('matching slice is required')).count()&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="dgFpBody">

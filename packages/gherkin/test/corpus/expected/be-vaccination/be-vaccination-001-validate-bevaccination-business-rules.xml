@@ -126,8 +126,8 @@
       <input name="actualstring">$pathValue</input>
       <input name="expectedstring">$expectedSnomed</input>
     </verify>
-    <interact id="inform" desc="Instruction for User" with="User">
-      <instruct desc="BeVaccination validated: recorder/performer match and CNK/SNOMED consistency checks passed." name="message"/>
+    <interact id="inform" desc="BeVaccination validated: recorder/performer match and CNK/SNOMED consistency checks passed." inputTitle="Instruction for User" with="User">
+      <instruct desc="Instruction" name="message" forceDisplay="true">&quot;BeVaccination validated: recorder/performer match and CNK/SNOMED consistency checks passed.&quot;</instruct>
     </interact>
   </steps>
 

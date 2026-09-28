@@ -101,7 +101,6 @@
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/report/context/4/value&quot;</input>
     </process>
-    <assign to="conformanceErrors">$validationErrors</assign>
     <assign to="dgFpParams{resource}">$validationOutcome</assign>
     <assign to="dgFpParams{expression}">&quot;issue.where(severity = 'error').count() - issue.where(severity = 'error' and details.text.contains('matching slice is required')).count()&quot;</assign>
     <process handler="TemplateProcessor" operation="process" output="dgFpBody">
@@ -124,8 +123,9 @@
       <input name="actualstring">$conformanceErrors</input>
       <input name="expectedstring">&quot;0&quot;</input>
     </verify>
-    <interact id="inform" desc="Instruction for Consumer" with="Consumer">
-      <instruct desc="Import this International Patient Summary for Patricia JORDANA into the system under test, then answer the questions that follow." name="message">$ips</instruct>
+    <interact id="inform" desc="Import this International Patient Summary for Patricia JORDANA into the system under test, then answer the questions that follow." inputTitle="Instruction for Consumer" with="Consumer">
+      <instruct desc="Instruction" name="message" forceDisplay="true">&quot;Import this International Patient Summary for Patricia JORDANA into the system under test, then answer the questions that follow.&quot;</instruct>
+      <instruct desc="Content" name="content">$ips</instruct>
     </interact>
     <interact id="evidence" desc="Evidence: the import of every CodeableConcept in the document completing without error (import log or screenshot)" inputTitle="Evidence: the import of every CodeableConcept in the document completing without error (import log or screenshot)" with="Consumer">
       <instruct desc="Demonstrate on the system under test: the import of every CodeableConcept in the document completing without error (import log or screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>
@@ -146,8 +146,8 @@
       <input name="actualstring">$confirmed{2}</input>
       <input name="expectedstring">&quot;yes&quot;</input>
     </verify>
-    <interact id="inform" desc="Instruction for Consumer" with="Consumer">
-      <instruct desc="Open Patricia JORDANA's summary in the system under test and display every CodeableConcept in the document." name="message"/>
+    <interact id="inform" desc="Open Patricia JORDANA's summary in the system under test and display every CodeableConcept in the document." inputTitle="Instruction for Consumer" with="Consumer">
+      <instruct desc="Instruction" name="message" forceDisplay="true">&quot;Open Patricia JORDANA's summary in the system under test and display every CodeableConcept in the document.&quot;</instruct>
     </interact>
     <interact id="evidence" desc="Evidence: every CodeableConcept in the document displayed (screenshot)" inputTitle="Evidence: every CodeableConcept in the document displayed (screenshot)" with="Consumer">
       <instruct desc="Demonstrate on the system under test: every CodeableConcept in the document displayed (screenshot). Then attach a screenshot, export or log that shows it." name="instruction"/>

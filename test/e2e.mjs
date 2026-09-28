@@ -10,7 +10,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { compileFeature, writeSuite } from '../src/compile.mjs';
-import { loadConfig, saveState, deploySuite, startTest, pollTest, resolveFromMaster, ensureDomainAndSpec, actorKeyFromDeploy, ensureOrganisation, ensureSystem, ensureConformance } from '../src/itb-client.mjs';
+import { loadConfig, saveState, deploySuite, startTest, pollTest, resolveOrganisation, ensureDomainAndSpec, actorKeyFromDeploy, ensureOrganisation, ensureSystem, ensureConformance } from '../src/itb-client.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const configPath = path.join(here, '../itb-suite.config.yaml');
@@ -19,7 +19,7 @@ if (!fs.existsSync(configPath)) {
   process.exit(2);
 }
 const cfg = loadConfig(configPath);
-await resolveFromMaster(cfg);
+await resolveOrganisation(cfg);
 await ensureDomainAndSpec(cfg);
 const s = cfg.suites[0];
 const feature = path.resolve(path.dirname(configPath), s.feature);

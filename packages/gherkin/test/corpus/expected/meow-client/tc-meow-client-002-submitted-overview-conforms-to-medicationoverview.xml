@@ -54,8 +54,8 @@
       <input name="actualnumber">$lastRequest{response}{status}</input>
       <input name="expectednumber">&quot;200&quot;</input>
     </verify>
-    <interact id="inform" desc="Instruction for MedicationOverviewConsumer" with="MedicationOverviewConsumer">
-      <instruct desc="Submit the Medication Overview for the test patient to the endpoint configured for this test session, then wait." name="message"/>
+    <interact id="inform" desc="Submit the Medication Overview for the test patient to the endpoint configured for this test session, then wait." inputTitle="Instruction for MedicationOverviewConsumer" with="MedicationOverviewConsumer">
+      <instruct desc="Instruction" name="message" forceDisplay="true">&quot;Submit the Medication Overview for the test patient to the endpoint configured for this test session, then wait.&quot;</instruct>
     </interact>
     <receive id="lastReceived" desc="Wait for message" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="MedicationOverviewResponder">
       <input name="timeout">&quot;300&quot;</input>
@@ -200,8 +200,8 @@
       <input name="actualstring">$pathValue</input>
       <input name="expectedstring">&quot;true&quot;</input>
     </verify>
-    <interact id="inform" desc="Instruction for MedicationOverviewConsumer" with="MedicationOverviewConsumer">
-      <instruct desc="Submitted Medication Overview conforms to IHE MEOW MedicationOverview and carries at least one treatment line." name="message"/>
+    <interact id="inform" desc="Submitted Medication Overview conforms to IHE MEOW MedicationOverview and carries at least one treatment line." inputTitle="Instruction for MedicationOverviewConsumer" with="MedicationOverviewConsumer">
+      <instruct desc="Instruction" name="message" forceDisplay="true">&quot;Submitted Medication Overview conforms to IHE MEOW MedicationOverview and carries at least one treatment line.&quot;</instruct>
     </interact>
   </steps>
 

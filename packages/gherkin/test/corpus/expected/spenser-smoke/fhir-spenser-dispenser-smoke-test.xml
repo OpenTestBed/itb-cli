@@ -5,7 +5,7 @@
   <metadata>
     <gitb:name>FHIR Spenser dispenser smoke test</gitb:name>
     <gitb:version>1.0</gitb:version>
-    <gitb:description>A simple smoke test against the Spenser chocolate dispenser, exercising three core capabilities: 1. CapabilityStatement — server publishes /metadata 2. Inventory      — GET /InventoryReport returns current bin contents 3. Order          — POST /MedicationRequest with a chocolate code is accepted Reference profile: http://costateixeira.github.io/spenser Default endpoint:  http://spenser.local  (override per device)</gitb:description>
+    <gitb:description>A smoke test against the Spenser chocolate dispenser, exercising the server-mode interactions the IG declares: 1. CapabilityStatement — /metadata, declaring BOTH of Spenser's roles 2. Inventory           — GET /InventoryReport returns current lane contents 3. Order               — POST /MedicationRequest answers with a MedicationDispense 4. History             — GET /MedicationDispense returns what it has been doing Reference profile: http://costateixeira.github.io/spenser Default endpoint:  http://spenser.local  (override per device) Spenser has two roles, and this file covers only the first. As a server it dispenses on demand, which is everything below. As a client it polls an order server and acts on orders that have been made actionable, either by a tag or by a Task. Nothing here exercises that; see the note at the foot of this file.</gitb:description>
   </metadata>
 
   <actors>

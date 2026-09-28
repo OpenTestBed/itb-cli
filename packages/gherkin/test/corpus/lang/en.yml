@@ -40,6 +40,16 @@ specVersion: "2.0.0"
 # $$N is "$" + text, and $opt.<name> reads a `| option | value |` table row.
 # ====================================================================
 
+# Scriptlets the core language itself calls. They ship inside this package
+# (lang/scriptlets/) because the core must not depend on an optional dialect:
+# `serializeJsonObject` used to come from smart-helper, and `instructUser`
+# came from nowhere at all, which made `paced manually` uncompilable for
+# anyone outside the workbench checkout. A dialect may call these too — the
+# compiler resolves scriptlets by path across every enabled source.
+scriptlets:
+  - instructUser.xml
+  - serializeJsonObject.xml
+
 refs:
   response: '$lastRequest{response}{body}'
   response.status: '$lastRequest{response}{status}'
@@ -735,15 +745,32 @@ verbs:
 
   # Emits <interact> directly rather than via a scriptlet so `with` can carry
   # the actor id — TDL takes a literal there, not a variable.
-  - text: '{actor} is informed {string}( with {value})?'
-    doc: Show a message to the actor's tester, optionally with content beneath it.
+  # What ITB shows: `desc` is the step in the diagram and the log, `inputTitle`
+  # the popup title (default "Server interaction"), an instruct's `desc` only a
+  # label and its content the displayed value. So the message is the step's
+  # desc AND the instruct's content (forceDisplay: inline text, not an editor).
+  - text: '{actor} is informed {string} with {value}'
+    doc: Show a message to the actor's tester, with content (a value or a resource) beneath it.
     actions:
       - interact:
           id: 'inform'
-          desc: 'Instruction for $1'
+          desc: '$2'
+          inputTitle: 'Instruction for $1'
           with: '$1'
           instructions:
-            - { desc: '$2', name: 'message', value: '$3' }
+            - { desc: 'Instruction', name: 'message', value: '"$2"', forceDisplay: true }
+            - { desc: 'Content', name: 'content', value: '$3' }
+
+  - text: '{actor} is informed {string}'
+    doc: Show a message to the actor's tester.
+    actions:
+      - interact:
+          id: 'inform'
+          desc: '$2'
+          inputTitle: 'Instruction for $1'
+          with: '$1'
+          instructions:
+            - { desc: 'Instruction', name: 'message', value: '"$2"', forceDisplay: true }
 
   - text: '{actor} is asked for {var} with {string}'
     doc: Prompt the tester for a text value.

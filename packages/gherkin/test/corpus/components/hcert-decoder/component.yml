@@ -49,7 +49,3 @@ language:
 
 # Scriptlets — reusable TDL XML functions included in generated test suites
 # (kept for reference / future use by other features)
-scriptlets:
-  - buildJsonBody.xml
-  - multipartUpload.xml
-  - postJson.xml

@@ -59,7 +59,10 @@ for (const dir of pluginDirs) {
   }
   const dest = path.join(componentsDir, manifest.name);
   fs.rmSync(dest, { recursive: true, force: true });
-  fs.cpSync(src, dest, { recursive: true });
+  // package.json is packaging metadata, not part of the dialect: it exists so
+  // the folder can be published to npm. The destination is served as static
+  // assets, and the compiler never reads it, so leave it behind.
+  fs.cpSync(src, dest, { recursive: true, filter: (from) => path.basename(from) !== 'package.json' });
   synced.push(manifest.name);
   console.log(`+ ${manifest.name}: dialect -> ${path.relative(WB, dest)}`);
 }

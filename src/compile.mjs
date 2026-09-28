@@ -98,6 +98,19 @@ function ensureAssets() {
   const rootLang = path.join(root, 'lang', 'en.yml');
   const assets = fs.existsSync(rootLang) ? {} : { 'lang/en.yml': LANG_EN, 'lang/en-1.yml': LANG_EN_1 };
 
+  // The scriptlets the core language calls travel with it, for the same
+  // reason and with the same precedence: a root that ships its own keeps
+  // them. Without these, `paced manually` and `is informed` fail to compile
+  // with "Scriptlet not found".
+  if (!fs.existsSync(rootLang)) {
+    try {
+      const dir = fileURLToPath(new URL('../lang/scriptlets/', import.meta.resolve('@opentestbed/otb-gherkin')));
+      for (const f of fs.readdirSync(dir)) {
+        if (f.endsWith('.xml')) assets[`lang/scriptlets/${f}`] = fs.readFileSync(path.join(dir, f), 'utf8');
+      }
+    } catch { /* an older package ships none */ }
+  }
+
   setCatalogSource(createNodeSource(root, {
     components: (process.env.ITB_COMPONENTS ?? '').split(',').map(s => s.trim()).filter(Boolean),
     assets,

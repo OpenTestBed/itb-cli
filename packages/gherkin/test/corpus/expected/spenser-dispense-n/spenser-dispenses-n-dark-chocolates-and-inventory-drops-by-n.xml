@@ -5,7 +5,7 @@
   <metadata>
     <gitb:name>Spenser dispenses N dark chocolates and inventory drops by N</gitb:name>
     <gitb:version>1.0</gitb:version>
-    <gitb:description>The tester enters a number N. The test reads the current dark-chocolate count (X), POSTs N orders for &quot;chocolate-dark&quot; with a 2-second delay between each, then re-reads the inventory and asserts the count is X - N. Reference profile: http://costateixeira.github.io/spenser Default endpoint:  http://spenser.local</gitb:description>
+    <gitb:description>The tester enters a number N. The test reads the current dark-chocolate count (X), POSTs N orders for &quot;chocolate-dark&quot; with a pause between each, then re-reads the inventory and asserts the count is X - N. This exercises Spenser's server role only: POST /MedicationRequest means &quot;dispense now&quot;, and the unit answers with the MedicationDispense. The client role, where Spenser polls an order server and acts only on orders made actionable by a tag or a Task, is not exercised here. Reference profile: http://costateixeira.github.io/spenser Default endpoint:  http://spenser.local</gitb:description>
   </metadata>
 
   <actors>

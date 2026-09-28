@@ -166,33 +166,71 @@ const norm = s => String(s ?? '').trim().toLowerCase();
 async function apiGet(cfg, path, key) {
   const resp = await fetch(`${base(cfg)}${path}`, { headers: { ITB_API_KEY: key } });
   const data = await jsonOrText(resp);
-  if (!resp.ok) throw new Error(`GET ${path}: HTTP ${resp.status}: ${JSON.stringify(data).slice(0, 300)}`);
+  if (!resp.ok) {
+    const err = new Error(`GET ${path}: HTTP ${resp.status}: ${JSON.stringify(data).slice(0, 300)}`);
+    err.status = resp.status;
+    throw err;
+  }
   return data;
 }
 
-/** Resolve community + organisation keys by name using only the master key. */
-export async function resolveFromMaster(cfg) {
-  const masterKey = cfg.instance.masterApiKey || process.env.ITB_MASTER_KEY;
-  if (!masterKey) return cfg;
-  const wantCommunity = norm(cfg.bootstrap?.community ?? cfg.instance.communityName);
+/**
+ * Resolve the organisation key from the community key.
+ *
+ * WHAT THIS IS NOT: there is no way to discover a community. The Test Bed's
+ * automation API has no read endpoint for communities in any version we have
+ * seen — `/community` offers PUT (create), POST (update own) and DELETE, and
+ * nothing else. `GET /api/rest/communities` never existed; an earlier version
+ * of this function called it, got a 404, downgraded that to a warning, and
+ * carried on with no key at all. Every later call then went out unauthorised
+ * and the Test Bed answered "you are not allowed to manage systems through the
+ * automation API", which sends you hunting through community permission flags
+ * that were never the problem. Hence: the community key is an input, and a
+ * failure here is fatal rather than a warning.
+ *
+ * What CAN be discovered, with the community key, is the organisation:
+ * `GET /organisation` returns the organisations of that key's community.
+ */
+export async function resolveOrganisation(cfg) {
+  const communityKey = cfg.instance.communityApiKey || process.env.ITB_COMMUNITY_KEY;
+  if (!communityKey) {
+    throw new Error(
+      'Missing instance.communityApiKey (env ITB_COMMUNITY_KEY).\n'
+      + '  The automation API cannot list communities, so this key has to be supplied.\n'
+      + '  Read it in the Test Bed UI under the community\'s settings, and make sure\n'
+      + '  "Manage test sessions via REST API" is enabled there or every call returns 403.',
+    );
+  }
+  cfg.instance.communityApiKey = communityKey;
+  if (cfg.instance.organisationApiKey) return cfg;
+
+  const wantOrg = norm(cfg.bootstrap?.organisation);
+  let list;
   try {
-    const data = await apiGet(cfg, '/api/rest/communities', masterKey);
-    const list = Array.isArray(data) ? data : (data.communities ?? data.items ?? []);
-    const match = list.find(c => !wantCommunity || [pick(c,'shortName'), pick(c,'fullName'), pick(c,'name')].map(norm).includes(wantCommunity)) ?? list[0];
-    if (match) {
-      cfg.instance.communityApiKey ||= pick(match, 'apiKey', 'key');
-      console.log(`resolved community '${pick(match,'shortName','fullName','name')}' -> key ${cfg.instance.communityApiKey?.slice(0,8)}…`);
-      const orgs = pick(match, 'organisations', 'organizations') ?? [];
-      const wantOrg = norm(cfg.bootstrap?.organisation);
-      const org = orgs.find(o => !wantOrg || [pick(o,'shortName'), pick(o,'fullName')].map(norm).includes(wantOrg)) ?? orgs[0];
-      if (org) {
-        cfg.instance.organisationApiKey ||= pick(org, 'apiKey', 'key');
-        console.log(`resolved organisation '${pick(org,'shortName','fullName')}' -> key ${cfg.instance.organisationApiKey?.slice(0,8)}…`);
-      }
-    }
+    const data = await apiGet(cfg, '/api/rest/organisation', communityKey);
+    list = Array.isArray(data) ? data : (data.organisations ?? data.organizations ?? data.items ?? []);
   } catch (e) {
-    console.warn(`community listing not available via master key (${e.message.slice(0,120)})`);
-    console.warn('-> set ITB_COMMUNITY_KEY from the UI (Community management -> API keys); org is then auto-created');
+    if (e.status === 403) {
+      throw new Error(
+        `${e.message}\n  The community key was rejected. Enable "Manage test sessions via REST API"`
+        + '\n  on that community in the Test Bed UI, or check the key itself.',
+      );
+    }
+    throw e;
+  }
+
+  const org = list.find(o => !wantOrg || [pick(o, 'shortName'), pick(o, 'fullName')].map(norm).includes(wantOrg))
+    ?? list[0];
+  if (!org) {
+    console.warn(`no organisations in this community${wantOrg ? ` matching '${cfg.bootstrap.organisation}'` : ''} — one will be created`);
+    return cfg;
+  }
+  cfg.instance.organisationApiKey = pick(org, 'apiKey', 'key');
+  const named = pick(org, 'shortName', 'fullName');
+  if (wantOrg && norm(named) !== wantOrg) {
+    console.warn(`organisation '${cfg.bootstrap.organisation}' not found; using '${named}'`);
+  } else {
+    console.log(`resolved organisation '${named}'`);
   }
   return cfg;
 }

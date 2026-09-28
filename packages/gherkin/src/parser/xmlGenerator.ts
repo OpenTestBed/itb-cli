@@ -34,10 +34,20 @@ export class XMLGenerator {
     this.externalScriptlets = scriptlets;
   }
 
-  /** Collect all scriptlets from enabled components loaded by the parser */
+  /**
+   * Every scriptlet available to resolve a `call`: the core language's own,
+   * then those of each enabled component.
+   *
+   * Resolution is a single flat namespace keyed by path, which is what lets a
+   * dialect reuse a base scriptlet instead of vendoring a copy. Core goes
+   * first so that a component shipping the same path is reported as the
+   * collision it is rather than silently replacing the base.
+   */
   private getComponentScriptlets(): ComponentScriptlet[] {
+    const scriptlets: ComponentScriptlet[] = [
+      ...(this.parser?.getCatalog?.()?.scriptlets ?? []),
+    ];
     const components = this.parser?.getComponents?.() ?? [];
-    const scriptlets: ComponentScriptlet[] = [];
     for (const comp of components) {
       if (comp.enabled && comp.scriptlets) {
         scriptlets.push(...comp.scriptlets);
@@ -896,9 +906,26 @@ function generateScriptlets(
     }
   }
 
-  // Index real component scriptlets by path
+  // Index real component scriptlets by path.
+  //
+  // One flat namespace across the core language and every enabled component,
+  // which is what makes a base scriptlet reusable from any dialect. The cost
+  // is that two sources can claim the same path; first writer wins, and a
+  // later one carrying DIFFERENT content is reported. Identical content is
+  // ordinary reuse and says nothing.
   const realScriptlets = new Map<string, ComponentScriptlet>();
   for (const s of componentScriptlets) {
+    const existing = realScriptlets.get(s.path);
+    if (existing) {
+      if (existing.xml !== s.xml) {
+        issues.push({
+          severity: 'warning',
+          from: 'scriptlet',
+          message: `Two sources ship ${s.path} with different content — the first is used and the other is ignored. Scriptlets share one namespace across the core language and every dialect, so give one of them a distinct name, or have both call a single shared copy.`,
+        });
+      }
+      continue;
+    }
     realScriptlets.set(s.path, s);
   }
 
@@ -953,8 +980,10 @@ ${indent(ref.body.trim(), 4)}
   }
 
   // Also include any component scriptlets that weren't directly referenced
-  // (they may be called by other scriptlets or useful for future steps)
-  for (const s of componentScriptlets) {
+  // (they may be called by other scriptlets or useful for future steps).
+  // Iterate the deduped index, not the raw list, or a collision would emit
+  // the same filename twice.
+  for (const s of realScriptlets.values()) {
     if (!allCalls.has(s.path)) {
       const scriptletId = s.path.replace(/^scriptlets\//, '').replace(/\.xml$/, '');
       files.push({

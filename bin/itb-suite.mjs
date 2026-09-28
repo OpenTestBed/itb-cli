@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { compileFeature, writeSuite } from '../src/compile.mjs';
 import { spawn } from 'node:child_process';
-import { loadConfig, saveState, deploySuite, undeploySuite, startTest, testStatus, pollTest, resolveFromMaster, ensureDomainAndSpec, actorKeyFromDeploy, ensureOrganisation, ensureSystem, ensureConformance, browseTree } from '../src/itb-client.mjs';
+import { loadConfig, saveState, deploySuite, undeploySuite, startTest, testStatus, pollTest, resolveOrganisation, ensureDomainAndSpec, actorKeyFromDeploy, ensureOrganisation, ensureSystem, ensureConformance, browseTree } from '../src/itb-client.mjs';
 import { loadIgSource } from '../src/testplan.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -79,6 +79,24 @@ function suiteEntry(cfg) {
   };
 }
 
+// A failure from the Test Bed client is a message for the operator, not a
+// stack trace. Anything unexpected still prints in full, because a surprise
+// deserves the detail.
+// Top-level await in an ES module surfaces a throw as an uncaughtException,
+// not an unhandledRejection, so both are handled.
+const fail = (e) => {
+  const msg = e instanceof Error ? e.message : String(e);
+  console.error(msg);
+  if (!(e instanceof Error) || !msg) console.error(e);
+  // Set the code rather than calling process.exit(): forcing an exit from
+  // this handler while sockets are still closing aborts libuv on Windows
+  // ("Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)"), which buries
+  // the message we just printed under a crash.
+  process.exitCode = 2;
+};
+process.on('unhandledRejection', fail);
+process.on('uncaughtException', fail);
+
 switch (cmd) {
   case 'compile': {
     const feature = positional[0] ?? suiteEntry(needConfig()).feature;
@@ -87,7 +105,7 @@ switch (cmd) {
   }
   case 'deploy': {
     const cfg = needConfig();
-    await resolveFromMaster(cfg);       // no-ops when keys already known (state/env)
+    await resolveOrganisation(cfg);       // no-ops when keys already known (state/env)
     await ensureDomainAndSpec(cfg);     // no-ops when target.specification is set
     saveState(cfg);
     // A feature file is a test suite: ITB stores one suite per file, so a set
@@ -121,7 +139,7 @@ switch (cmd) {
   }
   case 'run': {
     const cfg = needConfig();
-    await resolveFromMaster(cfg);                       // master key -> community/org keys
+    await resolveOrganisation(cfg);                       // community key -> organisation key
     await ensureDomainAndSpec(cfg);                     // master key -> domain + spec (created if absent)
     const s = suiteEntry(cfg);
     const { zip, caseIds } = await doCompile(s.feature, s.out, s.zip);
@@ -151,7 +169,7 @@ switch (cmd) {
   }
   case 'init': {
     const cfg = needConfig();
-    await resolveFromMaster(cfg);
+    await resolveOrganisation(cfg);
     await ensureDomainAndSpec(cfg);           // also creates the community on fresh installs
     await ensureOrganisation(cfg);
     try { await ensureSystem(cfg); } catch (e) {
@@ -169,7 +187,7 @@ switch (cmd) {
   }
   case 'undeploy': {
     const cfg = needConfig();
-    await resolveFromMaster(cfg);
+    await resolveOrganisation(cfg);
     await ensureDomainAndSpec(cfg);
     // suite id: --suite <id>, else derived from the configured feature (local compile)
     let suiteId = flags.suite;
@@ -197,7 +215,7 @@ switch (cmd) {
     if (!flags.import && !flags.deploy) { console.log('\n(--import writes .feature files into features/; --deploy also deploys each suite)'); break; }
 
     const cfg = needConfig();
-    if (flags.deploy) { await resolveFromMaster(cfg); await ensureDomainAndSpec(cfg); }
+    if (flags.deploy) { await resolveOrganisation(cfg); await ensureDomainAndSpec(cfg); }
     for (const tp of testPlans) {
       const baseName = String(tp.stableId || tp.id || 'testplan').replace(/[^\w.-]/g, '_');
       let i = 0;
@@ -256,7 +274,7 @@ switch (cmd) {
   }
   case 'browse': {
     const cfg = needConfig();
-    await resolveFromMaster(cfg);
+    await resolveOrganisation(cfg);
     const tree = await browseTree(cfg);
     console.log('___BROWSE_JSON___');       // marker so UIs can split logs from data
     console.log(JSON.stringify(tree, null, 2));
@@ -283,5 +301,6 @@ usage:
   node bin/itb-suite.mjs browse  # instance tree (domain, specs, orgs, systems) as JSON
   node bin/itb-suite.mjs status  --session <id>
 Selection flags (override config/state): --spec <key> --system <key> --actor <key>
-First: node src/build-compiler.mjs   (one-time, rebuild after workbench parser changes)`);
+Keys: ITB_COMMUNITY_KEY is required (the API cannot list communities);
+      ITB_ORG_KEY / ITB_SPEC_KEY / ITB_SYSTEM_KEY / ITB_ACTOR_KEY are optional overrides.`);
 }

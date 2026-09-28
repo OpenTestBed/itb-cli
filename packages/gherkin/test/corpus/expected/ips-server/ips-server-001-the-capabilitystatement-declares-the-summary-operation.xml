@@ -53,8 +53,8 @@
       <input name="expectednumber">&quot;200&quot;</input>
     </verify>
     <assign to="jsonHeaders{Accept}">&quot;application/fhir+json&quot;</assign>
-    <interact id="inform" desc="Instruction for Client">
-      <instruct desc="Load the reference patient Patricia JORDANA (identifier ABC1234) from https://hl7.org/fhir/uv/ips/Bundle-bundle-ips-all-sections.json into the server under test." name="message"/>
+    <interact id="inform" desc="Load the reference patient Patricia JORDANA (identifier ABC1234) from https://hl7.org/fhir/uv/ips/Bundle-bundle-ips-all-sections.json into the server under test." inputTitle="Instruction for Client">
+      <instruct desc="Instruction" name="message" forceDisplay="true">&quot;Load the reference patient Patricia JORDANA (identifier ABC1234) from https://hl7.org/fhir/uv/ips/Bundle-bundle-ips-all-sections.json into the server under test.&quot;</instruct>
     </interact>
     <interact id="ask" desc="The identifier value of the reference patient on the server (e.g. ABC1234)" inputTitle="The identifier value of the reference patient on the server (e.g. ABC1234)">
       <request desc="The identifier value of the reference patient on the server (e.g. ABC1234)" name="patientIdentifier" inputType="TEXT" required="true">$patientIdentifier</request>
