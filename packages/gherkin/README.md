@@ -6,9 +6,39 @@ test suite — the OTB Gherkin language, its parser, and its XML generator.
 Used by the OTB authoring workbench (in the browser) and by the `otb` CLI
 (on Node). One implementation, so the two cannot drift.
 
+## Getting started
+
+Install the compiler and whichever dialects your tests need. A dialect is a
+package of vocabulary for one domain — FHIR validation, health certificates —
+and carries no code:
+
 ```bash
 npm install @opentestbed/otb-gherkin
+npm install @opentestbed/dialect-fhir-validator @opentestbed/dialect-hcert-decoder
 ```
+
+The compiler reads dialects from a `components/` directory, so the installed
+packages have to be assembled into one. The `spec-to-tests` skill ships a
+script that does it, and it works from installed packages, a checkout, or a URL:
+
+```bash
+node get-dialects.mjs --installed --out assets
+ITB_ASSET_ROOT=./assets node compile.mjs my.feature --out build --zip suite.zip
+```
+
+Both scripts, and the procedure for turning a specification into a test suite,
+are at
+[itb-plugin-authoring/.claude/skills/spec-to-tests](https://github.com/OpenTestBed/itb-plugin-authoring/tree/main/.claude/skills/spec-to-tests).
+They depend only on this package and on the Test Bed's documented REST API, so
+they run without the OpenTestBed CLI and without containers.
+
+A **Test Bed is optional**. Everything above — authoring, compiling, packaging
+a deployable suite — needs nothing but Node. Connect one when you want to
+execute the tests rather than build them.
+
+Every sentence the language accepts, with an example of each, is in
+[EXPRESSIONS.md](https://github.com/OpenTestBed/itb-plugin-authoring/blob/main/app/public/lang/EXPRESSIONS.md),
+generated from the language itself.
 
 ## The language
 
@@ -55,8 +85,15 @@ actors, kind mismatches) and `issues` (unresolved scriptlets).
 ## Where the language comes from
 
 The parser reads `lang/en.yml` / `lang/en-1.yml` (shipped with this package)
-and `components/<id>/steps.yml` (plugin dialects, which live in their own
-repos). It reaches both through a **`CatalogSource`**:
+and `components/<id>/steps.yml` (dialects, published as
+`@opentestbed/dialect-*` packages and developed in their own repos). It reaches
+both through a **`CatalogSource`**:
+
+`lang/scriptlets/` travels with the language too. Two core steps call a
+scriptlet — `is informed` and `posts … N times, paced manually` — and those
+scriptlets ship here rather than in a dialect, so the core never depends on an
+optional one. Anything you inject a `lang/en.yml` for should inject these the
+same way.
 
 ```ts
 interface CatalogSource {
