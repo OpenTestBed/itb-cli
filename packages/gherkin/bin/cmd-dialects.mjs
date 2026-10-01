@@ -85,6 +85,22 @@ async function idsOf(base) {
  *  where this went wrong once already: `\Z` is not a JavaScript construct, it
  *  is a literal Z, so a block at end-of-file never matched and every scriptlet
  *  was silently dropped. Indentation is unambiguous; use it. */
+/** Split a flow mapping's body on commas that are not inside quotes, so a
+ *  value like `baseVersion: ">=2, <3"` survives. */
+function splitFlow(body) {
+  const parts = [];
+  let cur = '';
+  let quote = null;
+  for (const ch of body) {
+    if (quote) { if (ch === quote) quote = null; cur += ch; continue; }
+    if (ch === '"' || ch === "'") { quote = ch; cur += ch; continue; }
+    if (ch === ',') { parts.push(cur); cur = ''; continue; }
+    cur += ch;
+  }
+  if (cur.trim()) parts.push(cur);
+  return parts;
+}
+
 function peek(yamlText) {
   const lines = yamlText.split(/\r?\n/);
   const out = { id: null, steps: null, legacy: null, baseVersion: null, scriptlets: [] };
@@ -103,8 +119,21 @@ function peek(yamlText) {
       const value = clean(rest);
       if (key === 'id') out.id = value || null;
       else if (key === 'language') {
-        if (value) out.steps = value;       // legacy string form: `language: steps.yml`
-        else section = 'language';          // block form
+        if (value.startsWith('{')) {
+          // Flow mapping: `language: { steps: steps.yml, baseVersion: ">=2 <3" }`.
+          // Valid YAML, and read as the legacy string form below it made the
+          // steps file name the whole mapping, so the error came out as
+          // `{ steps: steps.yml, … } is missing at the source`.
+          for (const part of splitFlow(value.replace(/^\{|\}$/g, ''))) {
+            const kv = /^\s*([A-Za-z_][\w-]*)\s*:\s*(.*)$/.exec(part);
+            if (!kv) continue;
+            const v = clean(kv[2]);
+            if (kv[1] === 'steps') out.steps = v || null;
+            else if (kv[1] === 'legacy') out.legacy = v || null;
+            else if (kv[1] === 'baseVersion') out.baseVersion = v || null;
+          }
+        } else if (value) out.steps = value;  // legacy string form: `language: steps.yml`
+        else section = 'language';            // block form
       } else if (key === 'scriptlets') {
         if (value.startsWith('[')) {
           out.scriptlets = value.replace(/^\[|\]$/g, '').split(',').map(s => clean(s)).filter(Boolean);
