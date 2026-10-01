@@ -1,6 +1,6 @@
 {
   "name": "@opentestbed/otb-gherkin",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "bin": {
     "otb-gherkin": "bin/otb-gherkin.mjs"
   },
