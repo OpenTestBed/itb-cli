@@ -117,8 +117,17 @@ export interface ExtensionCatalog {
 export function normalizeLanguageFile(raw: any): any {
   if (!raw || typeof raw !== 'object') return raw;
   const steps: CatalogStep[] = [];
-  for (const s of raw.steps ?? []) steps.push({ ...s, actions: flattenActions(s.actions) });
-  for (const v of raw.verbs ?? []) {
+  // Both must be lists. A mapping is valid YAML and used to throw "object is
+  // not iterable" from inside the parser; an empty list plus a named warning is
+  // a far better way to learn you wrote `verbs:` as a mapping.
+  const asList = (v: any, key: string): any[] => {
+    if (v === undefined || v === null) return [];
+    if (Array.isArray(v)) return v;
+    console.warn(`${key}: must be a list of entries, not a ${typeof v === 'object' ? 'mapping' : typeof v} — ignoring it, so none of its steps will exist`);
+    return [];
+  };
+  for (const s of asList(raw.steps, 'steps')) steps.push({ ...s, actions: flattenActions(s.actions) });
+  for (const v of asList(raw.verbs, 'verbs')) {
     if (!v || typeof v.text !== 'string') continue;
     const { text, ...rest } = v;
     steps.push({ ...rest, text, match: rest.match ?? '', actions: flattenActions(rest.actions) });
@@ -729,7 +738,17 @@ export function mergeCatalog(core: Catalog, components: ComponentInfo[]): Catalo
       }));
       merged.push(...tagged);
     }
-    for (const k of ext.kinds ?? []) {
+    // `kinds:` must be a list. Written as a mapping it is still valid YAML, and
+    // a bare `for…of` over it threw "object is not iterable" from here — with no
+    // file, no line and no field name, which is the least useful place for a
+    // dialect author to meet their own typo. Take the keys and say so instead;
+    // `otb-gherkin dialects` rejects the shape up front, so this is the net.
+    const extKinds: string[] = Array.isArray(ext.kinds)
+      ? ext.kinds
+      : (ext.kinds && typeof ext.kinds === 'object'
+          ? (console.warn(`${id}: kinds: is a mapping, but it must be a list — write "kinds: [${Object.keys(ext.kinds).join(', ')}]". Reading its keys for now.`), Object.keys(ext.kinds))
+          : []);
+    for (const k of extKinds) {
       if (kinds[k] && kinds[k] !== id) console.warn(`actor kind "${k}" is declared by both ${kinds[k]} and ${id}; keeping ${kinds[k]}`);
       else kinds[k] = id;
     }

@@ -128,6 +128,45 @@ function peek(yamlText) {
   return out;
 }
 
+/**
+ * The keys a steps file must give a LIST, and what happens when it gives a
+ * mapping instead. `kinds: [weather-service]` is right; writing it as
+ *
+ *   kinds:
+ *     weather-service:
+ *       name: Weather service
+ *
+ * parses as valid YAML and then throws "object is not iterable" out of the
+ * middle of the compiler — no file, no line, no field name. Caught here, where
+ * the file is in hand and can be named.
+ *
+ * Line-based on purpose: this script has no YAML dependency, and a scanner is
+ * the right tool for "what shape is this key" anyway.
+ */
+const MUST_BE_LISTS = ['kinds', 'verbs', 'steps'];
+function listShapeProblem(text) {
+  const lines = String(text).split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const m = /^([A-Za-z_][A-Za-z0-9_-]*):[ \t]*(.*)$/.exec(lines[i]);
+    if (!m || !MUST_BE_LISTS.includes(m[1])) continue;
+    if (m[2].trim() !== '') continue;            // inline, e.g. `kinds: [a, b]`
+    // Look at the first thing nested under it.
+    for (let j = i + 1; j < lines.length; j++) {
+      const l = lines[j];
+      if (l.trim() === '' || /^\s*#/.test(l)) continue;
+      if (!/^\s/.test(l)) break;                 // next top-level key: empty, fine
+      if (/^\s*-/.test(l)) break;                // a list item: correct
+      const key = /^\s*([A-Za-z_][A-Za-z0-9_:.-]*):/.exec(l);
+      if (key) {
+        return `${m[1]}: is a mapping, but it must be a list — write "${m[1]}: [${key[1]}]" or "- ${key[1]}" items. `
+             + `As a mapping it parses, then fails deep in the compiler as "object is not iterable" with no file or line.`;
+      }
+      break;
+    }
+  }
+  return null;
+}
+
 async function grab(base, id, outComponents) {
   const prefix = id === null ? '' : id + '/';
   const comp = await readFrom(base, `${prefix}component.yml`);
@@ -148,7 +187,12 @@ async function grab(base, id, outComponents) {
 
   for (const f of [meta.steps ?? 'steps.yml', meta.legacy].filter(Boolean)) {
     const body = await readFrom(base, `${prefix}${f}`);
-    if (body) { fs.writeFileSync(path.join(dir, f), body, 'utf8'); wrote.push(f); }
+    if (body) {
+      const problem = listShapeProblem(body);
+      if (problem) return { id: realId, error: `${f}: ${problem}` };
+      fs.writeFileSync(path.join(dir, f), body, 'utf8');
+      wrote.push(f);
+    }
     else if (f === (meta.steps ?? 'steps.yml')) return { id: realId, error: `${f} is missing at the source` };
   }
   for (const s of meta.scriptlets) {
@@ -277,21 +321,43 @@ for (const src of sources) {
 
 if (got.length === 0) {
   console.error('No dialects obtained.');
+  // The reasons are printed further down, which this early exit never reached:
+  // someone whose only dialect was rejected got "No dialects obtained" and not
+  // one word about why. Say it here, first, because it is the whole answer.
+  for (const f of failed) console.error(`  FAIL ${f.id.padEnd(18)} ${f.error}`);
   console.error(FROM ? `  source: ${FROM}` : `  tried: ${DEFAULT_SOURCES.join(', ')}`);
-  console.error('  Point --from at a checkout: the workbench\'s app/public/components, or one plugin repo\'s dialect/ folder.');
+  if (failed.length === 0) {
+    console.error('  Point --from at a checkout: the workbench\'s app/public/components, or one plugin repo\'s dialect/ folder.');
+  }
   process.exit(1);
 }
 
+// A dialect sitting in the output folder that this run did not fetch is almost
+// always one the author wrote by hand — the supported way to have a dialect of
+// your own without publishing anything. Listing only what was fetched would
+// unlist it, and the failure then surfaces as "No mapping for step" against the
+// FEATURE FILE, which points at the wrong thing entirely. So keep it, and say
+// so, because a silently preserved file is nearly as confusing as a lost one.
+const fetched = new Set(got.map(g => g.id));
+let kept = [];
+try {
+  kept = fs.readdirSync(outComponents, { withFileTypes: true })
+    .filter(e => e.isDirectory() && !fetched.has(e.name)
+      && fs.existsSync(path.join(outComponents, e.name, 'component.yml')))
+    .map(e => e.name);
+} catch { /* first run — nothing to keep */ }
+
 fs.writeFileSync(path.join(outComponents, 'index.json'),
-  JSON.stringify({ components: got.map(g => g.id).sort() }, null, 2) + '\n', 'utf8');
+  JSON.stringify({ components: [...fetched, ...kept].sort() }, null, 2) + '\n', 'utf8');
 
 const core = coreSpecVersion();
 for (const g of got) {
   const bad = core && g.baseVersion && !satisfies(core, g.baseVersion);
   console.log(`  ${bad ? 'WARN' : 'ok  '} ${g.id.padEnd(18)} ${g.files.length} file${g.files.length === 1 ? '' : 's'}${g.from ? `  ${g.from}` : ''}${bad ? `  — wants core ${g.baseVersion}, installed core is ${core}: this dialect will be REFUSED at load and every one of its steps will report "No mapping for step"` : ''}`);
 }
+for (const k of kept) console.log(`  kept ${k.padEnd(18)} already in ${path.join(OUT, 'components')}, not from this source`);
 for (const f of failed) console.log(`  FAIL ${f.id.padEnd(18)} ${f.error}`);
 
-console.log(`\n${got.length} dialect${got.length === 1 ? '' : 's'} in ${outComponents}`);
+console.log(`\n${got.length} dialect${got.length === 1 ? '' : 's'} in ${outComponents}${kept.length ? ` (+${kept.length} kept)` : ''}`);
 console.log(`Use it with:  ITB_ASSET_ROOT=${path.resolve(OUT)}`);
 process.exit(failed.length ? 1 : 0);
