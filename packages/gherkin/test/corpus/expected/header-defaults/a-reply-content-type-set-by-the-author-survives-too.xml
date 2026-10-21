@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testcase id="a-reply-content-type-set-by-the-author-survives-too"
+          xmlns="http://www.gitb.com/tdl/v1/"
+          xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>a reply content type set by the author survives too</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>Header defaults do not override the author</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="Server" role="SUT"/>
+    <gitb:actor id="Client" role="SIMULATED"/>
+  </actors>
+
+  <variables>
+    <var name="lastReceived" type="map"/>
+    <var name="lastReply" type="map"/>
+    <var name="ServerBase" type="string"/>
+    <var name="replyHeaders" type="map"/>
+  </variables>
+
+  <steps stopOnError="true">
+    <assign to="ServerBase">&quot;https://api.example.org&quot;</assign>
+    <btxn from="Client" to="Server" txnId="txn_Server_Client" handler="HttpMessagingV2"/>
+    <assign to="replyHeaders{Content-Type}">&quot;application/fhir+json&quot;</assign>
+    <receive id="lastReceived" desc="Receive from Client" handler="HttpMessagingV2" from="Client" to="Server" txnId="txn_Server_Client">
+      <input name="timeout">&quot;60&quot;</input>
+    </receive>
+    <assign to="replyHeaders{Content-Type}">if (empty($replyHeaders{Content-Type})) then &quot;application/json&quot; else $replyHeaders{Content-Type}</assign>
+    <send id="lastReply" desc="Reply 200 to Client" handler="HttpMessagingV2" from="Server" to="Client" txnId="txn_Server_Client">
+      <input name="status">&quot;200&quot;</input>
+      <input name="headers">$replyHeaders</input>
+      <input name="body">'{&quot;resourceType&quot;:&quot;Bundle&quot;}'</input>
+    </send>
+    <etxn txnId="txn_Server_Client"/>
+  </steps>
+
+  <output>
+    <success>
+      <default>"Test case completed successfully."</default>
+    </success>
+    <failure>
+      <default>"Test case failed. Check step reports and logs."</default>
+    </failure>
+  </output>
+</testcase>

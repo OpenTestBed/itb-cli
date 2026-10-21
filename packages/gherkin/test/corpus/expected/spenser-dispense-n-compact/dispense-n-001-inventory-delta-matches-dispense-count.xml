@@ -71,7 +71,7 @@
     <interact id="ask" desc="How many dark chocolates to dispense?" inputTitle="How many dark chocolates to dispense?">
       <request desc="How many dark chocolates to dispense?" name="N" inputType="TEXT" required="true">$N</request>
     </interact>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <send id="lastRequest" desc="GET /InventoryReport" handler="HttpMessagingV2" from="Client" to="Spenser">
       <input name="uri">concat($SpenserBase, &quot;/InventoryReport&quot;)</input>
       <input name="method">&quot;GET&quot;</input>
@@ -179,8 +179,8 @@
       <input name="actualstring">$conformanceErrors</input>
       <input name="expectedstring">&quot;0&quot;</input>
     </verify>
-    <assign to="jsonHeaders{Content-Type}">&quot;application/json&quot;</assign>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Content-Type}">if (empty($jsonHeaders{Content-Type})) then &quot;application/json&quot; else $jsonHeaders{Content-Type}</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <assign to="i">0</assign>
     <while>
       <cond>number($i) &lt; number($N)</cond>
@@ -199,7 +199,7 @@
         <assign to="i">number($i) + 1</assign>
       </do>
     </while>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <send id="lastRequest" desc="GET /InventoryReport" handler="HttpMessagingV2" from="Client" to="Spenser">
       <input name="uri">concat($SpenserBase, &quot;/InventoryReport&quot;)</input>
       <input name="method">&quot;GET&quot;</input>

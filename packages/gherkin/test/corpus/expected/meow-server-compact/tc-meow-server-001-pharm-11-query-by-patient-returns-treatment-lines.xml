@@ -51,7 +51,7 @@
       <input name="actualnumber">$lastRequest{response}{status}</input>
       <input name="expectednumber">&quot;200&quot;</input>
     </verify>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <send id="lastRequest" desc="GET /MedicationStatement?patient=137202631" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="MedicationOverviewResponder">
       <input name="uri">concat($MedicationOverviewResponderBase, &quot;/MedicationStatement?patient=137202631&quot;)</input>
       <input name="method">&quot;GET&quot;</input>

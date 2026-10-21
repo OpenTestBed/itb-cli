@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testcase id="an-author-set-content-type-survives-the-post-verb"
+          xmlns="http://www.gitb.com/tdl/v1/"
+          xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>an author-set content type survives the POST verb</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>Header defaults do not override the author</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="Server" role="SUT"/>
+    <gitb:actor id="Client" role="SIMULATED"/>
+  </actors>
+
+  <variables>
+    <var name="lastRequest" type="map"/>
+    <var name="ServerBase" type="string"/>
+    <var name="jsonHeaders" type="map"/>
+    <var name="sigStatus" type="string"/>
+  </variables>
+
+  <steps stopOnError="true">
+    <assign to="ServerBase">&quot;https://api.example.org&quot;</assign>
+    <assign to="jsonHeaders{Content-Type}">&quot;application/x-www-form-urlencoded&quot;</assign>
+    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Content-Type}">if (empty($jsonHeaders{Content-Type})) then &quot;application/json&quot; else $jsonHeaders{Content-Type}</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
+    <send id="lastRequest" desc="POST /token" handler="HttpMessagingV2" from="Client" to="Server">
+      <input name="uri">concat($ServerBase, &quot;/token&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$jsonHeaders</input>
+      <input name="body">&quot;grant_type=client_credentials&amp;scope=read&quot;</input>
+    </send>
+    <assign to="sigStatus">if (empty($lastRequest{response}{status})) then &quot;0&quot; else $lastRequest{response}{status}</assign>
+    <verify handler="NumberValidator" desc="Response status is 200">
+      <input name="actualnumber">$sigStatus</input>
+      <input name="expectednumber">&quot;200&quot;</input>
+    </verify>
+  </steps>
+
+  <output>
+    <success>
+      <default>"Test case completed successfully."</default>
+    </success>
+    <failure>
+      <default>"Test case failed. Check step reports and logs."</default>
+    </failure>
+  </output>
+</testcase>

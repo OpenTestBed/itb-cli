@@ -32,8 +32,8 @@
     <assign to="DocumentResponderBase">&quot;https://hapi.fhir.org/baseR4&quot;</assign>
     <assign to="FHIRValidatorBase">&quot;http://fhir-validator:8081&quot;</assign>
     <assign to="jsonHeaders{Accept}">&quot;application/fhir+json&quot;</assign>
-    <assign to="jsonHeaders{Content-Type}">&quot;application/json&quot;</assign>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Content-Type}">if (empty($jsonHeaders{Content-Type})) then &quot;application/json&quot; else $jsonHeaders{Content-Type}</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <send id="lastRequest" desc="PUT /DocumentReference/otb-mhd-probe-001" handler="HttpMessagingV2" from="DocumentSource" to="DocumentResponder">
       <input name="uri">concat($DocumentResponderBase, &quot;/DocumentReference/otb-mhd-probe-001&quot;)</input>
       <input name="method">&quot;PUT&quot;</input>
@@ -46,7 +46,7 @@
       &quot;content&quot;: [{ &quot;attachment&quot;: { &quot;contentType&quot;: &quot;application/pdf&quot; } }]
     }'</input>
     </send>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <send id="lastRequest" desc="GET /DocumentReference/otb-mhd-probe-001" handler="HttpMessagingV2" from="DocumentSource" to="DocumentResponder">
       <input name="uri">concat($DocumentResponderBase, &quot;/DocumentReference/otb-mhd-probe-001&quot;)</input>
       <input name="method">&quot;GET&quot;</input>
@@ -104,8 +104,8 @@
       <input name="actualstring">$pathValue</input>
       <input name="expectedstring">&quot;current&quot;</input>
     </verify>
-    <assign to="jsonHeaders{Content-Type}">&quot;application/json&quot;</assign>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Content-Type}">if (empty($jsonHeaders{Content-Type})) then &quot;application/json&quot; else $jsonHeaders{Content-Type}</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <send id="lastRequest" desc="PUT /DocumentReference/otb-mhd-probe-001" handler="HttpMessagingV2" from="DocumentSource" to="DocumentResponder">
       <input name="uri">concat($DocumentResponderBase, &quot;/DocumentReference/otb-mhd-probe-001&quot;)</input>
       <input name="method">&quot;PUT&quot;</input>
@@ -123,7 +123,7 @@
       <input name="actualnumber">$sigStatus</input>
       <input name="expectednumber">&quot;200&quot;</input>
     </verify>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <send id="lastRequest" desc="GET /DocumentReference/otb-mhd-probe-001" handler="HttpMessagingV2" from="DocumentSource" to="DocumentResponder">
       <input name="uri">concat($DocumentResponderBase, &quot;/DocumentReference/otb-mhd-probe-001&quot;)</input>
       <input name="method">&quot;GET&quot;</input>

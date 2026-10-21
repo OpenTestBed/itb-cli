@@ -59,7 +59,7 @@
       <input name="actualnumber">$lastRequest{response}{status}</input>
       <input name="expectednumber">&quot;200&quot;</input>
     </verify>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <send id="lastRequest" desc="GET https://hl7.org/fhir/uv/ips/Bundle-bundle-ips-all-sections.json" handler="HttpMessagingV2" from="Tester">
       <input name="uri">&quot;https://hl7.org/fhir/uv/ips/Bundle-bundle-ips-all-sections.json&quot;</input>
       <input name="method">&quot;GET&quot;</input>

@@ -66,7 +66,7 @@
     <interact id="ask" desc="The identifier value of the reference patient on the server (e.g. ABC1234)" inputTitle="The identifier value of the reference patient on the server (e.g. ABC1234)">
       <request desc="The identifier value of the reference patient on the server (e.g. ABC1234)" name="patientIdentifier" inputType="TEXT" required="true">$patientIdentifier</request>
     </interact>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <send id="lastRequest" desc="GET /Patient/$summary?identifier=" handler="HttpMessagingV2" from="Client" to="IPSServer">
       <input name="uri">concat($IPSServerBase, &quot;/Patient/$summary?identifier=&quot;, $patientIdentifier)</input>
       <input name="method">&quot;GET&quot;</input>

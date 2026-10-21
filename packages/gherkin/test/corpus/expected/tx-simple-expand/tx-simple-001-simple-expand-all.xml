@@ -39,7 +39,7 @@
   <steps stopOnError="true">
     <assign to="TxServerBase">&quot;https://tx.fhir.org/r5&quot;</assign>
     <assign to="FHIRValidatorBase">&quot;http://fhir-validator:8081&quot;</assign>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <send id="lastRequest" desc="GET https://raw.githubusercontent.com/HL7/fhir-tx-ecosystem-ig/main/tests/simple/codesystem-simple.json" handler="HttpMessagingV2" from="Client">
       <input name="uri">&quot;https://raw.githubusercontent.com/HL7/fhir-tx-ecosystem-ig/main/tests/simple/codesystem-simple.json&quot;</input>
       <input name="method">&quot;GET&quot;</input>
@@ -49,15 +49,15 @@
     <verify handler="ExpressionValidator" desc="$csSimple is not empty">
       <input name="expression">string-length($csSimple) &gt; 0</input>
     </verify>
-    <assign to="jsonHeaders{Content-Type}">&quot;application/json&quot;</assign>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Content-Type}">if (empty($jsonHeaders{Content-Type})) then &quot;application/json&quot; else $jsonHeaders{Content-Type}</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <send id="lastRequest" desc="POST /CodeSystem" handler="HttpMessagingV2" from="Client" to="TxServer">
       <input name="uri">concat($TxServerBase, &quot;/CodeSystem&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$jsonHeaders</input>
       <input name="body">$csSimple</input>
     </send>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <send id="lastRequest" desc="GET https://raw.githubusercontent.com/HL7/fhir-tx-ecosystem-ig/main/tests/simple/valueset-all.json" handler="HttpMessagingV2" from="Client">
       <input name="uri">&quot;https://raw.githubusercontent.com/HL7/fhir-tx-ecosystem-ig/main/tests/simple/valueset-all.json&quot;</input>
       <input name="method">&quot;GET&quot;</input>
@@ -67,16 +67,16 @@
     <verify handler="ExpressionValidator" desc="$vsAll is not empty">
       <input name="expression">string-length($vsAll) &gt; 0</input>
     </verify>
-    <assign to="jsonHeaders{Content-Type}">&quot;application/json&quot;</assign>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Content-Type}">if (empty($jsonHeaders{Content-Type})) then &quot;application/json&quot; else $jsonHeaders{Content-Type}</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <send id="lastRequest" desc="POST /ValueSet" handler="HttpMessagingV2" from="Client" to="TxServer">
       <input name="uri">concat($TxServerBase, &quot;/ValueSet&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
       <input name="headers">$jsonHeaders</input>
       <input name="body">$vsAll</input>
     </send>
-    <assign to="jsonHeaders{Content-Type}">&quot;application/json&quot;</assign>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Content-Type}">if (empty($jsonHeaders{Content-Type})) then &quot;application/json&quot; else $jsonHeaders{Content-Type}</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <send id="lastRequest" desc="POST /ValueSet/$expand" handler="HttpMessagingV2" from="Client" to="TxServer">
       <input name="uri">concat($TxServerBase, &quot;/ValueSet/$expand&quot;)</input>
       <input name="method">&quot;POST&quot;</input>

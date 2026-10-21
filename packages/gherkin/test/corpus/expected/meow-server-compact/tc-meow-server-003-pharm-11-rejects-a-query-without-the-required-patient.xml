@@ -30,7 +30,7 @@
   <steps stopOnError="true">
     <assign to="MedicationOverviewResponderBase">&quot;https://hapi.fhir.org/baseR4&quot;</assign>
     <assign to="FHIRValidatorBase">&quot;http://fhir-validator:8080&quot;</assign>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <send id="lastRequest" desc="GET /MedicationStatement" handler="HttpMessagingV2" from="MedicationOverviewConsumer" to="MedicationOverviewResponder">
       <input name="uri">concat($MedicationOverviewResponderBase, &quot;/MedicationStatement&quot;)</input>
       <input name="method">&quot;GET&quot;</input>

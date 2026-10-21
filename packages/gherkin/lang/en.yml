@@ -7,7 +7,7 @@ locale: en
 # patterns. Feature files tagged `@lang:itb-core-en@^1` load lang/en-1.yml,
 # the previous generation, unchanged.
 id: itb-core-en
-specVersion: "2.0.0"
+specVersion: "2.1.0"
 
 # ====================================================================
 # OTB Gherkin — core language, generation 2
@@ -167,8 +167,8 @@ verbs:
   - text: '{actor} posts to/on {actor} at {string}( with id {value})? with body {ref}'
     doc: POST a body held in a variable.
     actions:
-      - assign: { to: 'jsonHeaders{Content-Type}', value: '"application/json"' }
-      - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
+      - assign: { to: 'jsonHeaders{Content-Type}', value: 'if (empty($jsonHeaders{Content-Type})) then "application/json" else $jsonHeaders{Content-Type}' }
+      - assign: { to: 'jsonHeaders{Accept}', value: 'if (empty($jsonHeaders{Accept})) then "application/json" else $jsonHeaders{Accept}' }
       - send:
           id: 'lastRequest'
           desc: 'POST $3'
@@ -184,8 +184,8 @@ verbs:
   - text: '{actor} posts to/on {actor} at {string}( with id {value})? with:'
     doc: POST the doc string as the body.
     actions:
-      - assign: { to: 'jsonHeaders{Content-Type}', value: '"application/json"' }
-      - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
+      - assign: { to: 'jsonHeaders{Content-Type}', value: 'if (empty($jsonHeaders{Content-Type})) then "application/json" else $jsonHeaders{Content-Type}' }
+      - assign: { to: 'jsonHeaders{Accept}', value: 'if (empty($jsonHeaders{Accept})) then "application/json" else $jsonHeaders{Accept}' }
       - send:
           id: 'lastRequest'
           desc: 'POST $3'
@@ -201,8 +201,8 @@ verbs:
   - text: '{actor} puts to/on {actor} at {string}( with id {value})? with body {ref}'
     doc: PUT a body held in a variable.
     actions:
-      - assign: { to: 'jsonHeaders{Content-Type}', value: '"application/json"' }
-      - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
+      - assign: { to: 'jsonHeaders{Content-Type}', value: 'if (empty($jsonHeaders{Content-Type})) then "application/json" else $jsonHeaders{Content-Type}' }
+      - assign: { to: 'jsonHeaders{Accept}', value: 'if (empty($jsonHeaders{Accept})) then "application/json" else $jsonHeaders{Accept}' }
       - send:
           id: 'lastRequest'
           desc: 'PUT $3'
@@ -218,8 +218,8 @@ verbs:
   - text: '{actor} puts to/on {actor} at {string}( with id {value})? with:'
     doc: PUT the doc string as the body.
     actions:
-      - assign: { to: 'jsonHeaders{Content-Type}', value: '"application/json"' }
-      - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
+      - assign: { to: 'jsonHeaders{Content-Type}', value: 'if (empty($jsonHeaders{Content-Type})) then "application/json" else $jsonHeaders{Content-Type}' }
+      - assign: { to: 'jsonHeaders{Accept}', value: 'if (empty($jsonHeaders{Accept})) then "application/json" else $jsonHeaders{Accept}' }
       - send:
           id: 'lastRequest'
           desc: 'PUT $3'
@@ -235,8 +235,8 @@ verbs:
   - text: '{actor} patches to/on {actor} at {string}( with id {value})? with body {ref}'
     doc: PATCH (JSON Patch) with a body held in a variable.
     actions:
-      - assign: { to: 'jsonHeaders{Content-Type}', value: '"application/json-patch+json"' }
-      - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
+      - assign: { to: 'jsonHeaders{Content-Type}', value: 'if (empty($jsonHeaders{Content-Type})) then "application/json-patch+json" else $jsonHeaders{Content-Type}' }
+      - assign: { to: 'jsonHeaders{Accept}', value: 'if (empty($jsonHeaders{Accept})) then "application/json" else $jsonHeaders{Accept}' }
       - send:
           id: 'lastRequest'
           desc: 'PATCH $3'
@@ -252,8 +252,8 @@ verbs:
   - text: '{actor} patches to/on {actor} at {string}( with id {value})? with:'
     doc: PATCH (JSON Patch) with the doc string as the body.
     actions:
-      - assign: { to: 'jsonHeaders{Content-Type}', value: '"application/json-patch+json"' }
-      - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
+      - assign: { to: 'jsonHeaders{Content-Type}', value: 'if (empty($jsonHeaders{Content-Type})) then "application/json-patch+json" else $jsonHeaders{Content-Type}' }
+      - assign: { to: 'jsonHeaders{Accept}', value: 'if (empty($jsonHeaders{Accept})) then "application/json" else $jsonHeaders{Accept}' }
       - send:
           id: 'lastRequest'
           desc: 'PATCH $3'
@@ -269,7 +269,7 @@ verbs:
   - text: '{actor} deletes on/from {actor} at {string}( with id {value})?'
     doc: DELETE.
     actions:
-      - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
+      - assign: { to: 'jsonHeaders{Accept}', value: 'if (empty($jsonHeaders{Accept})) then "application/json" else $jsonHeaders{Accept}' }
       - send:
           id: 'lastRequest'
           desc: 'DELETE $3'
@@ -284,7 +284,7 @@ verbs:
   - text: '{actor} gets from {actor} at {string}( with id {value})? as {var}'
     doc: GET relative to an actor's endpoint and keep the body.
     actions:
-      - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
+      - assign: { to: 'jsonHeaders{Accept}', value: 'if (empty($jsonHeaders{Accept})) then "application/json" else $jsonHeaders{Accept}' }
       - send:
           id: 'lastRequest'
           desc: 'GET $3'
@@ -302,7 +302,7 @@ verbs:
   - text: '{actor} gets {string} as {var}'
     doc: GET an absolute URL and keep the body.
     actions:
-      - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
+      - assign: { to: 'jsonHeaders{Accept}', value: 'if (empty($jsonHeaders{Accept})) then "application/json" else $jsonHeaders{Accept}' }
       - send:
           id: 'lastRequest'
           desc: 'GET $2'
@@ -318,8 +318,8 @@ verbs:
   - text: '{actor} posts {ref} to {actor} at {string} {value} times, paced manually'
     doc: POST the same body N times, prompting the operator between sends.
     actions:
-      - assign: { to: 'jsonHeaders{Content-Type}', value: '"application/json"' }
-      - assign: { to: 'jsonHeaders{Accept}', value: '"application/json"' }
+      - assign: { to: 'jsonHeaders{Content-Type}', value: 'if (empty($jsonHeaders{Content-Type})) then "application/json" else $jsonHeaders{Content-Type}' }
+      - assign: { to: 'jsonHeaders{Accept}', value: 'if (empty($jsonHeaders{Accept})) then "application/json" else $jsonHeaders{Accept}' }
       - repeat:
           count: '$5'
           do:
@@ -400,6 +400,7 @@ verbs:
   #   <Actor> waits for <Actor> [within N seconds]           catch a request
   #   <Actor> is listening for <Actor>                        open an exchange
   #   <Actor> receives a request from <Actor> [within N seconds]
+  #   set reply header "Name" to "value" | to $var               before replying
   #   <Actor> replies to <Actor> with status 200 and: """…""" | and body $var
   #   <Actor> stops listening for <Actor>
   # What was received is $received.method / .path / .headers.X / .body.
@@ -455,10 +456,19 @@ verbs:
           txnId: 'txn_$1_$2'
           inputs: { timeout: '"300"' }
 
+  # Reply headers are set the same way request headers are, and the reply verbs
+  # below default Content-Type only when nothing has set it. Without this a
+  # simulated 401 could not carry WWW-Authenticate, so a test of a client's
+  # reaction to a refusal was weaker than the requirement it covered.
+  - text: 'set reply header {string} to {value}'
+    doc: Set a header on every following reply (literal or $variable).
+    actions:
+      - assign: { to: 'replyHeaders{$1}', value: '$2' }
+
   - text: '{actor} replies to {actor} with status {int} and body {ref}'
     doc: Answer the received request with a body held in a variable.
     actions:
-      - assign: { to: 'replyHeaders{Content-Type}', value: '"application/json"' }
+      - assign: { to: 'replyHeaders{Content-Type}', value: 'if (empty($replyHeaders{Content-Type})) then "application/json" else $replyHeaders{Content-Type}' }
       - send:
           id: 'lastReply'
           desc: 'Reply $3 to $2'
@@ -474,7 +484,7 @@ verbs:
   - text: '{actor} replies to {actor} with status {int} and:'
     doc: Answer the received request with the doc string.
     actions:
-      - assign: { to: 'replyHeaders{Content-Type}', value: '"application/json"' }
+      - assign: { to: 'replyHeaders{Content-Type}', value: 'if (empty($replyHeaders{Content-Type})) then "application/json" else $replyHeaders{Content-Type}' }
       - send:
           id: 'lastReply'
           desc: 'Reply $3 to $2'

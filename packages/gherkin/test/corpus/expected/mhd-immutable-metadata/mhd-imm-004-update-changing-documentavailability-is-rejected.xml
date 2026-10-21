@@ -37,8 +37,8 @@
     <assign to="AuthServerBase">&quot;https://ehealthsuisse.ihe-europe.net/auth&quot;</assign>
     <assign to="FHIRValidatorBase">&quot;http://fhir-validator:8081&quot;</assign>
     <assign to="jsonHeaders{Accept}">&quot;application/fhir+json&quot;</assign>
-    <assign to="jsonHeaders{Content-Type}">&quot;application/json&quot;</assign>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Content-Type}">if (empty($jsonHeaders{Content-Type})) then &quot;application/json&quot; else $jsonHeaders{Content-Type}</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <send id="lastRequest" desc="POST /token" handler="HttpMessagingV2" from="DocumentSource" to="AuthServer">
       <input name="uri">concat($AuthServerBase, &quot;/token&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
@@ -50,7 +50,7 @@
       <input name="pointer">&quot;/access_token&quot;</input>
     </process>
     <assign to="jsonHeaders{Authorization}">concat(&quot;Bearer &quot;, $iuaToken)</assign>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <send id="lastRequest" desc="GET https://gitlab.inria.fr/gazelle/public/simulation/mhd-fhir-simulators/-/raw/master/mhd-fhir-simulators-domain/src/main/resources/create/MHD-1_DocumentReferenceCaseHCPERR.json" handler="HttpMessagingV2" from="DocumentSource">
       <input name="uri">&quot;https://gitlab.inria.fr/gazelle/public/simulation/mhd-fhir-simulators/-/raw/master/mhd-fhir-simulators-domain/src/main/resources/create/MHD-1_DocumentReferenceCaseHCPERR.json&quot;</input>
       <input name="method">&quot;GET&quot;</input>
@@ -60,8 +60,8 @@
     <verify handler="ExpressionValidator" desc="$originalDoc is not empty">
       <input name="expression">string-length($originalDoc) &gt; 0</input>
     </verify>
-    <assign to="jsonHeaders{Content-Type}">&quot;application/json&quot;</assign>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Content-Type}">if (empty($jsonHeaders{Content-Type})) then &quot;application/json&quot; else $jsonHeaders{Content-Type}</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <send id="lastRequest" desc="POST /DocumentReference" handler="HttpMessagingV2" from="DocumentSource" to="DocumentResponder">
       <input name="uri">concat($DocumentResponderBase, &quot;/DocumentReference&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
@@ -72,7 +72,7 @@
       <input name="content">$lastRequest{response}{body}</input>
       <input name="pointer">&quot;/id&quot;</input>
     </process>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <send id="lastRequest" desc="GET https://gitlab.inria.fr/gazelle/public/simulation/mhd-fhir-simulators/-/raw/master/mhd-fhir-simulators-domain/src/main/resources/updates/KO-ErrorCase3-2-documentAvailabilityModified.json" handler="HttpMessagingV2" from="DocumentSource">
       <input name="uri">&quot;https://gitlab.inria.fr/gazelle/public/simulation/mhd-fhir-simulators/-/raw/master/mhd-fhir-simulators-domain/src/main/resources/updates/KO-ErrorCase3-2-documentAvailabilityModified.json&quot;</input>
       <input name="method">&quot;GET&quot;</input>
@@ -82,8 +82,8 @@
     <verify handler="ExpressionValidator" desc="$payload is not empty">
       <input name="expression">string-length($payload) &gt; 0</input>
     </verify>
-    <assign to="jsonHeaders{Content-Type}">&quot;application/json&quot;</assign>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Content-Type}">if (empty($jsonHeaders{Content-Type})) then &quot;application/json&quot; else $jsonHeaders{Content-Type}</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <send id="lastRequest" desc="PUT /DocumentReference/" handler="HttpMessagingV2" from="DocumentSource" to="DocumentResponder">
       <input name="uri">concat($DocumentResponderBase, &quot;/DocumentReference/&quot;, $docId)</input>
       <input name="method">&quot;PUT&quot;</input>

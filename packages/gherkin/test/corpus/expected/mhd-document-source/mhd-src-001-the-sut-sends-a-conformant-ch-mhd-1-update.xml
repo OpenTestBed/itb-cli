@@ -119,7 +119,7 @@
       <input name="actualstring">$conformanceErrors</input>
       <input name="expectedstring">&quot;0&quot;</input>
     </verify>
-    <assign to="replyHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="replyHeaders{Content-Type}">if (empty($replyHeaders{Content-Type})) then &quot;application/json&quot; else $replyHeaders{Content-Type}</assign>
     <send id="lastReply" desc="Reply 200 to DocumentSource" handler="HttpMessagingV2" from="DocumentResponder" to="DocumentSource" txnId="txn_DocumentResponder_DocumentSource">
       <input name="status">&quot;200&quot;</input>
       <input name="headers">$replyHeaders</input>

@@ -43,7 +43,7 @@
   <steps stopOnError="true">
     <assign to="FHIRServerBase">&quot;http://localhost:8080/fhir&quot;</assign>
     <assign to="FHIRValidatorBase">&quot;http://fhir-validator:8081&quot;</assign>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <send id="lastRequest" desc="GET $FHIRServerBase/metadata" handler="HttpMessagingV2" from="Client">
       <input name="uri">&quot;$FHIRServerBase/metadata&quot;</input>
       <input name="method">&quot;GET&quot;</input>
@@ -137,8 +137,8 @@
       <input name="actualstring">$validationErrors</input>
       <input name="expectedstring">&quot;0&quot;</input>
     </verify>
-    <assign to="jsonHeaders{Content-Type}">&quot;application/json&quot;</assign>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Content-Type}">if (empty($jsonHeaders{Content-Type})) then &quot;application/json&quot; else $jsonHeaders{Content-Type}</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <send id="lastRequest" desc="POST /Patient" handler="HttpMessagingV2" from="Client" to="FHIRServer">
       <input name="uri">concat($FHIRServerBase, &quot;/Patient&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
@@ -150,7 +150,7 @@
       <input name="actualnumber">$sigStatus</input>
       <input name="expectednumber">&quot;201&quot;</input>
     </verify>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <send id="lastRequest" desc="GET $FHIRServerBase/Patient/smoke-pat-001" handler="HttpMessagingV2" from="Client">
       <input name="uri">&quot;$FHIRServerBase/Patient/smoke-pat-001&quot;</input>
       <input name="method">&quot;GET&quot;</input>

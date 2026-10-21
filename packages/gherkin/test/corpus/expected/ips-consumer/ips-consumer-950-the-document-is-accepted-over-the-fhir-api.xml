@@ -55,7 +55,7 @@
       <input name="actualnumber">$lastRequest{response}{status}</input>
       <input name="expectednumber">&quot;200&quot;</input>
     </verify>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <send id="lastRequest" desc="GET https://hl7.org/fhir/uv/ips/Bundle-bundle-ips-all-sections.json" handler="HttpMessagingV2" from="Tester">
       <input name="uri">&quot;https://hl7.org/fhir/uv/ips/Bundle-bundle-ips-all-sections.json&quot;</input>
       <input name="method">&quot;GET&quot;</input>
@@ -119,8 +119,8 @@
       <instruct desc="Instruction" name="message" forceDisplay="true">&quot;Import this International Patient Summary for Patricia JORDANA into the system under test, then answer the questions that follow.&quot;</instruct>
       <instruct desc="Content" name="content">$ips</instruct>
     </interact>
-    <assign to="jsonHeaders{Content-Type}">&quot;application/json&quot;</assign>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Content-Type}">if (empty($jsonHeaders{Content-Type})) then &quot;application/json&quot; else $jsonHeaders{Content-Type}</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <send id="lastRequest" desc="POST /Bundle" handler="HttpMessagingV2" from="Tester" to="Consumer">
       <input name="uri">concat($ConsumerBase, &quot;/Bundle&quot;)</input>
       <input name="method">&quot;POST&quot;</input>

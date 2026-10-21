@@ -73,7 +73,7 @@
       <input name="actualnumber">$lastRequest{response}{status}</input>
       <input name="expectednumber">&quot;200&quot;</input>
     </verify>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <send id="lastRequest" desc="GET /metadata" handler="HttpMessagingV2" from="Client" to="Spenser">
       <input name="uri">concat($SpenserBase, &quot;/metadata&quot;)</input>
       <input name="method">&quot;GET&quot;</input>
@@ -315,7 +315,7 @@
       <input name="actualstring">$pathValue</input>
       <input name="expectedstring">&quot;true&quot;</input>
     </verify>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <send id="lastRequest" desc="GET /InventoryReport" handler="HttpMessagingV2" from="Client" to="Spenser">
       <input name="uri">concat($SpenserBase, &quot;/InventoryReport&quot;)</input>
       <input name="method">&quot;GET&quot;</input>
@@ -442,8 +442,8 @@
       <input name="actualstring">$conformanceErrors</input>
       <input name="expectedstring">&quot;0&quot;</input>
     </verify>
-    <assign to="jsonHeaders{Content-Type}">&quot;application/json&quot;</assign>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Content-Type}">if (empty($jsonHeaders{Content-Type})) then &quot;application/json&quot; else $jsonHeaders{Content-Type}</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <send id="lastRequest" desc="POST /MedicationRequest" handler="HttpMessagingV2" from="Client" to="Spenser">
       <input name="uri">concat($SpenserBase, &quot;/MedicationRequest&quot;)</input>
       <input name="method">&quot;POST&quot;</input>
@@ -471,7 +471,7 @@
       <input name="actualstring">$dispenseStatus</input>
       <input name="expectedstring">&quot;completed&quot;</input>
     </verify>
-    <assign to="jsonHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
     <send id="lastRequest" desc="GET /MedicationDispense" handler="HttpMessagingV2" from="Client" to="Spenser">
       <input name="uri">concat($SpenserBase, &quot;/MedicationDispense&quot;)</input>
       <input name="method">&quot;GET&quot;</input>
