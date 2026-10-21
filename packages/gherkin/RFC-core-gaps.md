@@ -66,9 +66,7 @@ Medium — this is the one with real design risk.
 
 ---
 
-## 2. No unattended file input
-
-Parked pending a TDL question. See `docs/` in the authoring repo.
+## 2. No unattended file input — and TDL already supports it
 
 `uploads a file as $x` always emits `<interact>` with `inputType: UPLOAD`, so it
 needs a human. `gets "<url>" as $x` fetches unattended but needs the fixture
@@ -76,21 +74,57 @@ hosted and reachable **from the test bed**, sets `Accept: application/json` for
 what may be a PNG, and leaves the fixture unversioned relative to the suite that
 tested against it.
 
-What is missing is a fixture that travels *with* the archive:
+**The TDL question is settled: this works, and nothing in the language uses it.**
+A test suite archive may contain *"any number of arbitrary files used as
+resources within test cases"*, reached through an `imports` block:
 
-```gherkin
-When User loads the file "vectors/track1.png" as $qrImage
+```xml
+<testcase id="…">
+  <imports>
+    <artifact name="qrImage" type="binary">resources/track1.png</artifact>
+  </imports>
 ```
 
-Two parts: the verb, and a fourth emitted file type (`data`) that the generator
-writes and the zip carries — today it emits only `testsuite`, `testcase` and
-`scriptlet`.
+and `$qrImage` is then an ordinary session variable. Paths resolve **relative to
+the archive root**, which must have no top-level folder. `type` is `binary`
+(default), `object` (an XML DOM) or `schema`; there is no `string` type, so a
+text fixture is `binary` with an `encoding`. The recommended layout puts them in
+`resources/`. The path may itself be a variable reference, so a fixture can be
+chosen at run time.
 
-**Open question, and the whole item rests on it:** can TDL reference a resource
-inside the deployed suite archive? Scriptlets are reached with
-`<call path="…">`, so archive-relative resolution exists for *them*. Whether a
-data file can be read the same way is unverified. Settle that before designing
-the verb.
+### Proposal
+
+A sentence in the existing binding family — importing is not an actor's action,
+so it takes no actor:
+
+```gherkin
+Given set $qrImage to the file "resources/track1.png"
+When User scans $qrImage on HCertDecoder as $qrData
+```
+
+```yaml
+- text: 'set {var} to the file {string}'
+  doc: Bind a file shipped in the test suite archive. Replaces an upload prompt, so the case can run unattended.
+  actions:
+    - import: { name: '$1', path: '$2', type: 'binary' }
+```
+
+Three parts, and only the first is a language change:
+
+1. **the sentence**, plus a new `import` action kind;
+2. **the generator** must hoist imports into the test case's `<imports>` block
+   rather than emitting them inline where the step sits — this is the real work,
+   since every other action emits in place;
+3. **a fourth emitted file type** (`data`, written under `resources/`) so the
+   fixture travels in the archive. Today the generator emits only `testsuite`,
+   `testcase` and `scriptlet`, and `compile.mjs --zip` packages only those.
+
+**Shadowing:** `set {var} to {value}` and `set {var} to:` already exist;
+`to the file {string}` is distinguishable and reads correctly beside them.
+
+**Cost:** medium, concentrated in (2) and (3) rather than the sentence. Unblocks
+unattended runs for any suite starting from a fixture — including the three
+HCERT tracks, whose first step is an uploaded QR image.
 
 ---
 
@@ -232,7 +266,7 @@ schema rather than from the core's usage** before closing this.
 |---|---|---|---|
 | 1 | **3 + 4** together | small | One defect in two places, construct already proven, non-breaking, removes most of a dialect |
 | 2 | **1** | medium | The dominant gap, but real design risk in the substitution layer |
-| 3 | **2** | medium | Blocks unattended CI; needs the TDL archive question settled first |
+| 3 | **2** | medium | Blocks unattended CI. TDL supports it (`imports`/`artifact`); the work is in the generator and the packaging, not the sentence |
 | 4 | **6** | large | Parser change, independent |
 | 5 | **5**, **7** | unknown | Verify TDL's clock and encoder before designing anything |
 
