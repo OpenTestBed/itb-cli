@@ -113,11 +113,22 @@ export async function startTest(cfg, testCaseId) {
   const resp = await fetch(`${base(cfg)}/api/rest/tests/start`, {
     method: 'POST',
     headers: { ITB_API_KEY: orgKey, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ testCase: testCaseId, system, actor, forceSequentialExecution: true }),
+    // testCase is an ARRAY. Sent as a string the Test Bed ignores the filter
+    // and starts every test case of the actor, then createdSessions[0] is the
+    // first of those — not the one asked for. See issue #3.
+    body: JSON.stringify({ testCase: [testCaseId], system, actor, forceSequentialExecution: true }),
   });
   const data = await jsonOrText(resp);
   if (!resp.ok) throw new Error(`tests/start failed: HTTP ${resp.status}: ${JSON.stringify(data).slice(0, 500)}`);
-  const sessionId = data.sessionId ?? data.session ?? data.createdSessions?.[0]?.session ?? null;
+  // Exactly one session, or the filter was ignored and the id below is somebody
+  // else's session. Fail loudly rather than report another case's result.
+  const created = data.createdSessions;
+  if (Array.isArray(created) && created.length !== 1) {
+    throw new Error(
+      `tests/start created ${created.length} session(s) for "${testCaseId}", expected 1. ` +
+      `The testCase filter was not applied; refusing to report another case's result.`);
+  }
+  const sessionId = data.sessionId ?? data.session ?? created?.[0]?.session ?? null;
   return { sessionId, raw: data };
 }
 
@@ -127,11 +138,15 @@ export async function testStatus(cfg, sessionId) {
   const resp = await fetch(`${base(cfg)}/api/rest/tests/status`, {
     method: 'POST',
     headers: { ITB_API_KEY: orgKey, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ session: sessionId, withLogs: false }),
+    // session is an ARRAY, and the answer is { sessions: [ {...} ] }. Sent as a
+    // string the Test Bed answers { sessions: [] }, so every finished session
+    // read as UNDEFINED and `run` could never see a verdict. See issue #4.
+    body: JSON.stringify({ session: [sessionId], withLogs: false }),
   });
   const data = await jsonOrText(resp);
   if (!resp.ok) throw new Error(`tests/status failed: HTTP ${resp.status}: ${JSON.stringify(data).slice(0, 500)}`);
-  return { result: data.result ?? data.status ?? 'UNDEFINED', raw: data };
+  const s = data.sessions?.find(x => x.session === sessionId) ?? data.sessions?.[0];
+  return { result: s?.result ?? data.result ?? data.status ?? 'UNDEFINED', raw: s ?? data };
 }
 
 /** Poll until a final verdict or timeout. Interactive suites stay UNDEFINED
