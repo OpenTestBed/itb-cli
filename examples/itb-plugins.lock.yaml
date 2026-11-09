@@ -2,10 +2,10 @@ apiVersion: itb-plugins/v1
 instance: http://localhost:10003
 plugins:
   fhir-validator:
-    version: 0.3.0
+    version: 0.4.0
     repo: https://github.com/OpenTestBed/itb-plugin-fhir-validator
     commit: 0000000000000000000000000000000000000000
-    services: { fhir-validator: { image: ghcr.io/opentestbed/fhir-validator:0.3.0, hostPort: null } }
+    services: { fhir-validator: { image: ghcr.io/worldhealthorganization/fhir-validator:ci-build, hostPort: null } }
     provides:
       - { capability: fhir-transform, version: 1.0.0, entrypoint: /itb/transform }
       - { capability: fhir-validation, version: 1.0.0, entrypoint: /itb/fhir }
