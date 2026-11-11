@@ -1,0 +1,108 @@
+id: json-policy
+name: JSON policy validation steps
+description: >
+  A policy validator actor kind, a JSON document value type, and the
+  conformance handler behind the core's "should conform to".
+
+kinds: [policy-validator]
+
+types:
+  json:Document:
+    name: JSON document
+    # No path evaluator: paths on a JSON document are JSON pointers ("/a/b"),
+    # which the core evaluates for any value.
+
+# $doc should conform to "<policy id>|<version>" on Policies with:
+#   | option     | value              |
+#   | asOf       | 2027-08-18         |   or a bound variable: | asOf | $today |
+#   | parameters | accessLevel=public |
+#
+# Leaves, for the core and for the author:
+#   $conformanceErrors           number of rules with verdict "fail"
+#   $validation.errors           the same
+#   $validation.severity         SUCCESS | FAILURE
+#   $validation.outcome          the whole report — read a rule's verdict with
+#                                $validation.outcome at "/rules/<id>/verdict"
+#   $validation.fingerprint      "<id>|<version>#sha256:<16 hex>" — the core logs it
+#                                beside the verdict
+conforms:
+  kind: policy-validator
+  actions:
+    - assign: { to: 'jpHeaders{Content-Type}', value: '"application/json"' }
+    - assign: { to: 'jpHeaders{Accept}', value: '"application/json"' }
+    - assign: { to: 'jpParams{content}', value: '$subject', type: 'string' }
+    - assign: { to: 'jpParams{policy}', value: '"$profile"' }
+    - assign: { to: 'jpParams{asOf}', value: '"$opt.asOf"' }
+    - assign: { to: 'jpParams{parameters}', value: '"$opt.parameters"' }
+    - process:
+        handler: 'TemplateProcessor'
+        operation: 'process'
+        output: 'jpBody'
+        inputs:
+          syntax: '"freemarker"'
+          template: "'{ \"content\": \"${content?json_string}\", \"policy\": \"${policy?json_string}\", \"asOf\": \"${asOf?json_string}\", \"parameters\": \"${parameters?json_string}\" }'"
+          parameters: '$jpParams'
+    - send:
+        id: 'lastRequest'
+        desc: 'Check $subject against policy $profile'
+        handler: 'HttpMessagingV2'
+        to: '$target'
+        inputs:
+          uri: 'concat($targetBase, "/api/validate")'
+          method: '"POST"'
+          headers: '$jpHeaders'
+          body: '$jpBody'
+    - verify:
+        handler: 'NumberValidator'
+        desc: 'The policy service could decide (HTTP 200) for $profile'
+        inputs: { actualnumber: '$lastRequest{response}{status}', expectednumber: '"200"' }
+    - assign: { to: 'validationOutcome', value: '$lastRequest{response}{body}', type: 'string' }
+    - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'conformanceErrors',  inputs: { content: '$validationOutcome', pointer: '"/errors"' } }
+    - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'validationErrors',   inputs: { content: '$validationOutcome', pointer: '"/errors"' } }
+    - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'validationWarnings', inputs: { content: '$validationOutcome', pointer: '"/warnings"' } }
+    - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'validationSeverity', inputs: { content: '$validationOutcome', pointer: '"/result"' } }
+    - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'validationFingerprint', inputs: { content: '$validationOutcome', pointer: '"/policy/fingerprint"' } }
+    - log: 'concat("verdict ", $validationSeverity, " (", $conformanceErrors, " failed rules) as of ", $jpParams{asOf})'
+
+verbs:
+  # Tester checks $doc against policy "<id>|<version>" as of "2027-08-18" on Policies as $report
+  # Returns the report without asserting on the verdict, for must-fail cases:
+  # the core's "should not conform to" has no form that takes options, so it
+  # cannot carry an evaluation date. Assert with core comparators afterwards:
+  #   $report at "/result" should be "FAILURE"
+  - text: '{actor} checks {ref} against policy {canonical} as of {string}( with parameters {string})? on {actor:policy-validator} as {var}'
+    doc: Evaluate a JSON document against a policy as of a date and keep the report (per-rule verdicts, fingerprint) without asserting the verdict.
+    output: { type: 'json:Document' }
+    actions:
+      - assign: { to: 'jpHeaders{Content-Type}', value: '"application/json"' }
+      - assign: { to: 'jpHeaders{Accept}', value: '"application/json"' }
+      - assign: { to: 'jpParams{content}', value: '$2', type: 'string' }
+      - assign: { to: 'jpParams{policy}', value: '"$3"' }
+      - assign: { to: 'jpParams{asOf}', value: '"$4"' }
+      - assign: { to: 'jpParams{parameters}', value: '"$5"' }
+      - process:
+          handler: 'TemplateProcessor'
+          operation: 'process'
+          output: 'jpBody'
+          inputs:
+            syntax: '"freemarker"'
+            template: "'{ \"content\": \"${content?json_string}\", \"policy\": \"${policy?json_string}\", \"asOf\": \"${asOf?json_string}\", \"parameters\": \"${parameters?json_string}\" }'"
+            parameters: '$jpParams'
+      - send:
+          id: 'lastRequest'
+          desc: 'Check $$2 against policy $3 as of $4'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$6'
+          inputs:
+            uri: 'concat($$6Base, "/api/validate")'
+            method: '"POST"'
+            headers: '$jpHeaders'
+            body: '$jpBody'
+      - verify:
+          handler: 'NumberValidator'
+          desc: 'The policy service could decide (HTTP 200) for $3'
+          inputs: { actualnumber: '$lastRequest{response}{status}', expectednumber: '"200"' }
+      - assign: { to: '$7', value: '$lastRequest{response}{body}', type: 'string' }
+      - process: { handler: 'JsonPointerProcessor', operation: 'process', output: 'jpFingerprint', inputs: { content: '$$7', pointer: '"/policy/fingerprint"' } }
+      - log: 'concat("report by policy ", $jpFingerprint, " as of $4")'

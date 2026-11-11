@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite id="a-json-document-against-a-versioned-policy-outside-healthcare"
+           xmlns="http://www.gitb.com/tdl/v1/"
+           xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>A JSON document against a versioned policy, outside healthcare</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>The fixture for the language features the battery passport trial needed: a dialect that builds on another (battery-passport requires json-policy), a conformance handler that reports a fingerprint, an option whose value is a bound variable, and the negative conformance form with options.</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="Publisher">
+      <gitb:name>Publisher</gitb:name>
+      <gitb:desc>Endpoint: http://publisher.example/data</gitb:desc>
+    </gitb:actor>
+    <gitb:actor id="Tester">
+      <gitb:name>Tester</gitb:name>
+    </gitb:actor>
+    <gitb:actor id="Policies">
+      <gitb:name>Policies</gitb:name>
+      <gitb:desc>Endpoint: http://policies.example</gitb:desc>
+    </gitb:actor>
+  </actors>
+
+  <testcase id="an-option-takes-a-bound-variable-and-the-fingerprint-is-logged"/>
+  <testcase id="the-negative-form-takes-options-too"/>
+  <testcase id="an-option-that-names-no-bound-variable-stays-text"/>
+
+</testsuite>

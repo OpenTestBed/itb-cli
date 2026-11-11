@@ -1,0 +1,40 @@
+# Trial dialect: battery-passport — the domain layer over json-policy.
+#
+# Requires the json-policy dialect: rule checking is done there, by the
+# core's "should conform to" against the battery passport policies. This
+# dialect only adds what is specific to the Batteries Regulation: the
+# passport as a value, and reading it at one of the access levels of
+# Art. 77(2).
+#
+# SERVICE CONTRACT for the system under test (a passport provider):
+#   GET <base>/passports/<id>    Authorization: Bearer <credential>
+#   200 → the passport as JSON, restricted to what the credential's level may see
+#
+# Which credential stands for which level is test configuration: who counts as
+# a person with a legitimate interest is for the implementing act under
+# Art. 77(9), not adopted when this was written (2026-11-10).
+id: battery-passport
+name: EU battery passport
+version: "0.1"
+description: >
+  Battery passports under Regulation (EU) 2023/1542 Art. 77–78 and Annex XIII:
+  the passport value type and reading a passport at an access level.
+
+language:
+  steps: steps.yml
+  version: "0.1.0"
+  base: itb-core-en
+  baseVersion: ">=2 <3"
+
+# Builds on json-policy: its verbs use the policy-validator kind, and its
+# rules are checked by the json-policy conformance handler.
+requires:
+  - { dialect: json-policy, version: "^0.1" }
+
+# When it applies: the Batteries Regulation is the specification, or a sample
+# is laid out as a Battery Pass passport (general product information carrying
+# a battery category).
+appliesWhen:
+  any:
+    - { specification: '32023R1542|2023/1542' }
+    - { document: { pointer: /generalProductInformation/batteryCategory, exists: true } }

@@ -38,7 +38,7 @@ function parseDocString(lines: string[], startIdx: number): { text: string; endI
 import { loadCatalog, Catalog, CatalogAction, CatalogStep, loadAllComponents, mergeCatalog, ComponentInfo, LoadOptions } from './languageCatalog.js';
 import { parseITBHeader } from './itbHeader.js';
 import { parseRequirements } from './languageRequirements.js';
-import { SlotValue, slotValue } from './stepText.js';
+import { SlotValue, slotValue, resolveRef } from './stepText.js';
 
 /**
  * What the parser knows about a scenario while expanding it, step by step.
@@ -50,10 +50,14 @@ export interface ScenarioState {
   actors: Map<string, { role?: string; kind?: string }>;
   /** Value types of bound variables ($x -> 'fhir:Resource'). */
   varTypes: Map<string, string>;
+  /** Every variable a step has bound so far ({var} slots), typed or not.
+   *  This is what lets `| asOf | $today |` mean the variable — while
+   *  `| operation | $expand |`, naming nothing bound, stays text. */
+  vars: Set<string>;
 }
 
 export function newScenarioState(): ScenarioState {
-  return { actors: new Map(), varTypes: new Map() };
+  return { actors: new Map(), varTypes: new Map(), vars: new Set() };
 }
 
 /** Does the `@lang:` range ask for the 1.x core language? */
@@ -406,6 +410,7 @@ export class GherkinParser {
       if (result === null) return { actions: [], issues };
       if (!Array.isArray(result)) { skipped = skipped ?? result.skip; continue; }
       this.noteDeclarations(result, state);
+      entry.params!.forEach((p, i) => { if (p.type === 'var' && m[i + 1]) state.vars.add(m[i + 1].replace(/^\$/, '')); });
       this.checkInteractions(result, state, step, issues);
       return { actions: result, mappingLabel: label, issues };
     }
@@ -486,6 +491,15 @@ export class GherkinParser {
     for (const row of step.table ?? []) {
       if (row.option !== undefined) options[row.option.trim()] = (row.value ?? '').trim();
     }
+    // An option whose value names a bound variable (or a well-known ref) is
+    // that variable: a template's "$opt.x" — the quoted text form — becomes
+    // the expression instead. Anything else, including `$expand` when no step
+    // bound $expand, stays the text it was written as.
+    const optionExprs: Record<string, string> = {};
+    for (const [k, v] of Object.entries(options)) {
+      const vm = /^\$([A-Za-z_][A-Za-z0-9_]*)((?:\.[A-Za-z0-9_-]+)*)$/.exec(v);
+      if (vm && (state.vars.has(vm[1]) || refs[v.slice(1)] || refs[vm[1]])) optionExprs[k] = resolveRef(v.slice(1), refs);
+    }
 
     const ctx: MaterializeCtx = {
       groups: slots.map(s => s.raw),
@@ -493,6 +507,7 @@ export class GherkinParser {
       tableRows: step.table || [],
       docString: step.docString || '',
       options,
+      optionExprs,
       extra: {},
     };
 
@@ -602,7 +617,18 @@ export class GherkinParser {
         if (!this.bindTarget(componentId, state, ctx, err, catalog.conforms![componentId].kind)) return null;
       }
       const handler = catalog.conforms![componentId];
-      return [...materialize(handler.actions, ctx), ...materialize(entry.actions, ctx)];
+      const checked = materialize(handler.actions, ctx);
+      // A handler that says which exact rule set it applied (a policy version
+      // and hash, a validator and package version) leaves it in
+      // $validationFingerprint. Log it right before the verdict, so the step
+      // report shows it beside the result. Decided here, at compile time, so
+      // a handler that sets nothing gets no reference to an unset variable.
+      const sets = (a: IRAction) => (a.type === 'assign' && a.to.replace(/^\$/, '') === 'validationFingerprint')
+        || (a.type === 'process' && (a.output ?? '').replace(/^\$/, '') === 'validationFingerprint');
+      const fingerprint: IRAction[] = checked.some(sets)
+        ? [{ type: 'log', value: `concat("${(ctx.extra!.profile ?? '').replace(/"/g, '')} applied as ", $validationFingerprint)` }]
+        : [];
+      return [...checked, ...fingerprint, ...materialize(entry.actions, ctx)];
     }
 
     // Plain verb.
@@ -848,6 +874,8 @@ export interface MaterializeCtx {
   docString: string;
   /** v2: `| option | value |` rows -> $opt.<name>. */
   options?: Record<string, string>;
+  /** v2: options whose value is a bound $variable -> its TDL expression. */
+  optionExprs?: Record<string, string>;
   /** v2: named values ($subject, $path, $target, $targetBase, bind: ...). */
   extra?: Record<string, string>;
   _row?: Record<string, string>;
@@ -877,6 +905,15 @@ function substitute(v: string, ctx: MaterializeCtx): string {
         // below — a literal "" written in a template (translate(x, " ", ""))
         // is a real argument and must survive.
         return slot?.omitted && slot.expr === '""' ? OMITTED : (slot?.expr ?? '');
+      })
+      // "$opt.x" naming a bound variable → that variable's expression. A
+      // `$…` value naming nothing bound (`$expand`) becomes a single-quoted
+      // literal, so the whole-value "$name" unwrap in subst() below cannot
+      // turn it into a reference to a variable that does not exist.
+      .replace(/"\$opt\.([A-Za-z0-9_-]+)"/g, (whole: string, k: string) => {
+        if (ctx.optionExprs?.[k]) return ctx.optionExprs[k];
+        const v = ctx.options?.[k] ?? '';
+        return v.startsWith('$') && !v.includes("'") ? `'${v}'` : whole;
       })
       .replace(/\$opt\.([A-Za-z0-9_-]+)/g, (_: any, k: string) => ctx.options?.[k] ?? '');
     const extra = ctx.extra ?? {};

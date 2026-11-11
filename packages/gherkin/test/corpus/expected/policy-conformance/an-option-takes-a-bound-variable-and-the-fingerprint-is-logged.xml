@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testcase id="an-option-takes-a-bound-variable-and-the-fingerprint-is-logged"
+          xmlns="http://www.gitb.com/tdl/v1/"
+          xmlns:gitb="http://www.gitb.com/core/v1/">
+  <metadata>
+    <gitb:name>an option takes a bound variable, and the fingerprint is logged</gitb:name>
+    <gitb:version>1.0</gitb:version>
+    <gitb:description>A JSON document against a versioned policy, outside healthcare</gitb:description>
+  </metadata>
+
+  <actors>
+    <gitb:actor id="Publisher" role="SUT"/>
+    <gitb:actor id="Tester" role="SIMULATED"/>
+    <gitb:actor id="Policies" role="SIMULATED"/>
+  </actors>
+
+  <variables>
+    <var name="jpBody" type="string"/>
+    <var name="conformanceErrors" type="string"/>
+    <var name="validationErrors" type="string"/>
+    <var name="validationWarnings" type="string"/>
+    <var name="validationSeverity" type="string"/>
+    <var name="validationFingerprint" type="string"/>
+    <var name="lastRequest" type="map"/>
+    <var name="PublisherBase" type="string"/>
+    <var name="PoliciesBase" type="string"/>
+    <var name="asOf" type="string"/>
+    <var name="jsonHeaders" type="map"/>
+    <var name="passport" type="string"/>
+    <var name="jpHeaders" type="map"/>
+    <var name="jpParams" type="map"/>
+    <var name="validationOutcome" type="string"/>
+  </variables>
+
+  <steps stopOnError="true">
+    <assign to="PublisherBase">&quot;http://publisher.example/data&quot;</assign>
+    <assign to="PoliciesBase">&quot;http://policies.example&quot;</assign>
+    <assign to="asOf">&quot;2027-08-18&quot;</assign>
+    <assign to="jsonHeaders{Accept}">if (empty($jsonHeaders{Accept})) then &quot;application/json&quot; else $jsonHeaders{Accept}</assign>
+    <send id="lastRequest" desc="GET /passport-pass.json" handler="HttpMessagingV2" from="Tester" to="Publisher">
+      <input name="uri">concat($PublisherBase, &quot;/passport-pass.json&quot;)</input>
+      <input name="method">&quot;GET&quot;</input>
+      <input name="headers">$jsonHeaders</input>
+    </send>
+    <assign to="passport">$lastRequest{response}{body}</assign>
+    <assign to="jpHeaders{Content-Type}">&quot;application/json&quot;</assign>
+    <assign to="jpHeaders{Accept}">&quot;application/json&quot;</assign>
+    <assign to="jpParams{content}" type="string">$passport</assign>
+    <assign to="jpParams{policy}">&quot;https://otb.example/policy/battery-passport/due-diligence|1.0.0&quot;</assign>
+    <assign to="jpParams{asOf}">$asOf</assign>
+    <assign to="jpParams{parameters}">&quot;&quot;</assign>
+    <process handler="TemplateProcessor" operation="process" output="jpBody">
+      <input name="syntax">&quot;freemarker&quot;</input>
+      <input name="template">'{ &quot;content&quot;: &quot;${content?json_string}&quot;, &quot;policy&quot;: &quot;${policy?json_string}&quot;, &quot;asOf&quot;: &quot;${asOf?json_string}&quot;, &quot;parameters&quot;: &quot;${parameters?json_string}&quot; }'</input>
+      <input name="parameters">$jpParams</input>
+    </process>
+    <send id="lastRequest" desc="Check $passport against policy https://otb.example/policy/battery-passport/due-diligence|1.0.0" handler="HttpMessagingV2" from="Publisher" to="Policies">
+      <input name="uri">concat($PoliciesBase, &quot;/api/validate&quot;)</input>
+      <input name="method">&quot;POST&quot;</input>
+      <input name="headers">$jpHeaders</input>
+      <input name="body">$jpBody</input>
+    </send>
+    <verify handler="NumberValidator" desc="The policy service could decide (HTTP 200) for https://otb.example/policy/battery-passport/due-diligence|1.0.0">
+      <input name="actualnumber">$lastRequest{response}{status}</input>
+      <input name="expectednumber">&quot;200&quot;</input>
+    </verify>
+    <assign to="validationOutcome" type="string">$lastRequest{response}{body}</assign>
+    <process handler="JsonPointerProcessor" operation="process" output="conformanceErrors">
+      <input name="content">$validationOutcome</input>
+      <input name="pointer">&quot;/errors&quot;</input>
+    </process>
+    <process handler="JsonPointerProcessor" operation="process" output="validationErrors">
+      <input name="content">$validationOutcome</input>
+      <input name="pointer">&quot;/errors&quot;</input>
+    </process>
+    <process handler="JsonPointerProcessor" operation="process" output="validationWarnings">
+      <input name="content">$validationOutcome</input>
+      <input name="pointer">&quot;/warnings&quot;</input>
+    </process>
+    <process handler="JsonPointerProcessor" operation="process" output="validationSeverity">
+      <input name="content">$validationOutcome</input>
+      <input name="pointer">&quot;/result&quot;</input>
+    </process>
+    <process handler="JsonPointerProcessor" operation="process" output="validationFingerprint">
+      <input name="content">$validationOutcome</input>
+      <input name="pointer">&quot;/policy/fingerprint&quot;</input>
+    </process>
+    <log>concat(&quot;verdict &quot;, $validationSeverity, &quot; (&quot;, $conformanceErrors, &quot; failed rules) as of &quot;, $jpParams{asOf})</log>
+    <log>concat(&quot;https://otb.example/policy/battery-passport/due-diligence|1.0.0 applied as &quot;, $validationFingerprint)</log>
+    <verify handler="StringValidator" desc="$passport conforms to https://otb.example/policy/battery-passport/due-diligence|1.0.0">
+      <input name="actualstring">$conformanceErrors</input>
+      <input name="expectedstring">&quot;0&quot;</input>
+    </verify>
+    <verify handler="ExpressionValidator" desc="$validation.fingerprint matches &quot;due-diligence.1.0.0#sha256:&quot;">
+      <input name="expression">matches($validationFingerprint, &quot;due-diligence.1.0.0#sha256:&quot;)</input>
+    </verify>
+  </steps>
+
+  <output>
+    <success>
+      <default>"Test case completed successfully."</default>
+    </success>
+    <failure>
+      <default>"Test case failed. Check step reports and logs."</default>
+    </failure>
+  </output>
+</testcase>

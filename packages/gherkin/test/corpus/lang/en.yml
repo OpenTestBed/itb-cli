@@ -7,7 +7,7 @@ locale: en
 # patterns. Feature files tagged `@lang:itb-core-en@^1` load lang/en-1.yml,
 # the previous generation, unchanged.
 id: itb-core-en
-specVersion: "2.1.1"
+specVersion: "2.2.0"
 
 # ====================================================================
 # OTB Gherkin — core language, generation 2
@@ -60,6 +60,10 @@ refs:
   validation.warnings: '$validationWarnings'
   validation.outcome: '$validationOutcome'
   validation.severity: '$validationSeverity'
+  # Which exact rule set gave the verdict (e.g. "<id>|<version>#sha256:…").
+  # Optional for a conformance handler; when its actions set it, every
+  # conformance step logs it beside the verdict.
+  validation.fingerprint: '$validationFingerprint'
 
 # Path languages the core can evaluate without a dialect. A path that starts
 # with "/" is always a JSON pointer, whatever the subject's type; any other
@@ -709,11 +713,16 @@ verbs:
   #   $x should conform to "canonical" ignoring slicing errors
   #   $x should conform to "canonical" ignoring errors matching "text"
   #   $x should conform to "canonical" with:   | option | value |
+  #   $x should not conform to "canonical" [on …] [with: | option | value |]
+  # An option value may be a $variable bound by an earlier step
+  # (| asOf | $today |); any other text is passed as written.
   # Which validator: the named one, else the one owning $x's type, else the
   # only declared actor whose dialect can check conformance.
 
   # Contract with the dialect handler: it leaves the number of errors that
-  # count in $conformanceErrors; the core asserts it here.
+  # count in $conformanceErrors; the core asserts it here. A handler that also
+  # sets $validationFingerprint (the exact rule set it applied) gets it logged
+  # before the verdict, by the compiler, so the report says what was applied.
   - text: '{ref} should conform to {canonical}( on {actor})? ignoring slicing errors'
     doc: Conformance, not counting slice-matching errors (the common profile-level false positive).
     dispatch: conforms
@@ -742,6 +751,16 @@ verbs:
     doc: The value must FAIL conformance (at least one error).
     dispatch: conforms
     bind: { ignore: '' }
+    actions:
+      - verify: { handler: 'ExpressionValidator', desc: '$$1 does not conform to $2', inputs: { expression: 'number($conformanceErrors) > 0' } }
+
+  # The negative of the `with:` form. Without it a must-fail check that needs
+  # an option (an evaluation date, a parameter, a terminology server) could
+  # not use the conformance shape at all.
+  - text: '{ref} should not conform to {canonical}( on {actor})? with:'
+    doc: The value must FAIL conformance, with dialect-specific options from a | option | value | table.
+    dispatch: conforms
+    bind: { ignore: '$opt.ignore' }
     actions:
       - verify: { handler: 'ExpressionValidator', desc: '$$1 does not conform to $2', inputs: { expression: 'number($conformanceErrors) > 0' } }
 
