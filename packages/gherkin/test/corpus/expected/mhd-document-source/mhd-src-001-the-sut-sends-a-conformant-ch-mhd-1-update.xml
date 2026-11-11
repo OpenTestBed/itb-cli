@@ -47,15 +47,11 @@
       <input name="actualstring">$lastReceived{method}</input>
       <input name="expectedstring">&quot;PUT&quot;</input>
     </verify>
-    <verify handler="StringValidator" desc="$received.path contains /DocumentReference/">
-      <input name="actualstring">$lastReceived{path}</input>
-      <input name="expectedstring">&quot;/DocumentReference/&quot;</input>
-      <input name="matchType">&quot;contains&quot;</input>
+    <verify handler="ExpressionValidator" desc="$received.path contains /DocumentReference/">
+      <input name="expression">contains($lastReceived{path}, &quot;/DocumentReference/&quot;)</input>
     </verify>
-    <verify handler="StringValidator" desc="$received.headers.Authorization contains Bearer">
-      <input name="actualstring">$lastReceived{headers}{Authorization}</input>
-      <input name="expectedstring">&quot;Bearer&quot;</input>
-      <input name="matchType">&quot;contains&quot;</input>
+    <verify handler="ExpressionValidator" desc="$received.headers.Authorization contains Bearer">
+      <input name="expression">contains($lastReceived{headers}{Authorization}, &quot;Bearer&quot;)</input>
     </verify>
     <verify handler="ExpressionValidator" desc="$received.body is not empty">
       <input name="expression">string-length($lastReceived{body}) &gt; 0</input>

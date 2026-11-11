@@ -22,7 +22,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
-import { GherkinParser, XMLGenerator, setCatalogSource, parseITBHeader, scriptletSearchPaths } from '../dist/index.js';
+import { GherkinParser, XMLGenerator, setCatalogSource, parseITBHeader, scriptletSearchPaths, parseRequirements, checkRequirements } from '../dist/index.js';
 import { createNodeSource } from '../dist/node.js';
 
 const argv = process.argv.slice(2);
@@ -121,6 +121,12 @@ for (const file of files) {
     lastOut = out;
     for (const i of [...(parsed.errors ?? []), ...(out.issues ?? [])]) {
       (i.severity === 'warning' ? entry.warnings : entry.errors).push(i);
+    }
+    // What the file's @lang:/@dialect: tags ask for against what is loaded —
+    // versions, and a dialect whose parent (component.yml requires:) the file
+    // does not name. Warnings: they explain errors, they do not add any.
+    for (const i of checkRequirements(parseRequirements(parsed.__featureTags ?? []), parser.getCatalog(), parser.getComponents())) {
+      entry.warnings.push({ ...i, line: 1, from: 'tags' });
     }
     entry.testCases = out.files.filter(f => f.type === 'testcase').map(f => f.id);
     entry.suite = out.files.find(f => f.type === 'testsuite')?.id ?? null;

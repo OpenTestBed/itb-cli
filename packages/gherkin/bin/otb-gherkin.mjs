@@ -21,6 +21,7 @@ import { fileURLToPath } from 'node:url';
 const COMMANDS = {
   compile: 'cmd-compile.mjs',
   dialects: 'cmd-dialects.mjs',
+  applies: 'cmd-applies.mjs',
 };
 
 const [cmd, ...rest] = process.argv.slice(2);
@@ -61,6 +62,10 @@ usage:
       Compile feature files. Exits non-zero on any error and prints every
       diagnostic. --out writes the suite, --zip also packages it for upload.
       Needs ITB_ASSET_ROOT pointing at the directory holding components/.
+
+  otb-gherkin applies [--spec <id>]... [<sample file>...] [--json]
+      Which dialects apply: evaluates each dialect's appliesWhen against the
+      specification ids and sample documents, and prints the tags to use.
 
   otb-gherkin --version
 

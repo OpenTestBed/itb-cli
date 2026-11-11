@@ -1,0 +1,33 @@
+# Trial dialect: json-policy — domain-neutral parent for checking JSON documents
+# against versioned, reusable policies. Nothing in it knows about batteries.
+#
+# SERVICE CONTRACT (reference implementation: ../../service/policy-service.mjs)
+#
+#   POST /api/validate
+#     { "content": "<the document as a JSON string>",
+#       "policy":  "<policy id>|<version>",          version required
+#       "asOf":    "YYYY-MM-DD",                       evaluation date
+#       "parameters": "name=value;name2=value2" }
+#   200 → { result: SUCCESS|FAILURE, errors, warnings,
+#           policy: { id, version, sha256, fingerprint },
+#           rules: { <ruleId>: { verdict: pass|fail|not-applicable, reason, source, ... } } }
+#   400 → { error }   no verdict possible (unknown policy, missing date or parameter)
+#
+# The conformance handler fails the step on anything but 200, so a request
+# that cannot be decided is a red test, never a green one.
+id: json-policy
+name: JSON policy validation
+version: "0.1"
+description: >
+  Check a JSON document against a versioned policy of data-point rules, as of an
+  evaluation date, and keep the per-rule verdicts and the policy fingerprint.
+
+language:
+  steps: steps.yml
+  version: "0.1.0"
+  base: itb-core-en
+  baseVersion: ">=2 <3"
+
+# When it applies: any plain JSON document (FHIR JSON has its own validator).
+appliesWhen:
+  mediaType: application/json

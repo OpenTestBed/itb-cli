@@ -222,6 +222,57 @@ export interface ComponentManifest {
   /** Path to steps.yml (legacy string form) or a versioned LanguageDecl */
   language?: string | LanguageDecl;
   scriptlets?: string[]; // list of scriptlet XML files shipped with this component
+  /** Dialects this one builds on: their kinds, types or conformance handler
+   *  appear in its verbs. `json-policy@^0.1` or `{ dialect, version }`.
+   *  Checked at load (is the parent there?) and against a feature's
+   *  `@dialect:` tags (does the file name the parent too?). */
+  requires?: (string | DialectDependency)[];
+  /** When this dialect applies to what is being tested, as a condition over
+   *  facts about the specification and the documents (see appliesWhen.ts). */
+  appliesWhen?: unknown;
+}
+
+/** One entry of component.yml `requires:` in its object form. */
+export interface DialectDependency {
+  dialect: string;
+  /** Semver range of the parent's language.version (e.g. "^0.1"). */
+  version?: string;
+}
+
+/** component.yml `requires:` normalised to `{ id, range }`. Malformed entries
+ *  are skipped, not fatal: the dialect still loads and the author gets the
+ *  ordinary diagnostics. */
+export function dialectDependencies(manifest: ComponentManifest): { id: string; range?: string }[] {
+  const raw = manifest?.requires;
+  if (!Array.isArray(raw)) return [];
+  const out: { id: string; range?: string }[] = [];
+  for (const r of raw) {
+    if (typeof r === 'string' && r.trim()) {
+      const s = r.trim();
+      const at = s.lastIndexOf('@');
+      out.push(at > 0 ? { id: s.slice(0, at), range: s.slice(at + 1) || undefined } : { id: s });
+    } else if (r && typeof r === 'object' && typeof (r as DialectDependency).dialect === 'string') {
+      out.push({ id: (r as DialectDependency).dialect, range: (r as DialectDependency).version || undefined });
+    }
+  }
+  return out;
+}
+
+/** Are the dialects `comp` requires loaded, enabled and of a version in
+ *  range? undefined = it requires nothing. Report-only, like dialectDrift:
+ *  the child still merges, and its unmatched steps say the rest. */
+export function checkDependencies(comp: ComponentInfo, components: ComponentInfo[]): BaseCompat | undefined {
+  const deps = dialectDependencies(comp.manifest);
+  if (deps.length === 0) return undefined;
+  const problems: string[] = [];
+  for (const d of deps) {
+    const parent = components.find(c => c.manifest.id.toLowerCase() === d.id.toLowerCase());
+    if (!parent) { problems.push(`requires dialect "${d.id}", which is not loaded`); continue; }
+    if (!parent.enabled) { problems.push(`requires dialect "${d.id}", which is disabled`); continue; }
+    const have = languageDecl(parent.manifest)?.version;
+    if (d.range && have && !satisfiesRange(have, d.range)) problems.push(`requires ${d.id} ${d.range} — ${have} is loaded`);
+  }
+  return problems.length ? { ok: false, message: problems.join('; ') } : { ok: true };
 }
 
 /** Normalize the manifest's language field to a LanguageDecl (or null). */
@@ -258,6 +309,9 @@ export interface ComponentInfo {
    *  Report-only: the dialect stays authoritative and keeps loading;
    *  undefined = no declaration or cannot judge. */
   dialectDrift?: BaseCompat;
+  /** Dialects it `requires:` — missing, disabled or out of range.
+   *  undefined = it requires nothing. */
+  dependencies?: BaseCompat;
 }
 
 /** Check the app→dialect direction: does the app build (implementsDialect)
@@ -700,6 +754,9 @@ export async function loadAllComponents(core?: Catalog, opts: LoadOptions = {}):
     if (idx >= 0) results[idx] = remote; else results.push(remote);
   }
 
+  // Only now is the whole set known, so a child can be checked for its parent.
+  for (const r of results) r.dependencies = checkDependencies(r, results);
+
   return results;
 }
 
@@ -722,6 +779,9 @@ export function mergeCatalog(core: Catalog, components: ComponentInfo[]): Catalo
     if (comp.compat && !comp.compat.ok) {
       console.warn(`dialect "${comp.manifest.id}" not merged: ${comp.compat.message}`);
       continue;
+    }
+    if (comp.dependencies && !comp.dependencies.ok) {
+      console.warn(`dialect "${comp.manifest.id}" ${comp.dependencies.message} — merged anyway; its steps that use the parent will not match`);
     }
     const ext = comp.extension;
     if (!ext) continue;

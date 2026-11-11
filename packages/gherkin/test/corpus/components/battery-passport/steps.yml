@@ -1,0 +1,45 @@
+id: battery-passport
+name: EU battery passport steps
+description: >
+  The battery passport value type, and reading a passport from a provider at
+  one of the Art. 77(2) access levels.
+
+# No actor kind: the passport provider is the system under test, and a kind
+# can never bind to the SUT. Its verbs take a plain {actor}.
+
+types:
+  bp:Passport:
+    name: battery passport
+    # Paths are JSON pointers over the Battery Pass 1.2.0 aspect layout:
+    # /generalProductInformation/..., /performance/..., /circularity/...
+
+verbs:
+  # Background: Inspector holds authority access with token "authority-token"
+  # The level is one of: public, legitimate-interest, authority (Art. 77(2)(a)–(c)).
+  - text: '{actor} holds {word} access with token {string}'
+    doc: Give an actor the credential that stands for an access level (Art. 77(2)); the mapping is configuration until the Art. 77(9) implementing act.
+    actions:
+      - assign: { to: 'bpTokens{$2.raw}', value: '"$3"' }
+
+  # Inspector reads passport "passport-pass" from Provider with authority access as $view
+  - text: '{actor} reads passport {string} from {actor} with {word} access as {var}'
+    doc: Read a passport from the provider with the credential held for that access level, and assert it was served.
+    output: { type: 'bp:Passport' }
+    actions:
+      - assign: { to: 'bpHeaders{Accept}', value: '"application/json"' }
+      - assign: { to: 'bpHeaders{Authorization}', value: 'concat("Bearer ", $bpTokens{$4.raw})' }
+      - send:
+          id: 'lastRequest'
+          desc: 'Read passport $2 with $4.raw access'
+          handler: 'HttpMessagingV2'
+          from: '$1'
+          to: '$3'
+          inputs:
+            uri: 'concat($$3Base, "/passports/$2")'
+            method: '"GET"'
+            headers: '$bpHeaders'
+      - verify:
+          handler: 'NumberValidator'
+          desc: 'Provider served passport $2 at $4.raw access (HTTP 200)'
+          inputs: { actualnumber: '$lastRequest{response}{status}', expectednumber: '"200"' }
+      - assign: { to: '$5', value: '$lastRequest{response}{body}', type: 'string' }

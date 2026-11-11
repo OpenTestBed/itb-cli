@@ -154,6 +154,41 @@ Placeholders: `{actor}` `{actor:kind}` `{var}` `{ref}` `{value}` `{string}`
 optional parts; `a/b` for alternatives. A dialect adds verbs, never sentence
 shapes.
 
+A conformance handler must leave `$conformanceErrors`. It may also set
+`$validationFingerprint`, the exact rule set it applied (for example
+`<policy id>|<version>#sha256:…`). When it does, every conformance step logs
+the fingerprint right before the verdict, and authors can read it as
+`$validation.fingerprint`. In a `with:` table, an option whose value names a
+variable bound earlier (`| asOf | $today |`) passes that variable. Any other
+value, `$expand` included, passes as text.
+
+`component.yml` can say what the dialect builds on and when it applies:
+
+```yaml
+requires:                                 # dialects whose kinds/types/handler its verbs use
+  - { dialect: json-policy, version: "^0.1" }   # or the short form: json-policy@^0.1
+appliesWhen:                              # evaluated by `otb-gherkin applies`
+  any:
+    - { specification: '32023R1542|2023/1542' }
+    - { document: { pointer: /generalProductInformation/batteryCategory, exists: true } }
+```
+
+`requires:` is checked in three places:
+
+- `otb-gherkin dialects` warns when a parent is missing from `components/`.
+- Loading warns when a parent is missing, disabled or out of range.
+- `compile` warns when a feature tags the child without the parent.
+
+`appliesWhen:` takes these conditions:
+
+- `specification` is a regex over the specification ids.
+- `mediaType` is one or more media types.
+- `document` checks a JSON pointer with `exists`, `equals` or `matches`.
+- `all`, `any` and `not` combine conditions.
+
+`otb-gherkin applies --spec <id> <sample files…>` lists each dialect's verdict
+with its reason, and prints the tags to use.
+
 ## Scripts
 
 | Script | Purpose |
@@ -162,6 +197,7 @@ shapes.
 | `npm run test:update` | re-record snapshots (review the diff) |
 | `otb-gherkin compile <files…>` | compile features; exits non-zero on error, so it doubles as a CI gate |
 | `otb-gherkin dialects --installed` | assemble installed dialect packages into `components/` |
+| `otb-gherkin applies --spec <id> <samples…>` | which dialects apply (their `appliesWhen`), and the `@dialect:` tags to use |
 | `node scripts/check-features.mjs <assets> <features>` | the same gate, from a checkout of this repo |
 | `node scripts/convert-v1-to-v2.mjs <files…>` | migrate generation-1 feature files |
 

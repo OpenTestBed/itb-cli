@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  instructUser — display an instruction to the operator and wait.
+
+  Backs the core `<Actor> is informed "<message>"` step (en.yml section 7).
+  The compiler emits `<call path="scriptlets/instructUser.xml">` for that
+  step and resolves the id against, in order: the locations listed in the
+  feature's `# itb:` header, then `scriptlets/` beside the feature files
+  (this file), then the scriptlets shipped by enabled components.
+
+  WHY THIS FILE EXISTS AS SOURCE: an older build of the compiler emitted a
+  STUB for any unresolved scriptlet id — a scriptlet whose only step was
+  `<log>"... (stub)."</log>`. That deployed and ran green while never
+  prompting anyone. The current compiler correctly refuses to invent one,
+  so the scriptlet has to be real and has to be checked in.
+
+  Params are supplied by the two `is informed` mappings:
+    step, actor, message              — `<Actor> is informed "<message>"`
+    step, actor, message, content     — ... `with "<content>"`
+  `content` is declared so the four-input call binds cleanly; it is left
+  undisplayed because an unset variable in an <instruct> body renders
+  inconsistently across ITB builds. Add a second <instruct> for it only if
+  every call site passes it.
+-->
+<scriptlet id="instructUser"
+           xmlns="http://www.gitb.com/tdl/v1/"
+           xmlns:gitb="http://www.gitb.com/core/v1/">
+  <params>
+    <var name="step" type="string"/>
+    <var name="actor" type="string"/>
+    <var name="message" type="string"/>
+    <var name="content" type="string"/>
+  </params>
+  <steps>
+    <!--
+      Shape mirrors the known-working userFileUpload interaction in the
+      RACSEL PH4H suite: an <interact> with an id and desc, and no `with`
+      attribute. `with` takes an actor id, not a variable, so $actor
+      cannot be threaded through it — the actor name travels in the
+      instruction text instead.
+      Per gitb_tdl.xsd, UserInteraction extends TestStep (desc required)
+      and holds <instruct> (display) or <request> (input) children;
+      <instruct> extends TypedBinding, so the DISPLAYED value is the
+      element body, not an attribute. Putting $message in the body avoids
+      relying on variable interpolation inside XML attributes.
+    -->
+    <interact id="instructUser" desc="Instruction">
+      <instruct desc="Please read and continue:" name="message">$message</instruct>
+    </interact>
+  </steps>
+</scriptlet>

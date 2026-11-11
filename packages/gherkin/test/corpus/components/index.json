@@ -1,9 +1,11 @@
 {
   "components": [
     "archimate",
+    "battery-passport",
     "fhir-terminology",
     "fhir-validator",
     "hcert-decoder",
+    "json-policy",
     "tng-certificate"
   ]
 }

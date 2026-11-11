@@ -286,9 +286,11 @@ export async function ensureSystem(cfg, name = 'itb-suite-sut') {
 }
 
 /** Ensure a conformance statement binds the system to the actor.
- *  Community key first (community-scoped management op), org key as fallback. */
+ *  Organisation key first: the statement belongs to the system's organisation,
+ *  and the Test Bed answers the community key with 403 for this operation.
+ *  The community key stays as a fallback for builds that accept it. */
 export async function ensureConformance(cfg, systemKey, actorKey) {
-  for (const key of [cfg.instance.communityApiKey, cfg.instance.organisationApiKey]) {
+  for (const key of [cfg.instance.organisationApiKey, cfg.instance.communityApiKey]) {
     if (!key) continue;
     const resp = await fetch(`${base(cfg)}/api/rest/conformance/${systemKey}/${actorKey}`, {
       method: 'PUT', headers: { ITB_API_KEY: key },
