@@ -64,10 +64,8 @@
       <input name="actualstring">$lastReceived{method}</input>
       <input name="expectedstring">&quot;POST&quot;</input>
     </verify>
-    <verify handler="StringValidator" desc="$received.headers.Content-Type contains fhir+json">
-      <input name="actualstring">$lastReceived{headers}{Content-Type}</input>
-      <input name="expectedstring">&quot;fhir+json&quot;</input>
-      <input name="matchType">&quot;contains&quot;</input>
+    <verify handler="ExpressionValidator" desc="$received.headers.Content-Type contains fhir+json">
+      <input name="expression">contains($lastReceived{headers}{Content-Type}, &quot;fhir+json&quot;)</input>
     </verify>
     <verify handler="ExpressionValidator" desc="$received.body is not empty">
       <input name="expression">string-length($lastReceived{body}) &gt; 0</input>

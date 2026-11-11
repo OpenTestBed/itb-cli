@@ -7,7 +7,7 @@ locale: en
 # patterns. Feature files tagged `@lang:itb-core-en@^1` load lang/en-1.yml,
 # the previous generation, unchanged.
 id: itb-core-en
-specVersion: "2.1.0"
+specVersion: "2.1.1"
 
 # ====================================================================
 # OTB Gherkin — core language, generation 2
@@ -546,10 +546,14 @@ verbs:
     actions:
       - verify: { handler: 'ExpressionValidator', desc: '$$1 is not $2.raw', inputs: { expression: 'not($1 = $2)' } }
 
+  # contains() rather than StringValidator's matchType: Test Bed builds that do
+  # not know matchType warn at deploy (TDL-043), ignore it and compare for
+  # EQUALITY, so "contains" failed on any longer string. The expression form
+  # is what "should not contain" already used, and works on every build.
   - text: '{ref} should contain {value}'
     doc: Substring.
     actions:
-      - verify: { handler: 'StringValidator', desc: '$$1 contains $2.raw', inputs: { actualstring: '$1', expectedstring: '$2', matchType: '"contains"' } }
+      - verify: { handler: 'ExpressionValidator', desc: '$$1 contains $2.raw', inputs: { expression: 'contains($1, $2)' } }
 
   - text: '{ref} should not contain {value}'
     doc: No substring.
@@ -629,7 +633,7 @@ verbs:
     doc: Substring, at a path.
     dispatch: path
     actions:
-      - verify: { handler: 'StringValidator', desc: '$$1 at $2 contains $3.raw', inputs: { actualstring: '$pathValue', expectedstring: '$3', matchType: '"contains"' } }
+      - verify: { handler: 'ExpressionValidator', desc: '$$1 at $2 contains $3.raw', inputs: { expression: 'contains($pathValue, $3)' } }
 
   - text: '{ref} at {path} should not contain {value}'
     doc: No substring, at a path.
@@ -731,12 +735,15 @@ verbs:
     actions:
       - verify: { handler: 'StringValidator', desc: '$$1 conforms to $2', inputs: { actualstring: '$conformanceErrors', expectedstring: '"0"' } }
 
+  # ExpressionValidator, not NumberValidator's operation input: Test Bed builds
+  # that do not know it warn at deploy (TDL-043), drop it and compare for
+  # EQUALITY with 0, so a document with errors could never pass this check.
   - text: '{ref} should not conform to {canonical}( on {actor})?'
     doc: The value must FAIL conformance (at least one error).
     dispatch: conforms
     bind: { ignore: '' }
     actions:
-      - verify: { handler: 'NumberValidator', desc: '$$1 does not conform to $2', inputs: { actualnumber: '$conformanceErrors', expectednumber: '0', operation: '"greater_than"' } }
+      - verify: { handler: 'ExpressionValidator', desc: '$$1 does not conform to $2', inputs: { expression: 'number($conformanceErrors) > 0' } }
 
   # Compile-time typing: give a value a type so path assertions and
   # conformance know which dialect reads it. The names come from the loaded
