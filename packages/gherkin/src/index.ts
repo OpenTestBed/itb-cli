@@ -36,6 +36,8 @@ export {
   checkDialectImplementation,
   checkComponentHealth,
   satisfiesRange,
+  dialectDependencies,
+  checkDependencies,
 } from './parser/languageCatalog.js';
 export type {
   Catalog,
@@ -51,6 +53,7 @@ export type {
   ExtensionCatalog,
   LanguageDecl,
   BaseCompat,
+  DialectDependency,
 } from './parser/languageCatalog.js';
 
 // ── Remote plugin dialects ──────────────────────────────────────────
@@ -71,6 +74,10 @@ export type { ITBHeader } from './parser/itbHeader.js';
 // ── @lang: / @dialect: version requirements ─────────────────────────
 export { parseRequirements, checkRequirements } from './parser/languageRequirements.js';
 export type { LanguageRequirements, LanguageIssue, VersionRef } from './parser/languageRequirements.js';
+
+// ── When a dialect applies (component.yml appliesWhen) ──────────────
+export { evaluateAppliesWhen, dialectApplies, describeDocument } from './parser/appliesWhen.js';
+export type { ApplicabilityFacts, Applicability, DocumentFacts } from './parser/appliesWhen.js';
 
 // ── Shared types ────────────────────────────────────────────────────
 export type * from './types.js';

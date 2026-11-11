@@ -16,7 +16,7 @@
 // Gherkin tag cannot contain a space, so two-sided ranges (">=1.3 <1.6") are
 // not expressible here. `^` and `~` cover the realistic cases.
 
-import { Catalog, ComponentInfo, languageDecl, satisfiesRange } from './languageCatalog.js';
+import { Catalog, ComponentInfo, dialectDependencies, languageDecl, satisfiesRange } from './languageCatalog.js';
 
 export interface VersionRef {
   /** Spec or component id, e.g. "itb-core-en" / "fhir-validator". */
@@ -121,14 +121,36 @@ export function checkRequirements(
       });
       continue;
     }
-    if (!want.range) continue;
     const have = languageDecl(comp.manifest)?.version;
-    if (!have) continue; // legacy manifest with no version — nothing to compare
-    if (!satisfiesRange(have, want.range)) {
+    if (want.range && have && !satisfiesRange(have, want.range)) {
       issues.push({
         severity: 'warning',
         message: `This file targets ${want.id} ${want.range} — ${have} is loaded${damage}`,
       });
+    }
+
+    // A dialect that builds on another (component.yml `requires:`): the file
+    // must name the parent too, and the parent must be loaded in range. The
+    // tags are the file's statement of what it depends on; a parent left out
+    // of them is a dependency nobody can see from the file.
+    for (const dep of dialectDependencies(comp.manifest)) {
+      if (!req.dialects.some(d => sameId(d.id, dep.id))) {
+        issues.push({
+          severity: 'warning',
+          message: `Dialect "${want.id}" builds on "${dep.id}" — add @dialect:${dep.id}${dep.range ? '@' + dep.range : ''} to this file`,
+        });
+      }
+      const parent = components.find(c => sameId(c.manifest.id, dep.id));
+      if (!parent) {
+        issues.push({ severity: 'warning', message: `Dialect "${want.id}" builds on "${dep.id}", which is not loaded${damage}` });
+      } else if (!parent.enabled) {
+        issues.push({ severity: 'warning', message: `Dialect "${want.id}" builds on "${dep.id}", which is loaded but disabled — enable it in Environment` });
+      } else {
+        const pv = languageDecl(parent.manifest)?.version;
+        if (dep.range && pv && !satisfiesRange(pv, dep.range)) {
+          issues.push({ severity: 'warning', message: `Dialect "${want.id}" builds on ${dep.id} ${dep.range} — ${pv} is loaded${damage}` });
+        }
+      }
     }
   }
 

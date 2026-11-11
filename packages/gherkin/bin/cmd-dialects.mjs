@@ -103,8 +103,13 @@ function splitFlow(body) {
 
 function peek(yamlText) {
   const lines = yamlText.split(/\r?\n/);
-  const out = { id: null, steps: null, legacy: null, baseVersion: null, scriptlets: [] };
+  const out = { id: null, steps: null, legacy: null, baseVersion: null, scriptlets: [], requires: [] };
   const clean = (v) => v.replace(/#.*$/, '').trim().replace(/^["']|["']$/g, '');
+  // `requires:` entries: `json-policy@^0.1` or `{ dialect: json-policy, version: "^0.1" }`.
+  const dep = (v) => {
+    const m = /dialect\s*:\s*["']?([\w.-]+)/.exec(v);
+    return m ? m[1] : clean(v).split('@')[0] || null;
+  };
 
   let section = null;                       // which top-level key we are inside
   for (const raw of lines) {
@@ -134,6 +139,10 @@ function peek(yamlText) {
           }
         } else if (value) out.steps = value;  // legacy string form: `language: steps.yml`
         else section = 'language';            // block form
+      } else if (key === 'requires') {
+        if (value.startsWith('[')) {
+          out.requires = splitFlow(value.replace(/^\[|\]$/g, '')).map(dep).filter(Boolean);
+        } else section = 'requires';
       } else if (key === 'scriptlets') {
         if (value.startsWith('[')) {
           out.scriptlets = value.replace(/^\[|\]$/g, '').split(',').map(s => clean(s)).filter(Boolean);
@@ -152,6 +161,10 @@ function peek(yamlText) {
     } else if (section === 'scriptlets') {
       const m = /^[ \t]+-\s*(.+)$/.exec(raw);
       if (m) out.scriptlets.push(clean(m[1]));
+    } else if (section === 'requires') {
+      const m = /^[ \t]+-\s*(.+)$/.exec(raw);
+      const d = m && dep(m[1]);
+      if (d) out.requires.push(d);
     }
   }
   return out;
@@ -234,7 +247,7 @@ async function grab(base, id, outComponents) {
       return { id: realId, error: `component.yml lists scriptlet ${s}, which is missing at the source` };
     }
   }
-  return { id: realId, files: wrote, baseVersion: meta.baseVersion };
+  return { id: realId, files: wrote, baseVersion: meta.baseVersion, requires: meta.requires };
 }
 
 /** The core language's spec version, so a dialect that will be refused says so now. */
@@ -385,6 +398,15 @@ for (const g of got) {
   console.log(`  ${bad ? 'WARN' : 'ok  '} ${g.id.padEnd(18)} ${g.files.length} file${g.files.length === 1 ? '' : 's'}${g.from ? `  ${g.from}` : ''}${bad ? `  — wants core ${g.baseVersion}, installed core is ${core}: this dialect will be REFUSED at load and every one of its steps will report "No mapping for step"` : ''}`);
 }
 for (const k of kept) console.log(`  kept ${k.padEnd(18)} already in ${path.join(OUT, 'components')}, not from this source`);
+// A dialect that builds on another (component.yml requires:) is useless
+// without it: its verbs name the parent's kinds and types, so every one of
+// them would report "No mapping for step" against the feature file.
+const present = new Set([...fetched, ...kept]);
+for (const g of got) {
+  for (const r of g.requires ?? []) {
+    if (!present.has(r)) console.log(`  WARN ${g.id.padEnd(18)} requires dialect ${r}, which is not in ${path.join(OUT, 'components')} — fetch it too`);
+  }
+}
 for (const f of failed) console.log(`  FAIL ${f.id.padEnd(18)} ${f.error}`);
 
 console.log(`\n${got.length} dialect${got.length === 1 ? '' : 's'} in ${outComponents}${kept.length ? ` (+${kept.length} kept)` : ''}`);

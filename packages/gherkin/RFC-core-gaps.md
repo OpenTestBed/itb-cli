@@ -273,3 +273,84 @@ schema rather than from the core's usage** before closing this.
 Items 3+4 are one patch and one new sentence, and the snapshot diff is the whole
 observable effect. That is the change to do first and review carefully, because
 every header assign in the corpus moves.
+
+---
+
+## Addendum: gaps found outside healthcare (specVersion 2.2.0, implemented)
+
+**Where these came from.** A trial suite for the EU battery passport (Reg.
+(EU) 2023/1542): two dialects (`json-policy`, a domain-neutral parent, and
+`battery-passport` over it), 5 features and 20 cases, run green on a Test Bed.
+These items are implemented on the branch that adds this section. The corpus
+fixture is `policy-conformance.feature`, with `components/json-policy` and
+`components/battery-passport`.
+
+### 8. `should contain` compared for equality (fix)
+
+The core emitted `StringValidator` with `matchType: contains`. Test Bed builds
+that do not know `matchType` warn at deploy (TDL-043), drop it and compare for
+equality. So `$x should contain "fhir+json"` failed whenever `$x` was longer.
+Both forms (`should contain`, `at … should contain`) now emit
+`ExpressionValidator` with `contains($1, $2)`, the form `should not contain`
+already used. Snapshot effect: the three corpus test cases that use it.
+
+`should not conform` had the same defect. It used `NumberValidator` with
+`operation: greater_than`, an input the same builds drop (TDL-043), leaving
+an equality check against 0. A document with errors could therefore never
+pass a must-fail check. Both negative forms now emit
+`ExpressionValidator` with `number($conformanceErrors) > 0`. No corpus feature
+used them before this addendum's fixture.
+
+### 9. No negative conformance form with options (addition)
+
+```gherkin
+Then $doc should not conform to "<policy>|1.0.0" on Policies with:
+  | option | value      |
+  | asOf   | 2027-08-18 |
+```
+
+`text: '{ref} should not conform to {canonical}( on {actor})? with:'`. It
+mirrors the positive `with:` form. It shadows nothing: the plain negative form
+cannot match a step ending in `with:`.
+
+### 10. Option values could not be variables, safely (change)
+
+A whole-value `"$opt.x"` was already unwrapped into a variable reference by
+the generic `"$name"` rule. That held for any `$…` value: `$expand` became a
+variable that does not exist. A dotted ref (`$response.status`) produced an
+invalid reference. Now:
+
+- A value naming a variable some earlier step bound, or a well-known ref,
+  becomes that expression wherever the template writes `"$opt.x"`.
+- Any other `$…` value becomes a single-quoted literal.
+- Values not starting with `$` are unchanged.
+
+The corpus shows no other change.
+
+### 11. The verdict did not say which rule set gave it (addition)
+
+New well-known ref: `$validation.fingerprint` → `$validationFingerprint`. It
+is optional in the handler contract. When a handler's actions set it, the
+compiler emits a `<log>` of it right before the core's verdict. The decision
+is made at compile time, so a handler that sets nothing is untouched.
+
+### 12. Dialects could not build on dialects, or say when they apply (manifest)
+
+These are manifest fields, not grammar, so they do not change `specVersion`.
+
+`component.yml`:
+
+- `requires:` takes `json-policy@^0.1` or `{ dialect, version }`. It is
+  checked in three places:
+  - load: `ComponentInfo.dependencies`, plus a warning at merge;
+  - tags: `checkRequirements` warns when a feature tags the child without the
+    parent, and when the parent is missing, disabled or out of range;
+  - `otb-gherkin dialects`: warns when the parent is not in `components/`.
+- `appliesWhen:` takes a condition over the specification ids and sample
+  documents. The conditions are `specification`, `mediaType`, `document`
+  (pointer with exists/equals/matches), and `all`/`any`/`not`. It is
+  evaluated by `dialectApplies()` and by `otb-gherkin applies`.
+
+**Open for discussion:** whether a missing parent should refuse the child
+instead of warning, and whether the `appliesWhen` vocabulary needs more
+predicates (an XML root, a file glob, a package dependency).
